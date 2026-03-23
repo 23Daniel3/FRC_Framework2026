@@ -6,57 +6,55 @@ import com.ctre.phoenix6.signals.MotorAlignmentValue;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import edu.wpi.first.units.measure.*;
 
-/**
- * Configuration builder class for Motors.
- *
- * <p>Uses WPILib Units for all physical quantities.
- */
 public class MotorConfig {
 
-  // --- Hardware Limits ---
   public Current currentLimit = Amps.of(40);
   public boolean inverted = false;
   public IdleMode idleMode = IdleMode.kCoast;
   public Voltage nominalVoltage = Volts.of(12.0);
+  public double minOutput = -1.0;
+  public double maxOutput = 1.0;
 
   public int leaderMotorID = 0;
   public MotorAlignmentValue motorAlignment = MotorAlignmentValue.Aligned;
 
-  // --- Conversion Factors (dimensionless) ---
   public double positionConversionFactor = 1.0;
   public double velocityConversionFactor = 1.0;
 
-  // --- Soft Limits ---
   public boolean softLimitEnabled = false;
   public Angle minPosition = Rotations.of(0.0);
   public Angle maxPosition = Rotations.of(0.0);
   public boolean positionWrap = false;
 
-  // --- PID (Slot 0 Defaults) ---
-  public double kP = 0.0;
-  public double kI = 0.0;
-  public double kD = 0.0;
-  public double kF = 0.0;
-  public double kIZone = 0.0;
+  public final double[] kP = new double[4];
+  public final double[] kI = new double[4];
+  public final double[] kD = new double[4];
 
-  // --- Smart Motion / MaxMotion (Slot 0 Defaults) ---
-  public AngularVelocity maxMotionMaxVelocity = RotationsPerSecond.of(0.0);
-  public AngularAcceleration maxMotionMaxAcceleration = RotationsPerSecondPerSecond.of(0.0);
-  public Angle maxMotionAllowedClosedLoopError = Rotations.of(0.0);
+  public final double[] kS = new double[4];
+  public final double[] kV = new double[4];
+  public final double[] kA = new double[4];
+  public final double[] kG = new double[4];
 
-  // --- Feedback Sensor Configuration ---
+  public final AngularVelocity[] maxMotionMaxVelocity = new AngularVelocity[4];
+  public final AngularAcceleration[] maxMotionMaxAcceleration = new AngularAcceleration[4];
+  public final Angle[] maxMotionAllowedClosedLoopError = new Angle[4];
+
   public enum FeedbackSensorType {
-    INTERNAL, // Built-in Hall/NEO encoder
-    ALTERNATE, // External Quadrature on Data Port
-    ABSOLUTE_DATAPORT // External Absolute/DutyCycle on Data Port
+    INTERNAL,
+    ALTERNATE,
+    ABSOLUTE_DATAPORT
   }
 
   public FeedbackSensorType feedbackType = FeedbackSensorType.INTERNAL;
-  public int countsPerRevolution = 8192; // For Alternate Encoder (Through Bore)
+  public int countsPerRevolution = 8192;
 
-  // ---------------------------------------------------------------------------
-  // Fluent Configuration API
-  // ---------------------------------------------------------------------------
+  public MotorConfig() {
+    for (int i = 0; i < 4; i++) {
+      maxMotionMaxVelocity[i] = RotationsPerSecond.of(0.0);
+      maxMotionMaxAcceleration[i] = RotationsPerSecondPerSecond.of(0.0);
+      maxMotionAllowedClosedLoopError[i] = Rotations.of(0.0);
+    }
+  }
 
   public MotorConfig currentLimit(Current amps) {
     this.currentLimit = amps;
@@ -78,6 +76,12 @@ public class MotorConfig {
     return this;
   }
 
+  public MotorConfig outputRange(double min, double max) {
+    this.minOutput = min;
+    this.maxOutput = max;
+    return this;
+  }
+
   public MotorConfig nominalVoltage(Voltage v) {
     this.nominalVoltage = v;
     return this;
@@ -96,34 +100,34 @@ public class MotorConfig {
     return this;
   }
 
-  public MotorConfig pid(double p, double i, double d, double f) {
-    this.kP = p;
-    this.kI = i;
-    this.kD = d;
-    this.kF = f;
+  public MotorConfig pid(int slot, double p, double i, double d) {
+    this.kP[slot] = p;
+    this.kI[slot] = i;
+    this.kD[slot] = d;
     return this;
   }
 
-  public MotorConfig smartMotion(
-      AngularVelocity maxVel, AngularAcceleration maxAccel, Angle allowedError) {
-    this.maxMotionMaxVelocity = maxVel;
-    this.maxMotionMaxAcceleration = maxAccel;
-    this.maxMotionAllowedClosedLoopError = allowedError;
+  public MotorConfig svag(int slot, double s, double v, double a, double g) {
+    this.kS[slot] = s;
+    this.kV[slot] = v;
+    this.kA[slot] = a;
+    this.kG[slot] = g;
     return this;
   }
 
-  /**
-   * Configures the motor to use an Alternate Encoder (Quadrature) on the Data Port.
-   *
-   * @param cpr Counts per revolution (e.g., 8192 for REV Through Bore).
-   */
+  public MotorConfig smartMotion(int slot, AngularVelocity maxVel, AngularAcceleration maxAccel, Angle allowedError) {
+    this.maxMotionMaxVelocity[slot] = maxVel;
+    this.maxMotionMaxAcceleration[slot] = maxAccel;
+    this.maxMotionAllowedClosedLoopError[slot] = allowedError;
+    return this;
+  }
+
   public MotorConfig withAlternateEncoder(int cpr) {
     this.feedbackType = FeedbackSensorType.ALTERNATE;
     this.countsPerRevolution = cpr;
     return this;
   }
 
-  /** Configures the motor to use an Absolute Encoder (DutyCycle) on the Data Port. */
   public MotorConfig withAbsoluteEncoder() {
     this.feedbackType = FeedbackSensorType.ABSOLUTE_DATAPORT;
     return this;

@@ -4,6 +4,7 @@ import static edu.wpi.first.units.Units.Amps;
 import static edu.wpi.first.units.Units.Celsius;
 import static edu.wpi.first.units.Units.RadiansPerSecond;
 import static edu.wpi.first.units.Units.Rotations;
+import static edu.wpi.first.units.Units.RPM;
 import static edu.wpi.first.units.Units.RotationsPerSecond;
 import static edu.wpi.first.units.Units.RotationsPerSecondPerSecond;
 import static edu.wpi.first.units.Units.Volts;
@@ -16,311 +17,266 @@ import com.revrobotics.spark.ClosedLoopSlot;
 import com.revrobotics.spark.FeedbackSensor;
 import com.revrobotics.spark.SparkBase.ControlType;
 import com.revrobotics.spark.SparkClosedLoopController;
-import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
+import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.config.FeedForwardConfig;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
+
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.units.measure.Angle;
-import edu.wpi.first.units.measure.AngularAcceleration;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Current;
 import edu.wpi.first.units.measure.Voltage;
 import frc.lib.util.security.SparkUtil;
 
-/**
- * Implementation of {@link MotorIO} for REV Robotics Spark Max controllers. Handles Internal,
- * Alternate, and Absolute encoders for PID/MaxMotion.
- */
-public class MotorIOSparkMax implements MotorIO {
+public class MotorIOSparkMax extends MotorBase {
 
-  private final SparkMax motor;
-  private final SparkClosedLoopController closedLoopController;
-  private final SparkMaxConfig motorConfig = new SparkMaxConfig();
+    private final SparkMax motor;
+    private final SparkClosedLoopController closedLoopController;
+    private final SparkMaxConfig motorConfig;
+    private final MotorIOInputs inputs = new MotorIOInputs();
 
-  // Sensors (Only one will be actively used for main feedback, but we keep references)
-  private RelativeEncoder internalEncoder;
-  private RelativeEncoder alternateEncoder;
-  private AbsoluteEncoder absoluteEncoder;
+    // Sensores
+    private RelativeEncoder internalEncoder;
+    private RelativeEncoder externalEncoder;
+    private AbsoluteEncoder absoluteEncoder;
+    private final MotorConfig.FeedbackSensorType sensorType;
 
-  private final MotorConfig.FeedbackSensorType sensorType;
+    // Arrays para armazenar parâmetros de SVAG que não rodam nativos na malha do Spark
+    private final double[] kS = new double[4];
+    private final double[] kA = new double[4];
+    private final double[] kG = new double[4];
 
-  public MotorIOSparkMax(int id, MotorType type, MotorConfig config) {
-    motor = new SparkMax(id, type);
-    closedLoopController = motor.getClosedLoopController();
-    sensorType = config.feedbackType;
+    public MotorIOSparkMax(String name, int id, MotorType type, MotorConfig config, boolean tuningMode) {
+        // Inicializa o MotorBase (os métodos apply... chamados no super irão retornar silenciosamente pois motor == null)
+        super(name, tuningMode, config);
 
-    // --- Basic Config ---
-    motorConfig
-        .inverted(config.inverted)
-        .smartCurrentLimit((int) config.currentLimit.in(Amps))
-        .idleMode(config.idleMode)
-        .voltageCompensation(config.nominalVoltage.in(Volts));
+        this.motor = new SparkMax(id, type);
+        this.closedLoopController = motor.getClosedLoopController();
+        this.motorConfig = new SparkMaxConfig();
+        this.sensorType = config.feedbackType;
 
-    // --- Encoder & Feedback Selection ---
-    switch (config.feedbackType) {
-      case ALTERNATE -> {
-        // Configure Alternate Encoder (Quadrature on Data Port)
-        motorConfig
-            .alternateEncoder
-            .countsPerRevolution(config.countsPerRevolution)
-            .positionConversionFactor(config.positionConversionFactor)
-            .velocityConversionFactor(config.velocityConversionFactor);
+        // --- Configuração Básica ---
+        motorConfig.inverted(config.inverted)
+                   .smartCurrentLimit((int) config.currentLimit.in(Amps))
+                   .idleMode(config.idleMode)
+                   .voltageCompensation(config.nominalVoltage.in(Volts));
 
-        motorConfig.closedLoop.feedbackSensor(FeedbackSensor.kAlternateOrExternalEncoder);
-        alternateEncoder = motor.getAlternateEncoder();
-      }
-      case ABSOLUTE_DATAPORT -> {
-        // Configure Absolute Encoder (Duty Cycle on Data Port)
-        motorConfig
-            .absoluteEncoder
-            .positionConversionFactor(config.positionConversionFactor)
-            .velocityConversionFactor(config.velocityConversionFactor)
-            .zeroOffset(0.0);
-
-        motorConfig.closedLoop.feedbackSensor(FeedbackSensor.kAbsoluteEncoder);
-        absoluteEncoder = motor.getAbsoluteEncoder();
-      }
-      default -> {
-        // Internal NEO Encoder
-        motorConfig
-            .encoder
-            .positionConversionFactor(config.positionConversionFactor)
-            .velocityConversionFactor(config.velocityConversionFactor);
-
-        motorConfig.closedLoop.feedbackSensor(FeedbackSensor.kPrimaryEncoder);
-        internalEncoder = motor.getEncoder();
-      }
-    }
-
-    // --- PID & SmartMotion (Slot 0) ---
-    motorConfig
-        .closedLoop
-        .p(config.kP, ClosedLoopSlot.kSlot0)
-        .i(config.kI, ClosedLoopSlot.kSlot0)
-        .d(config.kD, ClosedLoopSlot.kSlot0)
-        .apply(new FeedForwardConfig().kV(config.kF, ClosedLoopSlot.kSlot0))
-        .outputRange(-1, 1, ClosedLoopSlot.kSlot0);
-
-    if (config.maxMotionMaxVelocity.in(RadiansPerSecond) > 0) {
-      motorConfig
-          .closedLoop
-          .maxMotion
-          .cruiseVelocity(
-              config.maxMotionMaxVelocity.in(RotationsPerSecond) * 60, ClosedLoopSlot.kSlot0)
-          .maxAcceleration(
-              config.maxMotionMaxAcceleration.in(RotationsPerSecondPerSecond) * 60,
-              ClosedLoopSlot.kSlot0)
-          .allowedProfileError(
-              config.maxMotionAllowedClosedLoopError.in(Rotations), ClosedLoopSlot.kSlot0);
-    }
-
-    // --- Soft Limits ---
-    if (config.softLimitEnabled) {
-      motorConfig
-          .softLimit
-          .forwardSoftLimitEnabled(true)
-          .forwardSoftLimit(config.maxPosition.in(Rotations))
-          .reverseSoftLimitEnabled(true)
-          .reverseSoftLimit(config.minPosition.in(Rotations));
-    }
-
-    // --- Wrapping ---
-    if (config.positionWrap) {
-      motorConfig
-          .closedLoop
-          .positionWrappingEnabled(true)
-          .positionWrappingInputRange(
-              config.minPosition.in(Rotations), config.maxPosition.in(Rotations));
-    }
-
-    // APLICANDO TryUntilOk NA CONFIGURAÇÃO INICIAL
-    SparkUtil.tryUntilOk(
-        motor,
-        5,
-        () ->
-            motor.configure(
-                motorConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters));
-  }
-
-  @Override
-  public void updateInputs(MotorIOInputs inputs) {
-    // Read from the configured active sensor
-    switch (sensorType) {
-      case ALTERNATE -> {
-        if (alternateEncoder != null) {
-          inputs.position = Rotations.of(alternateEncoder.getPosition());
-          inputs.velocity =
-              RadiansPerSecond.of(
-                  Units.rotationsPerMinuteToRadiansPerSecond(alternateEncoder.getVelocity()));
+        // --- Seleção de Encoder ---
+        switch (config.feedbackType) {
+            case ALTERNATE -> {
+                motorConfig.alternateEncoder.countsPerRevolution(config.countsPerRevolution)
+                           .positionConversionFactor(config.positionConversionFactor)
+                           .velocityConversionFactor(config.velocityConversionFactor);
+                motorConfig.closedLoop.feedbackSensor(FeedbackSensor.kAlternateOrExternalEncoder);
+                externalEncoder = motor.getAlternateEncoder();
+            }
+            case ABSOLUTE_DATAPORT -> {
+                motorConfig.absoluteEncoder.positionConversionFactor(config.positionConversionFactor)
+                           .velocityConversionFactor(config.velocityConversionFactor)
+                           .zeroOffset(0.0);
+                motorConfig.closedLoop.feedbackSensor(FeedbackSensor.kAbsoluteEncoder);
+                absoluteEncoder = motor.getAbsoluteEncoder();
+            }
+            default -> {
+                motorConfig.encoder.positionConversionFactor(config.positionConversionFactor)
+                           .velocityConversionFactor(config.velocityConversionFactor);
+                motorConfig.closedLoop.feedbackSensor(FeedbackSensor.kPrimaryEncoder);
+                internalEncoder = motor.getEncoder();
+            }
         }
-      }
-      case ABSOLUTE_DATAPORT -> {
-        if (absoluteEncoder != null) {
-          inputs.position = Rotations.of(absoluteEncoder.getPosition());
-          inputs.velocity =
-              RadiansPerSecond.of(
-                  Units.rotationsPerMinuteToRadiansPerSecond(absoluteEncoder.getVelocity()));
+
+        // --- Injeção Inicial de PID/SVAG/SmartMotion (Todos os Slots) ---
+        for (int i = 0; i < 4; i++) {
+            ClosedLoopSlot slot = resolveSlot(i);
+            motorConfig.closedLoop.p(config.kP[i], slot)
+                                  .i(config.kI[i], slot)
+                                  .d(config.kD[i], slot)
+                                  .outputRange(config.minOutput, config.maxOutput, slot)
+                                  .apply(new FeedForwardConfig().kV(config.kV[i], slot));
+
+            // Salva kS, kA e kG para processamento de Arbitrary FF nas chamadas de controle
+            this.kS[i] = config.kS[i];
+            this.kA[i] = config.kA[i];
+            this.kG[i] = config.kG[i];
+
+            // Configuração do MAXMotion
+            if (config.maxMotionMaxVelocity[i].in(RadiansPerSecond) > 0) {
+                double rpm = config.maxMotionMaxVelocity[i].in(RotationsPerSecond) * 60.0;
+                double rpmPerSec = config.maxMotionMaxAcceleration[i].in(RotationsPerSecondPerSecond) * 60.0;
+                motorConfig.closedLoop.maxMotion.cruiseVelocity(rpm, slot)
+                                                .maxAcceleration(rpmPerSec, slot)
+                                                .allowedProfileError(config.maxMotionAllowedClosedLoopError[i].in(Rotations), slot);
+            }
         }
-      }
-      default -> {
-        if (internalEncoder != null) {
-          inputs.position = Rotations.of(internalEncoder.getPosition());
-          inputs.velocity =
-              RadiansPerSecond.of(
-                  Units.rotationsPerMinuteToRadiansPerSecond(internalEncoder.getVelocity()));
+
+        // --- Soft Limits e Wrapping ---
+        if (config.softLimitEnabled) {
+            motorConfig.softLimit.forwardSoftLimitEnabled(true)
+                                 .forwardSoftLimit(config.maxPosition.in(Rotations))
+                                 .reverseSoftLimitEnabled(true)
+                                 .reverseSoftLimit(config.minPosition.in(Rotations));
         }
-      }
+
+        if (config.positionWrap) {
+            motorConfig.closedLoop.positionWrappingEnabled(true)
+                                  .positionWrappingInputRange(config.minPosition.in(Rotations), config.maxPosition.in(Rotations));
+        }
+
+        // --- Push final das configurações para o Hardware ---
+        applyConfig(true);
     }
 
-    inputs.appliedVolts = Volts.of(motor.getAppliedOutput() * motor.getBusVoltage());
-    inputs.current = Amps.of(motor.getOutputCurrent());
-    inputs.temperature = Celsius.of(motor.getMotorTemperature());
-    inputs.isConnected = !motor.hasActiveFault();
+    @Override
+    protected void updateHardwareInputs(MotorIOInputs inputs) {
+        switch (sensorType) {
+            case ALTERNATE -> {
+                if (externalEncoder != null) {
+                    inputs.position = Rotations.of(externalEncoder.getPosition());
+                    inputs.velocity = RadiansPerSecond.of(Units.rotationsPerMinuteToRadiansPerSecond(externalEncoder.getVelocity()));
+                }
+            }
+            case ABSOLUTE_DATAPORT -> {
+                if (absoluteEncoder != null) {
+                    inputs.position = Rotations.of(absoluteEncoder.getPosition());
+                    inputs.velocity = RadiansPerSecond.of(Units.rotationsPerMinuteToRadiansPerSecond(absoluteEncoder.getVelocity()));
+                }
+            }
+            default -> {
+                if (internalEncoder != null) {
+                    inputs.position = Rotations.of(internalEncoder.getPosition());
+                    inputs.velocity = RadiansPerSecond.of(Units.rotationsPerMinuteToRadiansPerSecond(internalEncoder.getVelocity()));
+                }
+            }
+        }
 
-    if (motor.hasActiveFault()) {
-      inputs.activeFaults = MotorFaults.getSparkFaults(motor);
-    } else {
-      inputs.activeFaults = new String[] {};
+        inputs.appliedVolts = Volts.of(motor.getAppliedOutput() * motor.getBusVoltage());
+        inputs.current = Amps.of(motor.getOutputCurrent());
+        inputs.temperature = Celsius.of(motor.getMotorTemperature());
+        inputs.isConnected = !motor.hasActiveFault();
+        inputs.activeFaults = motor.hasActiveFault() ? frc.lib.interfaces.motor.MotorFaults.getSparkFaults(motor) : new String[]{};
     }
-  }
 
-  @Override
-  public void setPercentOutput(double percentOutput) {
-    motor.set(percentOutput);
-  }
+    // --- Controle de Movimento com Arbitrary FF Injetado ---
 
-  @Override
-  public void setOffset(Angle offset) {
-    motor.getEncoder().setPosition(offset.in(Rotations));
-  }
+    @Override
+    public void runVelocity(AngularVelocity velocity) {
+        double velocityRPM = velocity.in(RPM);
+        // Aplica atrito estático (kS) respeitando a direção do movimento + Gravidade (kG)
+        double arbFF = (kS[0] * Math.signum(velocityRPM)) + kG[0];
 
-  @Override
-  public void setVoltage(Voltage volts) {
-    motor.setVoltage(volts);
-  }
+        closedLoopController.setSetpoint(
+            velocityRPM, ControlType.kVelocity, ClosedLoopSlot.kSlot0, arbFF, SparkClosedLoopController.ArbFFUnits.kVoltage
+        );
+    }
 
-  @Override
-  public void stop() {
-    motor.stopMotor();
-  }
+    @Override
+    public void runPosition(Angle position) {
+        // Para posição, injetamos a gravidade (kG) para manter braços/elevadores parados.
+        closedLoopController.setSetpoint(
+            position.in(Rotations), ControlType.kPosition, ClosedLoopSlot.kSlot0, kG[0], SparkClosedLoopController.ArbFFUnits.kVoltage
+        );
+    }
 
-  @Override
-  public void runVelocity(AngularVelocity velocity, int slotId, Voltage arbFF) {
-    double velocityRPM = Units.radiansPerSecondToRotationsPerMinute(velocity.in(RadiansPerSecond));
-    closedLoopController.setSetpoint(
-        velocityRPM,
-        ControlType.kVelocity,
-        resolveSlot(slotId),
-        arbFF.in(Volts),
-        SparkClosedLoopController.ArbFFUnits.kVoltage);
-  }
+    @Override
+    public void runSmartPosition(Angle position) {
+        closedLoopController.setSetpoint(
+            position.in(Rotations), ControlType.kMAXMotionPositionControl, ClosedLoopSlot.kSlot0, kG[0], SparkClosedLoopController.ArbFFUnits.kVoltage
+        );
+    }
 
-  @Override
-  public void runPosition(Angle position, int slotId, Voltage arbFF) {
-    closedLoopController.setSetpoint(
-        position.in(Rotations),
-        ControlType.kPosition,
-        resolveSlot(slotId),
-        arbFF.in(Volts),
-        SparkClosedLoopController.ArbFFUnits.kVoltage);
-  }
+    // --- Controles de Baixo Nível ---
 
-  @Override
-  public void runSmartPosition(Angle position, int slotId, Voltage arbFF) {
-    closedLoopController.setSetpoint(
-        position.in(Rotations),
-        ControlType.kMAXMotionPositionControl,
-        resolveSlot(slotId),
-        arbFF.in(Volts),
-        SparkClosedLoopController.ArbFFUnits.kVoltage);
-  }
+    @Override
+    public void runVoltage(Voltage volts) {
+        motor.setVoltage(volts.in(Volts));
+    }
 
-  @Override
-  public void setBrakeMode(boolean enabled) {
-    motorConfig.idleMode(enabled ? IdleMode.kBrake : IdleMode.kCoast);
-    SparkUtil.tryUntilOk(
-        motor,
-        5,
-        () ->
-            motor.configure(
-                motorConfig, ResetMode.kNoResetSafeParameters, PersistMode.kNoPersistParameters));
-  }
+    @Override
+    public void runPercentOutput(Voltage percent) {
+        motor.set(percent.in(Volts)); 
+    }
 
-  @Override
-  public void configurePIDF(int slotId, double kP, double kI, double kD, double kF) {
-    ClosedLoopSlot slot = resolveSlot(slotId);
+    @Override
+    public void stop() {
+        motor.stopMotor();
+    }
 
-    motorConfig
-        .closedLoop
-        .p(kP, slot)
-        .i(kI, slot)
-        .d(kD, slot)
-        .apply(new FeedForwardConfig().kV(kF, slot));
+    @Override
+    public void setOffset(Angle offset) {
+        if (internalEncoder != null) internalEncoder.setPosition(offset.in(Rotations));
+        if (externalEncoder != null) externalEncoder.setPosition(offset.in(Rotations));
+    }
 
-    SparkUtil.tryUntilOk(
-        motor,
-        5,
-        () ->
-            motor.configure(
-                motorConfig, ResetMode.kNoResetSafeParameters, PersistMode.kPersistParameters));
-  }
+    // --- Atualização de Hardware via Dashboard (Tuning) ---
 
-  @Override
-  public void setCurrentLimit(Current current) {
-    motorConfig.smartCurrentLimit((int) current.in(Amps));
-    motor.configure(motorConfig, ResetMode.kNoResetSafeParameters, PersistMode.kPersistParameters);
-  }
+    @Override
+    public void setBrakeMode(boolean enabled) {
+        if (motor == null) return; // Previne NullPointer no Super
+        motorConfig.idleMode(enabled ? IdleMode.kBrake : IdleMode.kCoast);
+        applyConfig(false);
+    }
 
-  @Override
-  public void setVoltageCompensation(Voltage voltage) {
-    motorConfig.voltageCompensation(voltage.in(Volts));
-    motor.configure(motorConfig, ResetMode.kNoResetSafeParameters, PersistMode.kPersistParameters);
-  }
+    @Override
+    public void setCurrentLimit(Current current) {
+        if (motor == null) return;
+        motorConfig.smartCurrentLimit((int) current.in(Amps));
+        applyConfig(false);
+    }
 
-  @Override
-  public void setMaxOutputSlot(double maxOutput, int slotId) {
-    ClosedLoopSlot slot = resolveSlot(slotId);
+    @Override
+    public void applyHardwarePID(int slot, double p, double i, double d) {
+        if (motor == null) return;
+        motorConfig.closedLoop.p(p, resolveSlot(slot)).i(i, resolveSlot(slot)).d(d, resolveSlot(slot));
+        applyConfig(false);
+    }
 
-    motorConfig.closedLoop.maxOutput(maxOutput, slot);
+    @Override
+    public void applyHardwareSVAG(int slot, double s, double v, double a, double g) {
+        if (motor == null) return;
+        this.kS[slot] = s;
+        this.kA[slot] = a;
+        this.kG[slot] = g;
+        motorConfig.closedLoop.apply(new FeedForwardConfig().kV(v, resolveSlot(slot)));
+        applyConfig(false);
+    }
 
-    SparkUtil.tryUntilOk(
-        motor,
-        5,
-        () ->
-            motor.configure(
-                motorConfig, ResetMode.kNoResetSafeParameters, PersistMode.kPersistParameters));
-  }
+    @Override
+    public void applyHardwareSmartMotion(int slot, double maxVel, double maxAccel, double allowedErr) {
+        if (motor == null) return;
+        ClosedLoopSlot revSlot = resolveSlot(slot);
+        motorConfig.closedLoop.maxMotion.cruiseVelocity(maxVel * 60.0, revSlot)
+                                        .maxAcceleration(maxAccel * 60.0, revSlot)
+                                        .allowedProfileError(allowedErr, revSlot);
+        applyConfig(false);
+    }
 
-  @Override
-  public void configureSmartMotion(
-      int slotId, AngularVelocity maxVel, AngularAcceleration maxAccel, Angle allowedError) {
-    ClosedLoopSlot slot = resolveSlot(slotId);
-    double rpm = Units.radiansPerSecondToRotationsPerMinute(maxVel.in(RadiansPerSecond));
-    double rotPerSec = maxAccel.in(RotationsPerSecondPerSecond);
-    double rpmPerSecond = rotPerSec * 60.0;
+    @Override
+    public void applyHardwareOutputRange(int slot, double min, double max) {
+        if (motor == null) return;
+        motorConfig.closedLoop.outputRange(min, max, resolveSlot(slot));
+        applyConfig(false);
+    }
 
-    motorConfig
-        .closedLoop
-        .maxMotion
-        .cruiseVelocity(rpm, slot)
-        .maxAcceleration(rpmPerSecond, slot)
-        .allowedProfileError(allowedError.abs(Rotations), slot);
-    SparkUtil.tryUntilOk(
-        motor,
-        5,
-        () ->
-            motor.configure(
-                motorConfig, ResetMode.kNoResetSafeParameters, PersistMode.kPersistParameters));
-  }
+    @Override
+    public MotorIOInputs getMotorIOInputs() {
+        return inputs;
+    }
 
-  private ClosedLoopSlot resolveSlot(int slotId) {
-    return switch (slotId) {
-      case 1 -> ClosedLoopSlot.kSlot1;
-      case 2 -> ClosedLoopSlot.kSlot2;
-      case 3 -> ClosedLoopSlot.kSlot3;
-      default -> ClosedLoopSlot.kSlot0;
-    };
-  }
+    // --- Utilidades ---
+
+    private void applyConfig(boolean isInit) {
+        ResetMode resetMode = isInit ? ResetMode.kResetSafeParameters : ResetMode.kNoResetSafeParameters;
+        SparkUtil.tryUntilOk(motor, 5, () -> motor.configure(motorConfig, resetMode, PersistMode.kPersistParameters));
+    }
+
+    private ClosedLoopSlot resolveSlot(int slotId) {
+        return switch (slotId) {
+            case 1 -> ClosedLoopSlot.kSlot1;
+            case 2 -> ClosedLoopSlot.kSlot2;
+            case 3 -> ClosedLoopSlot.kSlot3;
+            default -> ClosedLoopSlot.kSlot0;
+        };
+    }
 }

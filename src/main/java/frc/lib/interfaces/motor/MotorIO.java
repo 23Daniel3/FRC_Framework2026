@@ -6,12 +6,6 @@ import edu.wpi.first.units.measure.*;
 import org.littletonrobotics.junction.LogTable;
 import org.littletonrobotics.junction.inputs.LoggableInputs;
 
-/**
- * Hardware abstraction interface for motor controllers (IO Layer).
- *
- * <p>This interface defines standard interactions including PID slots, SmartMotion, and FeedForward
- * control.
- */
 public interface MotorIO {
 
   public static class MotorIOInputs implements LoggableInputs {
@@ -46,115 +40,33 @@ public interface MotorIO {
     }
   }
 
-  /** Updates the input object with the latest hardware data. */
-  public default void updateInputs(MotorIOInputs inputs) {}
+  void updateInputs(MotorIOInputs inputs);
 
-  // --- Basic Control ---
+  void setBrakeMode(boolean enabled);
 
-  /** Sets the motor output percentage (-1.0 to 1.0). */
-  public default void setPercentOutput(double percentOutput) {}
+  void setOffset(Angle offset);
 
-  /** Sets the motor output voltage. */
-  public default void setVoltage(Voltage volts) {}
+  void runVoltage(Voltage volts);
 
-  /** Stops the motor immediately. */
-  public default void stop() {}
+  void runPercentOutput(Voltage volts);
 
-  /** Sets the idle mode (Brake/Coast). */
-  public default void setBrakeMode(boolean enabled) {}
+  void runVelocity(AngularVelocity velocity);
 
-  /** Sets the encoder position/offset. */
-  public default void setOffset(Angle offset) {}
+  void runPosition(Angle position);
 
-  /** Gets the absolute encoder position directly (use sparingly). */
-  public default Angle getAbsEncoderPosition() {
-    return Rotations.of(0.0);
-  }
+  void runSmartPosition(Angle position);
 
-  // --- Closed Loop Control (Simplified) ---
+  void stop();
 
-  /** Runs velocity control on Slot 0. */
-  public default void runVelocity(AngularVelocity velocity) {
-    runVelocity(velocity, 0, Volts.of(0.0));
-  }
+  void applyHardwarePID(int slot, double p, double i, double d);
 
-  /** Runs position control on Slot 0. */
-  public default void runPosition(Angle position) {
-    runPosition(position, 0, Volts.of(0.0));
-  }
+  void applyHardwareSVAG(int slot, double s, double v, double a, double g);
 
-  /** Runs SmartMotion (MaxMotion) to a position on Slot 0. */
-  public default void runSmartPosition(Angle position) {
-    runSmartPosition(position, 0, Volts.of(0.0));
-  }
+  void applyHardwareSmartMotion(int slot, double maxVel, double maxAccel, double allowedErr);
 
-  // --- Closed Loop Control (Advanced with Slots & FeedForward) ---
+  void applyHardwareOutputRange(int slot, double min, double max);
 
-  /**
-   * Runs velocity control.
-   *
-   * @param velocity Target velocity.
-   * @param slotId PID Slot index (0-3).
-   * @param arbFF Arbitrary FeedForward voltage.
-   */
-  public default void runVelocity(AngularVelocity velocity, int slotId, Voltage arbFF) {}
+  void setCurrentLimit(Current current);
 
-  /**
-   * Runs position control.
-   *
-   * @param position Target position.
-   * @param slotId PID Slot index (0-3).
-   * @param arbFF Arbitrary FeedForward voltage.
-   */
-  public default void runPosition(Angle position, int slotId, Voltage arbFF) {}
-
-  /**
-   * Runs SmartMotion (MaxMotion) control to a target position.
-   *
-   * @param position Target position.
-   * @param slotId PID Slot index (0-3).
-   * @param arbFF Arbitrary FeedForward voltage.
-   */
-  public default void runSmartPosition(Angle position, int slotId, Voltage arbFF) {}
-
-  // --- Configuration Methods ---
-
-  /**
-   * Configures PIDF constants for a specific slot.
-   *
-   * @param slotId The slot index (0-3).
-   * @param kP Proportional gain.
-   * @param kI Integral gain.
-   * @param kD Derivative gain.
-   * @param kF Feed-forward gain.
-   */
-  public default void configurePIDF(int slotId, double kP, double kI, double kD, double kF) {}
-
-  public default void configureKSVA(int slotId, double kS, double kV, double kA) {}
-
-  public default void setMaxOutputSlot(double maxOutput, int slot) {}
-
-  public default void setCurrentLimit(Current current) {}
-  ;
-
-  public default void setVoltageCompensation(Voltage voltage) {}
-  ;
-
-  /**
-   * Configures SmartMotion (MaxMotion) parameters for a specific slot.
-   *
-   * @param slotId The slot index (0-3).
-   * @param maxVel Maximum velocity.
-   * @param maxAccel Maximum acceleration.
-   * @param allowedError Allowed closed-loop error.
-   */
-  public default void configureSmartMotion(
-      int slotId, AngularVelocity maxVel, AngularAcceleration maxAccel, Angle allowedError) {}
-
-  /** Helper to get populated inputs. */
-  public default MotorIOInputs getMotorIOInputs() {
-    MotorIOInputs inputs = new MotorIOInputs();
-    updateInputs(inputs);
-    return inputs;
-  }
+  MotorIOInputs getMotorIOInputs();
 }
