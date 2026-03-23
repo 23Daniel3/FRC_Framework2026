@@ -1,0 +1,182 @@
+{
+  "hubs": [
+    {
+      "x": -8,
+      "y": -8,
+      "width": 1619,
+      "height": 869,
+      "state": {
+        "sidebar": {
+          "width": 500,
+          "expanded": [
+            "/RealOutputs",
+            "/RealOutputs/Subsystems",
+            "/RealOutputs/Subsystems/Drivetrain",
+            "/RealOutputs/Subsystems/Drivetrain/Odometry",
+            "/RealOutputs/Subsystems/Drivetrain/DriveState/Module/0",
+            "/RealOutputs/Subsystems/Vision",
+            "/NetworkInputs",
+            "/DriverStation",
+            "/DriverStation/Joystick0",
+            "/DriverStation/Joystick1",
+            "/RealOutputs/Zones",
+            "/RealOutputs/FSM",
+            "/RealOutputs/FSM/DriveToNext",
+            "/RealOutputs/FSM/DriveToPrevious"
+          ]
+        },
+        "tabs": {
+          "selected": 2,
+          "tabs": [
+            {
+              "type": 0,
+              "title": "",
+              "controller": null,
+              "controllerUUID": "sg7gjvlsfygc6n9q2xxhzlprrti8h5x7",
+              "renderer": "",
+              "controlsHeight": 0
+            },
+            {
+              "type": 1,
+              "title": "Line Graph",
+              "controller": {
+                "leftSources": [],
+                "rightSources": [],
+                "discreteSources": [],
+                "leftLockedRange": null,
+                "rightLockedRange": null,
+                "leftUnitConversion": {
+                  "autoTarget": null,
+                  "preset": null
+                },
+                "rightUnitConversion": {
+                  "autoTarget": null,
+                  "preset": null
+                },
+                "leftFilter": 0,
+                "rightFilter": 0
+              },
+              "controllerUUID": "i4hwrzo6g0ohg59wqt7su7tjiwkbenam",
+              "renderer": null,
+              "controlsHeight": 200
+            },
+            {
+              "type": 2,
+              "title": "2D Field",
+              "controller": {
+                "sources": [
+                  {
+                    "type": "robot",
+                    "logKey": "/RealOutputs/Subsystems/Drivetrain/Odometry/Pose",
+                    "logType": "Pose2d",
+                    "visible": true,
+                    "options": {
+                      "bumpers": ""
+                    }
+                  },
+                  {
+                    "type": "trajectory",
+                    "logKey": "/RealOutputs//Zones/Trench_left_blue",
+                    "logType": "Pose2d[]",
+                    "visible": true,
+                    "options": {
+                      "color": "#00ff00",
+                      "size": "normal"
+                    }
+                  },
+                  {
+                    "type": "trajectory",
+                    "logKey": "/RealOutputs//Zones/Trench_right_blue",
+                    "logType": "Pose2d[]",
+                    "visible": true,
+                    "options": {
+                      "color": "#00ff00",
+                      "size": "normal"
+                    }
+                  },
+                  {
+                    "type": "trajectory",
+                    "logKey": "/RealOutputs//Zones/Trench_left_red",
+                    "logType": "Pose2d[]",
+                    "visible": true,
+                    "options": {
+                      "color": "#00ff00",
+                      "size": "normal"
+                    }
+                  },
+                  {
+                    "type": "trajectory",
+                    "logKey": "/RealOutputs//Zones/Trench_right_red",
+                    "logType": "Pose2d[]",
+                    "visible": true,
+                    "options": {
+                      "color": "#00ff00",
+                      "size": "normal"
+                    }
+                  }
+                ],
+                "field": "FRC:2026 Field",
+                "orientation": 3,
+                "size": "large"
+              },
+              "controllerUUID": "1it0yw8zxum8r7en4ue9hb5eqrcc431b",
+              "renderer": null,
+              "controlsHeight": 241
+            },
+            {
+              "type": 3,
+              "title": "3D Field",
+              "controller": {
+                "sources": [
+                  {
+                    "type": "robot",
+                    "logKey": "/RealOutputs/Subsystems/Drivetrain/Odometry/Pose",
+                    "logType": "Pose2d",
+                    "visible": true,
+                    "options": {
+                      "model": "Robot 2025"
+                    }
+                  }
+                ],
+                "game": "FRC:2026 Field"
+              },
+              "controllerUUID": "roy2u1m5jm4h11jzseqhcflbfm8vpq61",
+              "renderer": {
+                "cameraIndex": -1,
+                "orbitFov": 50,
+                "cameraPosition": [
+                  8.90340148944767,
+                  1.4339623583783223,
+                  0.9341149036249838
+                ],
+                "cameraTarget": [
+                  -4.2702833384046,
+                  0.3524271937541796,
+                  1.1418452745183552
+                ]
+              },
+              "controlsHeight": 200
+            },
+            {
+              "type": 8,
+              "title": "Joysticks",
+              "controller": [
+                "Xbox Controller (Black)",
+                "None",
+                "None",
+                "None",
+                "None",
+                "None"
+              ],
+              "controllerUUID": "8i95sjd5z2ybbyf86n3nmoqfsu5gtyht",
+              "renderer": null,
+              "controlsHeight": 85
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "satellites": [],
+  "version": "26.0.0"
+}

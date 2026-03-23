@@ -1,0 +1,149 @@
+{
+  "version": 1.0,
+  "grid_size": 12,
+  "tabs": [
+    {
+      "name": "Teleoperado",
+      "grid_layout": {
+        "layouts": [],
+        "containers": [
+          {
+            "title": "Tempo Restante",
+            "x": 948.0,
+            "y": 0.0,
+            "width": 408.0,
+            "height": 252.0,
+            "type": "Match Time",
+            "properties": {
+              "topic": "/AdvantageKit/RealOutputs/GameInfo/MatchTime",
+              "period": 0.06,
+              "data_type": "double",
+              "time_display_mode": "Minutes and Seconds",
+              "red_start_time": 10,
+              "yellow_start_time": 20
+            }
+          },
+          {
+            "title": "Alerta 5 Segundos",
+            "x": 948.0,
+            "y": 252.0,
+            "width": 408.0,
+            "height": 324.0,
+            "type": "Boolean Box",
+            "properties": {
+              "topic": "/AdvantageKit/RealOutputs/Alerta 5 Segundos",
+              "period": 0.06,
+              "data_type": "boolean",
+              "true_color": 4293921290,
+              "false_color": 4278190080,
+              "true_icon": "None",
+              "false_icon": "None"
+            }
+          },
+          {
+            "title": "Tempo Restante da Janela",
+            "x": 504.0,
+            "y": 0.0,
+            "width": 444.0,
+            "height": 252.0,
+            "type": "Match Time",
+            "properties": {
+              "topic": "/AdvantageKit/RealOutputs/Tempo Restante Janela",
+              "period": 0.06,
+              "data_type": "double",
+              "time_display_mode": "Seconds Only",
+              "red_start_time": 5,
+              "yellow_start_time": 10
+            }
+          },
+          {
+            "title": "Minha Aliança",
+            "x": 0.0,
+            "y": 0.0,
+            "width": 168.0,
+            "height": 120.0,
+            "type": "Large Text Display",
+            "properties": {
+              "topic": "/AdvantageKit/RealOutputs/ShootingLogic/MyAllianceChar",
+              "period": 0.06,
+              "data_type": "string"
+            }
+          },
+          {
+            "title": "Pose",
+            "x": 0.0,
+            "y": 252.0,
+            "width": 492.0,
+            "height": 264.0,
+            "type": "Field",
+            "properties": {
+              "topic": "/Pose",
+              "period": 0.06,
+              "field_game": "Rebuilt (No Fuel)",
+              "robot_width": 0.85,
+              "robot_length": 0.85,
+              "show_other_objects": true,
+              "show_trajectories": true,
+              "field_rotation": 0.0,
+              "robot_color": 4294198070,
+              "trajectory_color": 4294967295,
+              "show_robot_outside_widget": true
+            }
+          },
+          {
+            "title": "Auto_Chooser",
+            "x": 0.0,
+            "y": 120.0,
+            "width": 504.0,
+            "height": 132.0,
+            "type": "ComboBox Chooser",
+            "properties": {
+              "topic": "/SmartDashboard/Auto_Chooser",
+              "period": 0.06,
+              "sort_options": false
+            }
+          },
+          {
+            "title": "Desligar Visão",
+            "x": 348.0,
+            "y": 0.0,
+            "width": 156.0,
+            "height": 120.0,
+            "type": "ComboBox Chooser",
+            "properties": {
+              "topic": "/SmartDashboard/Desligar Visão",
+              "period": 0.06,
+              "sort_options": false
+            }
+          },
+          {
+            "title": "Side_Chooser",
+            "x": 168.0,
+            "y": 0.0,
+            "width": 180.0,
+            "height": 120.0,
+            "type": "ComboBox Chooser",
+            "properties": {
+              "topic": "/SmartDashboard/Side_Chooser",
+              "period": 0.06,
+              "sort_options": false
+            }
+          },
+          {
+            "title": "limelight-left",
+            "x": 492.0,
+            "y": 252.0,
+            "width": 456.0,
+            "height": 336.0,
+            "type": "Camera Stream",
+            "properties": {
+              "topic": "/CameraPublisher/limelight-left",
+              "period": 0.06,
+              "rotation_turns": 0
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
