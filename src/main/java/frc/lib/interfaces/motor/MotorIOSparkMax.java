@@ -43,25 +43,26 @@ public class MotorIOSparkMax extends MotorBase {
     private AbsoluteEncoder absoluteEncoder;
     private final MotorConfig.FeedbackSensorType sensorType;
 
-    // Arrays para armazenar parâmetros de SVAG que não rodam nativos na malha do Spark
-    private final double[] kS = new double[4];
-    private final double[] kA = new double[4];
-    private final double[] kG = new double[4];
-
-    public MotorIOSparkMax(String name, int id, MotorType type, MotorConfig config, boolean tuningMode) {
+    public MotorIOSparkMax(String name, int id, MotorType type, MotorConfig config) {
         // Inicializa o MotorBase (os métodos apply... chamados no super irão retornar silenciosamente pois motor == null)
-        super(name, tuningMode, config);
+        super(name, config);
 
         this.motor = new SparkMax(id, type);
         this.closedLoopController = motor.getClosedLoopController();
         this.motorConfig = new SparkMaxConfig();
         this.sensorType = config.feedbackType;
 
+                // --- Configure Follower Motor
+        if (config.leaderMotorID != 0) {
+            motorConfig.follow(config.leaderMotorID, config.followerInverted);
+        }
+
         // --- Configuração Básica ---
         motorConfig.inverted(config.inverted)
                    .smartCurrentLimit((int) config.currentLimit.in(Amps))
                    .idleMode(config.idleMode)
-                   .voltageCompensation(config.nominalVoltage.in(Volts));
+                   .voltageCompensation(config.nominalVoltage.in(Volts))
+                    .closedLoop.outputRange(config.minOutput, config.maxOutput);
 
         // --- Seleção de Encoder ---
         switch (config.feedbackType) {
@@ -96,11 +97,6 @@ public class MotorIOSparkMax extends MotorBase {
                                   .outputRange(config.minOutput, config.maxOutput, slot)
                                   .apply(new FeedForwardConfig().kV(config.kV[i], slot));
 
-            // Salva kS, kA e kG para processamento de Arbitrary FF nas chamadas de controle
-            this.kS[i] = config.kS[i];
-            this.kA[i] = config.kA[i];
-            this.kG[i] = config.kG[i];
-
             // Configuração do MAXMotion
             if (config.maxMotionMaxVelocity[i].in(RadiansPerSecond) > 0) {
                 double rpm = config.maxMotionMaxVelocity[i].in(RotationsPerSecond) * 60.0;
@@ -126,6 +122,10 @@ public class MotorIOSparkMax extends MotorBase {
 
         // --- Push final das configurações para o Hardware ---
         applyConfig(true);
+
+        
+        if (internalEncoder != null) internalEncoder.setPosition(0);
+        if (externalEncoder != null) externalEncoder.setPosition(0);
     }
 
     @Override
@@ -163,27 +163,44 @@ public class MotorIOSparkMax extends MotorBase {
     @Override
     public void runVelocity(AngularVelocity velocity) {
         double velocityRPM = velocity.in(RPM);
-        // Aplica atrito estático (kS) respeitando a direção do movimento + Gravidade (kG)
-        double arbFF = (kS[0] * Math.signum(velocityRPM)) + kG[0];
 
         closedLoopController.setSetpoint(
-            velocityRPM, ControlType.kVelocity, ClosedLoopSlot.kSlot0, arbFF, SparkClosedLoopController.ArbFFUnits.kVoltage
+            velocityRPM, ControlType.kVelocity, ClosedLoopSlot.kSlot0
         );
     }
 
     @Override
     public void runPosition(Angle position) {
-        // Para posição, injetamos a gravidade (kG) para manter braços/elevadores parados.
-        closedLoopController.setSetpoint(
-            position.in(Rotations), ControlType.kPosition, ClosedLoopSlot.kSlot0, kG[0], SparkClosedLoopController.ArbFFUnits.kVoltage
-        );
+        closedLoopController.setSetpoint(position.in(Rotations), ControlType.kPosition, ClosedLoopSlot.kSlot0);
     }
 
     @Override
     public void runSmartPosition(Angle position) {
+        closedLoopController.setSetpoint(position.in(Rotations), ControlType.kMAXMotionPositionControl, ClosedLoopSlot.kSlot0);
+    }
+
+    @Override
+    public void runVelocity(AngularVelocity velocity, int slot) {
+        ClosedLoopSlot resolvedSlot = resolveSlot(slot);
+        double velocityRPM = velocity.in(RPM);
+
         closedLoopController.setSetpoint(
-            position.in(Rotations), ControlType.kMAXMotionPositionControl, ClosedLoopSlot.kSlot0, kG[0], SparkClosedLoopController.ArbFFUnits.kVoltage
+            velocityRPM, ControlType.kVelocity, resolvedSlot
         );
+    }
+
+    @Override
+    public void runPosition(Angle position, int slot) {
+        ClosedLoopSlot resolvedSlot = resolveSlot(slot);
+
+        closedLoopController.setSetpoint(position.in(Rotations), ControlType.kPosition, resolvedSlot);
+    }
+
+    @Override
+    public void runSmartPosition(Angle position, int slot) {
+        ClosedLoopSlot resolvedSlot = resolveSlot(slot);
+
+        closedLoopController.setSetpoint(position.in(Rotations), ControlType.kMAXMotionPositionControl, resolvedSlot);
     }
 
     // --- Controles de Baixo Nível ---
@@ -194,8 +211,8 @@ public class MotorIOSparkMax extends MotorBase {
     }
 
     @Override
-    public void runPercentOutput(Voltage percent) {
-        motor.set(percent.in(Volts)); 
+    public void runPercentOutput(double percent) {
+        motor.set(percent); 
     }
 
     @Override
@@ -235,10 +252,16 @@ public class MotorIOSparkMax extends MotorBase {
     @Override
     public void applyHardwareSVAG(int slot, double s, double v, double a, double g) {
         if (motor == null) return;
-        this.kS[slot] = s;
-        this.kA[slot] = a;
-        this.kG[slot] = g;
-        motorConfig.closedLoop.apply(new FeedForwardConfig().kV(v, resolveSlot(slot)));
+        ClosedLoopSlot resolvedSlot = resolveSlot(slot);
+
+        motorConfig.closedLoop.apply(
+            new FeedForwardConfig()
+                .kS(s, resolvedSlot)
+                .kV(v, resolvedSlot)
+                .kA(a, resolvedSlot)
+                .kG(g, resolvedSlot)
+        );
+
         applyConfig(false);
     }
 

@@ -13,6 +13,7 @@ import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.*;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
+import com.ctre.phoenix6.signals.MotorAlignmentValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.units.measure.*;
 
@@ -40,8 +41,8 @@ public class MotorIOTalonFX extends MotorBase {
     private final StatusSignal<Current> currentSignal;
     private final StatusSignal<Temperature> temperatureSignal;
 
-    public MotorIOTalonFX(String name, int id, CANBus canBus, MotorConfig config, boolean tuningMode) {
-        super(name, tuningMode, config);
+    public MotorIOTalonFX(String name, int id, CANBus canBus, MotorConfig config) {
+        super(name, config);
 
         this.motor = new TalonFX(id, canBus);
 
@@ -68,6 +69,14 @@ public class MotorIOTalonFX extends MotorBase {
             driveConfig.SoftwareLimitSwitch.ReverseSoftLimitThreshold = config.minPosition.in(Rotations);
         }
 
+        // --- Configure Follower Motor
+        if (config.leaderMotorID != 0) {
+            motor.setControl(new Follower(config.leaderMotorID, config.followerInverted? MotorAlignmentValue.Opposed : MotorAlignmentValue.Aligned));
+        }
+
+        driveConfig.Voltage.PeakForwardVoltage = config.maxOutput * config.nominalVoltage.in(Volts);
+        driveConfig.Voltage.PeakReverseVoltage = config.minOutput * config.nominalVoltage.in(Volts);
+
         // --- Relação de Transmissão (Sensor to Mechanism) ---
         // No Phoenix 6, você define a redução direto aqui e ele escala Posição e Velocidade automaticamente
         driveConfig.Feedback.SensorToMechanismRatio = (config.positionConversionFactor != 0.0) 
@@ -79,7 +88,6 @@ public class MotorIOTalonFX extends MotorBase {
         applySlotConfig(0, config.kP[0], config.kI[0], config.kD[0], config.kS[0], config.kV[0], config.kA[0], config.kG[0]);
         applySlotConfig(1, config.kP[1], config.kI[1], config.kD[1], config.kS[1], config.kV[1], config.kA[1], config.kG[1]);
         applySlotConfig(2, config.kP[2], config.kI[2], config.kD[2], config.kS[2], config.kV[2], config.kA[2], config.kG[2]);
-        applySlotConfig(3, config.kP[3], config.kI[3], config.kD[3], config.kS[3], config.kV[3], config.kA[3], config.kG[3]);
 
         // --- Motion Magic (Nativo no Hardware) ---
         // Usamos o Slot 0 como padrão para Motion Magic
@@ -102,6 +110,8 @@ public class MotorIOTalonFX extends MotorBase {
         
         // Otimiza o uso de banda do CAN
         motor.optimizeBusUtilization();
+
+        motor.setPosition(0);
     }
 
     @Override
@@ -126,7 +136,6 @@ public class MotorIOTalonFX extends MotorBase {
 
     @Override
     public void runVelocity(AngularVelocity velocity) {
-        // Slot 0 e ArbFF de 0V, pois o kS/kG já estão no SlotConfigs do hardware
         motor.setControl(velocityRequest.withVelocity(velocity).withSlot(0));
     }
 
@@ -142,15 +151,28 @@ public class MotorIOTalonFX extends MotorBase {
     }
 
     @Override
+    public void runVelocity(AngularVelocity velocity, int slot) {
+        motor.setControl(velocityRequest.withVelocity(velocity).withSlot(slot));
+    }
+
+    @Override
+    public void runPosition(Angle position, int slot) {
+        motor.setControl(positionRequest.withPosition(position).withSlot(slot));
+    }
+
+    @Override
+    public void runSmartPosition(Angle position, int slot) {
+        motor.setControl(motionMagicRequest.withPosition(position).withSlot(slot));
+    }
+
+    @Override
     public void runVoltage(Voltage volts) {
         motor.setControl(voltageRequest.withOutput(volts.in(Volts)));
     }
 
     @Override
-    public void runPercentOutput(Voltage percentAsVolts) {
-        // Converte volts para duty cycle (-1.0 a 1.0) baseado na tensão do bus
-        double dutyCycle = percentAsVolts.in(Volts) / 12.0; 
-        motor.setControl(dutyCycleRequest.withOutput(dutyCycle));
+    public void runPercentOutput(double percent) {
+        motor.setControl(dutyCycleRequest.withOutput(percent));
     }
 
     @Override

@@ -2,7 +2,6 @@ package frc.lib.interfaces.motor;
 
 import static edu.wpi.first.units.Units.*;
 
-import com.ctre.phoenix6.signals.MotorAlignmentValue;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import edu.wpi.first.units.measure.*;
 
@@ -16,7 +15,7 @@ public class MotorConfig {
   public double maxOutput = 1.0;
 
   public int leaderMotorID = 0;
-  public MotorAlignmentValue motorAlignment = MotorAlignmentValue.Aligned;
+  public boolean followerInverted = false;
 
   public double positionConversionFactor = 1.0;
   public double velocityConversionFactor = 1.0;
@@ -138,8 +137,8 @@ public class MotorConfig {
     return this;
   }
 
-  public MotorConfig withMotorAlignment(MotorAlignmentValue alignmentValue) {
-    this.motorAlignment = alignmentValue;
+  public MotorConfig withFollowerInverted(boolean inverted) {
+    this.followerInverted = inverted;
     return this;
   }
 }

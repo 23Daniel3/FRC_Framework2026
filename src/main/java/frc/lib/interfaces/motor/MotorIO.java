@@ -48,13 +48,19 @@ public interface MotorIO {
 
   void runVoltage(Voltage volts);
 
-  void runPercentOutput(Voltage volts);
+  void runPercentOutput(double percent);
 
   void runVelocity(AngularVelocity velocity);
 
   void runPosition(Angle position);
 
   void runSmartPosition(Angle position);
+
+  void runVelocity(AngularVelocity velocity, int slot);
+
+  void runPosition(Angle position, int slot);
+
+  void runSmartPosition(Angle position, int slot);
 
   void stop();
 
@@ -69,4 +75,6 @@ public interface MotorIO {
   void setCurrentLimit(Current current);
 
   MotorIOInputs getMotorIOInputs();
+
+  MotorController getMotorController();
 }

@@ -2,21 +2,87 @@ package frc.lib.interfaces.motor;
 
 import static edu.wpi.first.units.Units.*;
 
-import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
+import edu.wpi.first.units.measure.Angle;
+import edu.wpi.first.units.measure.AngularVelocity;
+import edu.wpi.first.units.measure.Current;
+import edu.wpi.first.units.measure.Voltage;
 import frc.lib.logger.LoggedTunableNumber;
+import frc.robot.Constants;
 
 public abstract class MotorBase implements MotorIO {
     protected final String name;
-    protected final boolean tuningMode;
-
+    
+    private final boolean tuningMode = Constants.tuningMode;
     private final TunablePID[] pidSlots = new TunablePID[4];
     private final TunableSVAG[] svagSlots = new TunableSVAG[4];
     private final TunableSmart[] smartSlots = new TunableSmart[4];
     private final TunableLimits limits;
 
-    public MotorBase(String name, boolean tuningMode, MotorConfig config) {
+    private final MotorController controller = new MotorController() {
+
+        @Override
+        public void setBrakeMode(boolean enabled) {
+            MotorBase.this.setBrakeMode(enabled);
+        }
+
+        @Override
+        public void setOffset(Angle offset) {
+            MotorBase.this.setOffset(offset);
+        }
+
+        @Override
+        public void runVoltage(Voltage volts) {
+            MotorBase.this.runVoltage(volts);
+        }
+
+        @Override
+        public void runPercentOutput(double percent) {
+            MotorBase.this.runPercentOutput(percent);
+        }
+
+        @Override
+        public void runVelocity(AngularVelocity velocity) {
+            MotorBase.this.runVelocity(velocity);
+        }
+
+        @Override
+        public void runPosition(Angle position) {
+            MotorBase.this.runPosition(position);
+        }
+
+        @Override
+        public void runSmartPosition(Angle position) {
+            MotorBase.this.runSmartPosition(position);
+        }
+
+        @Override
+        public void runVelocity(AngularVelocity velocity, int slot) {
+            MotorBase.this.runVelocity(velocity, slot);
+        }
+
+        @Override
+        public void runPosition(Angle position, int slot) {
+            MotorBase.this.runPosition(position, slot);
+        }
+
+        @Override
+        public void runSmartPosition(Angle position, int slot) {
+            MotorBase.this.runSmartPosition(position, slot);
+        }
+
+        @Override
+        public void stop() {
+            MotorBase.this.stop();
+        }
+
+        @Override
+        public void setCurrentLimit(Current current) {
+            MotorBase.this.setCurrentLimit(current);
+        }
+    };
+
+    public MotorBase(String name, MotorConfig config) {
         this.name = name;
-        this.tuningMode = tuningMode;
 
         this.limits = new TunableLimits(name, config.minOutput, config.maxOutput);
 
@@ -28,13 +94,6 @@ public abstract class MotorBase implements MotorIO {
                 config.maxMotionMaxAcceleration[i].in(RotationsPerSecondPerSecond),
                 config.maxMotionAllowedClosedLoopError[i].in(Rotations)
             );
-        }
-        
-        setBrakeMode(config.idleMode == IdleMode.kBrake);
-        setCurrentLimit(config.currentLimit);
-        
-        for (int i = 0; i < 4; i++) {
-            applyHardwareOutputRange(i, config.minOutput, config.maxOutput);
         }
     }
 
@@ -124,4 +183,9 @@ public abstract class MotorBase implements MotorIO {
     }
 
     protected abstract void updateHardwareInputs(MotorIOInputs inputs);
+    
+    @Override
+    public MotorController getMotorController() {
+        return controller;
+    }
 }
