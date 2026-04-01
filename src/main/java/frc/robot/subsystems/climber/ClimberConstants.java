@@ -1,30 +1,37 @@
 package frc.robot.subsystems.climber;
 
+import static edu.wpi.first.units.Units.Amps;
+import static edu.wpi.first.units.Units.Rotations;
+import static edu.wpi.first.units.Units.Volts;
+
+import edu.wpi.first.units.measure.Angle;
+import frc.lib.interfaces.motor.MotorConfig;
+
 public class ClimberConstants {
-  public static final int motorID = 21;
-  public static final double MAX_POSITION = 100.0;
-  public static final double MIN_POSITION = -100.0;
-  public static final double kP = 50.0;
-  public static final double kI = 0.0;
-  public static final double kD = 0.0;
-  public static final double kF = 0.0;
+  public static final int MOTOR_ID = 21;
 
-  public static final double HIGH_POSITION = 1.19;
-  public static final double LOW_POSITION = -0.2;
+  public static final Angle HIGH_POSITION = Rotations.of(1.19);
+  public static final Angle LOW_POSITION = Rotations.of(-0.2);
 
-  public static final double POWER_UP = 0.8;
-  public static final double POWER_DOWN = -0.8;
+  public static final MotorConfig MOTOR_CONFIG =
+        new MotorConfig()
+            .currentLimit(Amps.of(40))
+            .inverted(true)
+            .brakeMode()
+            .nominalVoltage(Volts.of(10.0))
+            .conversionFactors(0.014705000445246696, 1.0)
+            .pid(0, 50, 0, 0)
+            .outputRange(-0.7, 0.7);
 
-  public static final double MAX_SECURITY_CURRENT = 45;
+  public enum ClimberRequest {
+    LOW, 
+    HIGH
+  }
 
-  public static final double THRESOLD_CURRENT_SPIKE = 0.5;
-
-  public static enum ClimberIntention {
-    HIGH,
-    LOW,
-    INIT,
-    POWER_UP,
-    POWER_DOWN,
-    NON_INTENTION
+  public enum ClimberState {
+    RETRACTED, 
+    EXTENDED, 
+    RETRACTING,
+    EXTENDING,
   }
 }
