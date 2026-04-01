@@ -15,6 +15,7 @@ public interface MotorIO {
     public Current current = Amps.of(0.0);
     public Temperature temperature = Celsius.of(0.0);
     public boolean isConnected = false;
+    public boolean atSetpoint = false;
     public String[] activeFaults = new String[] {};
 
     @Override
@@ -25,6 +26,7 @@ public interface MotorIO {
       table.put("Current", current);
       table.put("Temperature", temperature);
       table.put("IsConnected", isConnected);
+      table.put("AtSetpoint", atSetpoint);
       table.put("ActiveFaults", activeFaults);
     }
 
@@ -36,6 +38,7 @@ public interface MotorIO {
       current = table.get("Current", current);
       temperature = table.get("Temperature", temperature);
       isConnected = table.get("IsConnected", isConnected);
+      atSetpoint = table.get("AtSetpoint", atSetpoint);
       activeFaults = table.get("ActiveFaults", activeFaults);
     }
   }

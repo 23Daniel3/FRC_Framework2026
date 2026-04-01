@@ -158,6 +158,9 @@ public class MotorIOSparkFlex extends MotorBase {
 
     @Override
     public void runVelocity(AngularVelocity velocity) {
+        currentMode = MotorControlMode.VELOCITY;
+        targetVelocity = velocity;
+
         double velocityRPM = velocity.in(RPM);
 
         closedLoopController.setSetpoint(
@@ -167,16 +170,25 @@ public class MotorIOSparkFlex extends MotorBase {
 
     @Override
     public void runPosition(Angle position) {
+        currentMode = MotorControlMode.POSITION;
+        targetPosition = position;
+
         closedLoopController.setSetpoint(position.in(Rotations), ControlType.kPosition, ClosedLoopSlot.kSlot0);
     }
 
     @Override
     public void runSmartPosition(Angle position) {
+        currentMode = MotorControlMode.SMART_POSITION;
+        targetPosition = position;
+
         closedLoopController.setSetpoint(position.in(Rotations), ControlType.kMAXMotionPositionControl, ClosedLoopSlot.kSlot0);
     }
 
     @Override
     public void runVelocity(AngularVelocity velocity, int slot) {
+        currentMode = MotorControlMode.VELOCITY;
+        targetVelocity = velocity;
+
         ClosedLoopSlot resolvedSlot = resolveSlot(slot);
         double velocityRPM = velocity.in(RPM);
 
@@ -187,6 +199,9 @@ public class MotorIOSparkFlex extends MotorBase {
 
     @Override
     public void runPosition(Angle position, int slot) {
+        currentMode = MotorControlMode.POSITION;
+        targetPosition = position;
+
         ClosedLoopSlot resolvedSlot = resolveSlot(slot);
 
         closedLoopController.setSetpoint(position.in(Rotations), ControlType.kPosition, resolvedSlot);
@@ -194,6 +209,9 @@ public class MotorIOSparkFlex extends MotorBase {
 
     @Override
     public void runSmartPosition(Angle position, int slot) {
+        currentMode = MotorControlMode.SMART_POSITION;
+        targetPosition = position;
+
         ClosedLoopSlot resolvedSlot = resolveSlot(slot);
 
         closedLoopController.setSetpoint(position.in(Rotations), ControlType.kMAXMotionPositionControl, resolvedSlot);
@@ -203,16 +221,19 @@ public class MotorIOSparkFlex extends MotorBase {
 
     @Override
     public void runVoltage(Voltage volts) {
+        currentMode = MotorControlMode.VOLTAGE;
         motor.setVoltage(volts.in(Volts));
     }
 
     @Override
     public void runPercentOutput(double percent) {
+        currentMode = MotorControlMode.PERCENT;
         motor.set(percent); 
     }
 
     @Override
     public void stop() {
+        currentMode = MotorControlMode.IDLE;
         motor.stopMotor();
     }
 

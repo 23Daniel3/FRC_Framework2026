@@ -11,6 +11,13 @@ import frc.robot.Constants;
 
 public abstract class MotorBase implements MotorIO {
     protected final String name;
+
+    protected MotorControlMode currentMode = MotorControlMode.IDLE;
+
+    protected Angle targetPosition = Rotations.of(0.0);
+    protected AngularVelocity targetVelocity = RPM.of(0.0);
+    protected final double positionTolerance;
+    protected final double velocityTolerance;
     
     private final boolean tuningMode = Constants.tuningMode;
     private final TunablePID[] pidSlots = new TunablePID[4];
@@ -85,6 +92,8 @@ public abstract class MotorBase implements MotorIO {
         this.name = name;
 
         this.limits = new TunableLimits(name, config.minOutput, config.maxOutput);
+        this.positionTolerance = config.positionTolerance.in(Rotations);
+        this.velocityTolerance = config.velocityTolerance.in(RPM);
 
         for (int i = 0; i < 4; i++) {
             pidSlots[i] = new TunablePID(name, i, config.kP[i], config.kI[i], config.kD[i]);
@@ -107,6 +116,7 @@ public abstract class MotorBase implements MotorIO {
                 smartSlots[i].check();
             }
         }
+        inputs.atSetpoint = calculateAtSetpoint(inputs);
         updateHardwareInputs(inputs);
     }
 
@@ -188,4 +198,25 @@ public abstract class MotorBase implements MotorIO {
     public MotorController getMotorController() {
         return controller;
     }
+
+    private boolean calculateAtSetpoint(MotorIOInputs inputs) {
+    switch (currentMode) {
+
+        case POSITION:
+        case SMART_POSITION: {
+            double error = Math.abs(inputs.position.in(Rotations) - targetPosition.in(Rotations));
+            double velocity = Math.abs(inputs.velocity.in(RPM));
+
+            return error < positionTolerance && velocity < velocityTolerance;
+        }
+
+        case VELOCITY: {
+            double error = Math.abs(inputs.velocity.in(RPM) - targetVelocity.in(RPM));
+            return error < velocityTolerance;
+        }
+
+        default:
+            return false;
+    }
+}
 }

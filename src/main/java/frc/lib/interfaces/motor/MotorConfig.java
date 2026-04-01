@@ -20,6 +20,9 @@ public class MotorConfig {
   public double positionConversionFactor = 1.0;
   public double velocityConversionFactor = 1.0;
 
+  public Angle positionTolerance = Rotations.of(0);
+  public AngularVelocity velocityTolerance = RPM.of(0);
+
   public boolean softLimitEnabled = false;
   public Angle minPosition = Rotations.of(0.0);
   public Angle maxPosition = Rotations.of(0.0);
@@ -139,6 +142,16 @@ public class MotorConfig {
 
   public MotorConfig withFollowerInverted(boolean inverted) {
     this.followerInverted = inverted;
+    return this;
+  }
+
+  public MotorConfig withPositionTolerance(Angle position) {
+    this.positionTolerance = position;
+    return this;
+  }
+
+  public MotorConfig withVelocityTolerance(AngularVelocity velocity) {
+    this.velocityTolerance = velocity;
     return this;
   }
 }
