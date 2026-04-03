@@ -1,152 +1,72 @@
 package frc.robot.subsystems.intake;
 
-import static edu.wpi.first.units.Units.Amps;
+import static edu.wpi.first.units.Units.RPM;
 import static edu.wpi.first.units.Units.Rotations;
-import static edu.wpi.first.units.Units.Volts;
 
-import edu.wpi.first.units.measure.Angle;
-import edu.wpi.first.units.measure.AngularVelocity;
-import edu.wpi.first.wpilibj2.command.InstantCommand;
-import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.lib.interfaces.motor.MotorIO.MotorIOInputs;
-import frc.lib.logger.LoggedTunableNumber;
+import frc.lib.interfaces.subsystem.StateSubsystem;
 import frc.lib.util.ConstantsLogger;
-import frc.lib.util.PeriodicTimer;
-import frc.robot.Constants;
-import org.littletonrobotics.junction.Logger;
+import frc.robot.subsystems.intake.IntakeConstants.IntakeRequest;
+import frc.robot.subsystems.intake.IntakeConstants.IntakeState;
 
-public class Intake extends SubsystemBase {
+public class Intake extends StateSubsystem<
+        IntakeConstants.IntakeRequest, IntakeConstants.IntakeState, IntakeIOInputsAutoLogged> {
 
   private final IntakeIO io;
-  private final IntakeIOInputsAutoLogged inputs = new IntakeIOInputsAutoLogged();
-  private final int id;
-  private final Trigger coastButtonPressed;
-
-  private final LoggedTunableNumber kPRollerMotor =
-      new LoggedTunableNumber("Subsystems/Intake/RollerMotor/kP", IntakeConstants.ROLLER_KP);
-  private final LoggedTunableNumber kIRollerMotor =
-      new LoggedTunableNumber("Subsystems/Intake/RollerMotor/kI", IntakeConstants.ROLLER_KI);
-  private final LoggedTunableNumber kDRollerMotor =
-      new LoggedTunableNumber("Subsystems/Intake/RollerMotor/kD", IntakeConstants.ROLLER_KD);
-  private final LoggedTunableNumber kSRollerMotor =
-      new LoggedTunableNumber("Subsystems/Intake/RollerMotor/kS", IntakeConstants.ROLLER_KS);
-  private final LoggedTunableNumber kVRollerMotor =
-      new LoggedTunableNumber("Subsystems/Intake/RollerMotor/kV", IntakeConstants.ROLLER_KV);
-
-  private final LoggedTunableNumber kPIntakeMotor =
-      new LoggedTunableNumber("Subsystems/Intake/IntakeMotor/kP", IntakeConstants.INTAKE_KP);
-  private final LoggedTunableNumber kIIntakeMotor =
-      new LoggedTunableNumber("Subsystems/Intake/IntakeMotor/kI", IntakeConstants.INTAKE_KI);
-  private final LoggedTunableNumber kDIntakeMotor =
-      new LoggedTunableNumber("Subsystems/Intake/IntakeMotor/kD", IntakeConstants.INTAKE_KD);
-  private final LoggedTunableNumber kFIntakeMotor =
-      new LoggedTunableNumber("Subsystems/Intake/IntakeMotor/kF", IntakeConstants.INTAKE_KF);
-
-  private LoggedTunableNumber currentLimitIntakeMotor =
-      new LoggedTunableNumber(
-          "Subsystems/Intake/CurrentLimitIntakeMotor", IntakeConstants.CURRENT_LIMIT_INTAKE_MOTOR);
-  private LoggedTunableNumber currentLimitRollerMotor =
-      new LoggedTunableNumber(
-          "Subsystems/Intake/CurrentLimitRollerMotor", IntakeConstants.CURRENT_LIMIT_ROLLER_MOTOR);
-
-  private LoggedTunableNumber voltageCompensationIntakeMotor =
-      new LoggedTunableNumber(
-          "Subsystems/Intake/VoltageCompensationIntakeMotor",
-          IntakeConstants.VOLTAGE_COMPENSATION_INTAKE_MOTOR);
 
   public Intake(IntakeIO io) {
+    super(
+        "Subsystems/Intake",
+        new IntakeIOInputsAutoLogged(),
+        IntakeState.class,
+        IntakeState.IN,
+        IntakeRequest.IN);
     this.io = io;
-    id = hashCode();
     setName("Subsystems/Intake");
-    io.configurePIDSVRollerMotor(
-        kPRollerMotor.get(),
-        kIRollerMotor.get(),
-        kDRollerMotor.get(),
-        kSRollerMotor.get(),
-        kVRollerMotor.get());
-    io.configurePIDFIntakeMotor(
-        kPIntakeMotor.get(), kIIntakeMotor.get(), kDIntakeMotor.get(), kFIntakeMotor.get());
     ConstantsLogger.logConstants(IntakeConstants.class, getName());
-    resetPosition(Rotations.of(IntakeConstants.INTAKE_START_POSITION));
-    coastButtonPressed = new Trigger(() -> inputs.coastButtonPressed);
-    coastButtonPressed
-        .debounce(0.5)
-        .onTrue(new InstantCommand(() -> io.setBrakeMode(false)).ignoringDisable(true))
-        .onFalse(new InstantCommand(() -> io.setBrakeMode(true)).ignoringDisable(true));
+
+    fsm.state(IntakeState.GOING_OUT)
+        .onEnter(
+            () -> {
+              io.controlIntakeMotor()
+                  .runPosition(Rotations.of(IntakeConstants.INTAKE_OUT_POSITION));
+              io.controlRollerMotor().runVelocity(RPM.of(0));
+            })
+        .transitionTo(
+            IntakeState.OUT,
+            () -> inputs.intakeMotorInputs.atSetpoint && currentRequest == IntakeRequest.OUT)
+        .transitionTo(
+            IntakeState.COLLECT,
+            () -> inputs.intakeMotorInputs.atSetpoint && currentRequest == IntakeRequest.COLLECT);
+
+    fsm.state(IntakeState.GOING_IN)
+        .onEnter(
+            () -> {
+              io.controlIntakeMotor().runPosition(Rotations.of(IntakeConstants.INTAKE_IN_POSITION));
+              io.controlRollerMotor().runVelocity(RPM.of(0));
+            })
+        .transitionTo(IntakeState.IN, () -> inputs.intakeMotorInputs.atSetpoint);
+
+    fsm.state(IntakeState.COLLECT)
+        .onEnter(
+            () -> {
+              io.controlRollerMotor().runVelocity(RPM.of(IntakeConstants.INTAKE_MAX_VELOCITY));
+            });
+
+    fsm.state(IntakeState.IN)
+        .onEnter(
+            () -> {
+              io.controlRollerMotor().runVelocity(RPM.of(0));
+            });
+
+    fsm.addGlobalTransition(
+        IntakeState.GOING_OUT,
+        () -> (currentRequest == IntakeRequest.COLLECT || currentRequest == IntakeRequest.OUT) );
+    fsm.addGlobalTransition(IntakeState.GOING_IN, () -> currentRequest == IntakeRequest.IN);
   }
 
   @Override
-  public void periodic() {
-    PeriodicTimer.start(getName());
-    io.updateInputs(inputs);
-    Logger.processInputs(getName(), inputs);
-
-    if (Constants.tuningMode) {
-      if (kPRollerMotor.hasChanged(id)
-          || kIRollerMotor.hasChanged(id)
-          || kDRollerMotor.hasChanged(id)
-          || kSRollerMotor.hasChanged(id)
-          || kVRollerMotor.hasChanged(id)) {
-
-        io.configurePIDSVRollerMotor(
-            kPRollerMotor.get(),
-            kIRollerMotor.get(),
-            kDRollerMotor.get(),
-            kSRollerMotor.get(),
-            kVRollerMotor.get());
-      }
-
-      if (kPIntakeMotor.hasChanged(id)
-          || kIIntakeMotor.hasChanged(id)
-          || kDIntakeMotor.hasChanged(id)
-          || kFIntakeMotor.hasChanged(id)) {
-
-        io.configurePIDFIntakeMotor(
-            kPIntakeMotor.get(), kIIntakeMotor.get(), kDIntakeMotor.get(), kFIntakeMotor.get());
-      }
-    }
-
-    if (currentLimitIntakeMotor.hasChanged(hashCode())) {
-      io.setCurrentLimitIntakeMotor(Amps.of(currentLimitIntakeMotor.get()));
-    }
-
-    if (currentLimitRollerMotor.hasChanged(hashCode())) {
-      io.setCurrentLimitRollerMotor(Amps.of(currentLimitRollerMotor.get()));
-    }
-
-    if (voltageCompensationIntakeMotor.hasChanged(hashCode())) {
-      io.setVoltageCompensationIntakeMotor(Volts.of(voltageCompensationIntakeMotor.get()));
-    }
-    PeriodicTimer.stop(getName());
-  }
-
-  public void resetPosition(Angle position) {
-    io.resetPosition(position);
-  }
-
-  public void runVelocity(AngularVelocity velocity) {
-    io.runVelocityRollerMotor(velocity);
-  }
-
-  public void runPosition(Angle position) {
-    io.runPositionIntakeMotor(position);
-  }
-
-  public void runPercentOutputRollerMotor(double percentOutput) {
-    io.runPercentOutputRollerMotor(percentOutput);
-  }
-
-  public void runPercentOutputIntakeMotor(double percentOutput) {
-    io.runPercentOutputIntakeMotor(percentOutput);
-  }
-
-  public void stopRollerMotor() {
-    io.stopRollerMotor();
-  }
-
-  public void stopIntakeMotor() {
-    io.stopIntakeMotor();
+  public void sPeriodic() {
   }
 
   public MotorIOInputs getRollerMotorInputs() {
@@ -157,19 +77,13 @@ public class Intake extends SubsystemBase {
     return inputs.intakeMotorInputs;
   }
 
-  public InstantCommand setToMaxCurrent() {
-    return new InstantCommand(
-        () -> {
-          io.setCurrentLimitIntakeMotor(Amps.of(60));
-          io.setCurrentLimitRollerMotor(Amps.of(60));
-        });
+  @Override
+  public boolean atGoal() {
+    return false;
   }
 
-  public InstantCommand setToNormalCurrent() {
-    return new InstantCommand(
-        () -> {
-          io.setCurrentLimitIntakeMotor(Amps.of(currentLimitIntakeMotor.get()));
-          io.setCurrentLimitRollerMotor(Amps.of(currentLimitRollerMotor.get()));
-        });
+  @Override
+  protected void updateInputs() {
+    io.updateInputs(inputs);
   }
 }

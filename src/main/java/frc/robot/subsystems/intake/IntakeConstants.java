@@ -1,26 +1,16 @@
 package frc.robot.subsystems.intake;
 
+import static edu.wpi.first.units.Units.Amps;
+import static edu.wpi.first.units.Units.Rotations;
+import static edu.wpi.first.units.Units.Volts;
+
+import frc.lib.interfaces.motor.MotorConfig;
+
 public class IntakeConstants {
   public static final int ROLLER_MOTOR_ID = 18;
   public static final int INTAKE_MOTOR_ID = 19;
 
   public static final int SENSOR_PORT = 0;
-
-  public static final double CURRENT_LIMIT_INTAKE_MOTOR = 35;
-  public static final double CURRENT_LIMIT_ROLLER_MOTOR = 30;
-  public static final double VOLTAGE_COMPENSATION_INTAKE_MOTOR = 10;
-  public static final double NOMINAL_VOLTAGE_ROLLER_MOTOR = 10;
-
-  public static final double ROLLER_KP = 0.0;
-  public static final double ROLLER_KI = 0.0;
-  public static final double ROLLER_KD = 0.0;
-  public static final double ROLLER_KS = 0.42;
-  public static final double ROLLER_KV = 0.115;
-
-  public static final double INTAKE_KP = 0.08;
-  public static final double INTAKE_KI = 0.0;
-  public static final double INTAKE_KD = 0.0;
-  public static final double INTAKE_KF = 0.0;
 
   public static final double INTAKE_START_POSITION = 0.0;
   public static final double INTAKE_IN_POSITION = 1.0;
@@ -28,21 +18,38 @@ public class IntakeConstants {
   public static final double INTAKE_OUT_POSITION = 10.7;
 
   public static final double INTAKE_POWER = 0.85;
-  public static final double INTAKE_MAX_VELOCITY = 5500;
+  public static final double INTAKE_MAX_VELOCITY = 2500;
 
   public static final double INTAKE_REVERSE_POWER = -0.45;
 
-  public enum IntakeIntention {
+  public static final MotorConfig configRollerMotor =
+      new MotorConfig()
+          .currentLimit(Amps.of(30))
+          .coastMode()
+          .nominalVoltage(Volts.of(10))
+          .inverted(true)
+          .svag(0, 0.42, 0.115, 0, 0);
+
+  public static final MotorConfig configIntakeMotor =
+      new MotorConfig()
+          .currentLimit(Amps.of(35))
+          .brakeMode()
+          .nominalVoltage(Volts.of(10.0))
+          .inverted(false)
+          .pid(0, 0.08, 0, 0)
+          .withPositionTolerance(Rotations.of(1));
+
+  public enum IntakeRequest {
     IN,
     OUT,
-    MIDDLE,
-    NON_INTENTION
+    COLLECT
   }
 
-  public enum RollerIntention {
-    INTAKE,
-    OUTAKE,
-    STOP,
-    NON_INTENTION
+  public enum IntakeState {
+    IN,
+    OUT,
+    COLLECT,
+    GOING_IN,
+    GOING_OUT
   }
 }
