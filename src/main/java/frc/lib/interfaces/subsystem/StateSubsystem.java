@@ -34,6 +34,10 @@ public abstract class StateSubsystem<R extends Enum<R>, S extends Enum<S>, I ext
     return fsm.getCurrentState();
   }
 
+  public I getInputs() {
+    return inputs;
+  }
+
   protected abstract void updateInputs();
 
   @Override
@@ -52,9 +56,7 @@ public abstract class StateSubsystem<R extends Enum<R>, S extends Enum<S>, I ext
     PeriodicTimer.stop(getName());
   }
 
-  protected void sPeriodic() {
-
-  }
+  protected void sPeriodic() {}
 
   public abstract boolean atGoal();
 }
