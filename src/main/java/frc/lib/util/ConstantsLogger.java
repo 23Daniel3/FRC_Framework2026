@@ -5,6 +5,8 @@ import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.geometry.Translation3d;
 import frc.lib.calculus.ThrottleMap;
+import frc.lib.interfaces.motor.MotorConfig;
+
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import org.littletonrobotics.junction.Logger;
@@ -86,8 +88,10 @@ public final class ConstantsLogger {
     } else if (value instanceof Translation3d) {
       Logger.recordOutput(path, (Translation3d) value);
 
+    } else if (value instanceof MotorConfig) {
+      ((MotorConfig) value).toLog(path);
+      
     } else {
-      // Safe fallback using toString, wrapped to prevent crashing on bad toString impl
       try {
         Logger.recordOutput(path, String.valueOf(value));
       } catch (Exception ignored) {
