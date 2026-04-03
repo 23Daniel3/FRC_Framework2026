@@ -6,17 +6,19 @@ import frc.lib.util.PeriodicTimer;
 import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.inputs.LoggableInputs;
 
-public abstract class StateSubsystem<R extends Enum<R>, S extends Enum<S>, I extends LoggableInputs>
+public abstract class StateSubsystem<R extends Enum<R>, S extends Enum<S>, I extends LoggableInputs, T extends SubsystemIO<I>>
     extends SubsystemBase {
 
   protected final StateMachine<S> fsm;
   protected final I inputs;
+  protected final T io;
   protected R currentRequest;
 
   public StateSubsystem(
-      String name, I inputs, Class<S> stateEnum, S initialState, R initialRequest) {
+      String name, I inputs, T io, Class<S> stateEnum, S initialState, R initialRequest) {
     setName(name);
     this.inputs = inputs;
+    this.io = io;
     this.currentRequest = initialRequest;
 
     this.fsm = new StateMachine<>(name, stateEnum, initialState);
@@ -38,13 +40,11 @@ public abstract class StateSubsystem<R extends Enum<R>, S extends Enum<S>, I ext
     return inputs;
   }
 
-  protected abstract void updateInputs();
-
   @Override
   public final void periodic() {
     PeriodicTimer.start(getName());
 
-    updateInputs();
+    io.updateInputs(inputs);
     Logger.processInputs(getName(), inputs);
 
     fsm.update();
