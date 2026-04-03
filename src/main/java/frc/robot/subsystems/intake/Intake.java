@@ -4,7 +4,6 @@ import static edu.wpi.first.units.Units.RPM;
 import static edu.wpi.first.units.Units.Rotations;
 
 import frc.lib.interfaces.subsystem.StateSubsystem;
-import frc.lib.util.ConstantsLogger;
 import frc.robot.subsystems.intake.IntakeConstants.IntakeRequest;
 import frc.robot.subsystems.intake.IntakeConstants.IntakeState;
 
@@ -18,9 +17,8 @@ public class Intake extends StateSubsystem<
         io,
         IntakeState.class,
         IntakeState.IN,
-        IntakeRequest.IN);
-    setName("Subsystems/Intake");
-    ConstantsLogger.logConstants(IntakeConstants.class, getName());
+        IntakeRequest.IN,
+        IntakeConstants.class);
 
     fsm.state(IntakeState.GOING_OUT)
         .onEnter(

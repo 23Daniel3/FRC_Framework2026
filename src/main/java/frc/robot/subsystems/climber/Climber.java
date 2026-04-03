@@ -14,7 +14,8 @@ public class Climber
         io,
         ClimberState.class,
         ClimberState.RETRACTED,
-        ClimberRequest.LOW);
+        ClimberRequest.LOW,
+        ClimberConstants.class);
 
     fsm.state(ClimberState.EXTENDING)
         .onEnter(() -> io.controlMotor().runPosition(ClimberConstants.HIGH_POSITION))
