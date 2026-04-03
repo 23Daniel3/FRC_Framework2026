@@ -10,15 +10,19 @@ public class ClimberIOSpark implements ClimberIO {
   private final MotorIO motor;
 
   public ClimberIOSpark() {
-    motor = new MotorIOSparkMax("ClimberMotor", 
-    ClimberConstants.MOTOR_ID, MotorType.kBrushless, ClimberConstants.MOTOR_CONFIG);
+    motor =
+        new MotorIOSparkMax(
+            "ClimberMotor",
+            ClimberConstants.MOTOR_ID,
+            MotorType.kBrushless,
+            ClimberConstants.MOTOR_CONFIG);
   }
 
   @Override
   public void updateInputs(ClimberIOInputs inputs) {
     inputs.motorInputs = motor.getMotorIOInputs();
   }
-  
+
   @Override
   public MotorController controlMotor() {
     return motor.getMotorController();

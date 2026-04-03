@@ -14,23 +14,23 @@ public class ClimberConstants {
   public static final Angle LOW_POSITION = Rotations.of(-0.2);
 
   public static final MotorConfig MOTOR_CONFIG =
-        new MotorConfig()
-            .currentLimit(Amps.of(40))
-            .inverted(true)
-            .brakeMode()
-            .nominalVoltage(Volts.of(10.0))
-            .conversionFactors(0.014705000445246696, 1.0)
-            .pid(0, 50, 0, 0)
-            .outputRange(-0.7, 0.7);
+      new MotorConfig()
+          .currentLimit(Amps.of(40))
+          .inverted(true)
+          .brakeMode()
+          .nominalVoltage(Volts.of(10.0))
+          .conversionFactors(0.014705000445246696, 1.0)
+          .pid(0, 50, 0, 0)
+          .outputRange(-0.7, 0.7);
 
   public enum ClimberRequest {
-    LOW, 
+    LOW,
     HIGH
   }
 
   public enum ClimberState {
-    RETRACTED, 
-    EXTENDED, 
+    RETRACTED,
+    EXTENDED,
     RETRACTING,
     EXTENDING,
   }
