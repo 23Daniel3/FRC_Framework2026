@@ -3,7 +3,6 @@ package frc.robot.subsystems.intake;
 import static edu.wpi.first.units.Units.RPM;
 import static edu.wpi.first.units.Units.Rotations;
 
-import frc.lib.interfaces.motor.MotorIO.MotorIOInputs;
 import frc.lib.interfaces.subsystem.StateSubsystem;
 import frc.lib.util.ConstantsLogger;
 import frc.robot.subsystems.intake.IntakeConstants.IntakeRequest;
@@ -30,7 +29,7 @@ public class Intake extends StateSubsystem<
             () -> {
               io.controlIntakeMotor()
                   .runPosition(Rotations.of(IntakeConstants.INTAKE_OUT_POSITION));
-              io.controlRollerMotor().runVelocity(RPM.of(0));
+              io.controlRollerMotor().stop();
             })
         .transitionTo(
             IntakeState.OUT,
@@ -43,7 +42,7 @@ public class Intake extends StateSubsystem<
         .onEnter(
             () -> {
               io.controlIntakeMotor().runPosition(Rotations.of(IntakeConstants.INTAKE_IN_POSITION));
-              io.controlRollerMotor().runVelocity(RPM.of(0));
+              io.controlRollerMotor().stop();
             })
         .transitionTo(IntakeState.IN, () -> inputs.intakeMotorInputs.atSetpoint);
 
@@ -56,32 +55,27 @@ public class Intake extends StateSubsystem<
     fsm.state(IntakeState.IN)
         .onEnter(
             () -> {
-              io.controlRollerMotor().runVelocity(RPM.of(0));
+              io.controlRollerMotor().stop();
             });
 
     fsm.addGlobalTransition(
         IntakeState.GOING_OUT,
-        () -> (currentRequest == IntakeRequest.COLLECT || currentRequest == IntakeRequest.OUT) );
+        () -> (currentRequest == IntakeRequest.COLLECT) && (getState() != IntakeState.COLLECT));
+    
+    fsm.addGlobalTransition(
+        IntakeState.GOING_OUT,
+        () -> (currentRequest == IntakeRequest.OUT) && (getState() != IntakeState.OUT));
+    
     fsm.addGlobalTransition(IntakeState.GOING_IN, () -> currentRequest == IntakeRequest.IN);
   }
 
   @Override
-  public void sPeriodic() {
-  }
-
-  public MotorIOInputs getRollerMotorInputs() {
-    return inputs.rollerMotorInputs;
-  }
-
-  public MotorIOInputs getIntakeMotorInputs() {
-    return inputs.intakeMotorInputs;
-  }
-
-  @Override
   public boolean atGoal() {
-    return false;
-  }
-
+    return (currentRequest == IntakeRequest.IN && getState() == IntakeState.IN) ||
+      (currentRequest == IntakeRequest.OUT && getState() == IntakeState.OUT) ||
+      (currentRequest == IntakeRequest.COLLECT && getState() == IntakeState.COLLECT);
+  }  
+  
   @Override
   protected void updateInputs() {
     io.updateInputs(inputs);
