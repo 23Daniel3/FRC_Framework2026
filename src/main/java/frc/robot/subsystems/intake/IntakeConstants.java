@@ -22,7 +22,7 @@ public class IntakeConstants {
 
   public static final double INTAKE_REVERSE_POWER = -0.45;
 
-  public static final MotorConfig configRollerMotor =
+  public static final MotorConfig CONFIG_ROLLER_MOTOR =
       new MotorConfig()
           .currentLimit(Amps.of(30))
           .coastMode()
@@ -30,7 +30,7 @@ public class IntakeConstants {
           .inverted(true)
           .svag(0, 0.42, 0.115, 0, 0);
 
-  public static final MotorConfig configIntakeMotor =
+  public static final MotorConfig CONFIG_INTAKE_MOTOR =
       new MotorConfig()
           .currentLimit(Amps.of(35))
           .brakeMode()
