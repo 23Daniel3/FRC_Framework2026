@@ -9,8 +9,8 @@ import java.util.Map;
 import org.littletonrobotics.junction.networktables.LoggedNetworkNumber;
 
 /**
- * Tunable number compatível com as Unidades da WPILib.
- * O valor no Dashboard é mantido na unidade definida no construtor.
+ * Tunable number compatível com as Unidades da WPILib. O valor no Dashboard é mantido na unidade
+ * definida no construtor.
  */
 @SuppressWarnings({"rawtypes", "unchecked"})
 public class LoggedTunableUnit {
@@ -18,7 +18,7 @@ public class LoggedTunableUnit {
   private static final double EPSILON = 1e-6;
 
   private final String key;
-  private final Unit unit; 
+  private final Unit unit;
   private boolean hasDefault = false;
   private double defaultValue;
   private LoggedNetworkNumber dashboardNumber;
@@ -45,17 +45,15 @@ public class LoggedTunableUnit {
     }
   }
 
-  /**
-   * Retorna o valor numérico puro na unidade original.
-   */
+  /** Retorna o valor numérico puro na unidade original. */
   public double getRaw() {
     if (!hasDefault) return 0.0;
     return Constants.tuningMode ? dashboardNumber.get() : defaultValue;
   }
 
   /**
-   * Retorna a Measure já "convertida" para o tipo correto (Current, Voltage, Velocity, etc).
-   * O Java infere o tipo T automaticamente com base no método que está chamando este get().
+   * Retorna a Measure já "convertida" para o tipo correto (Current, Voltage, Velocity, etc). O Java
+   * infere o tipo T automaticamente com base no método que está chamando este get().
    */
   public <T extends Measure> T get() {
     return (T) unit.of(getRaw());
