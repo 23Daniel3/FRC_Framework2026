@@ -9,18 +9,16 @@ import frc.robot.subsystems.intake.IntakeConstants.IntakeRequest;
 import frc.robot.subsystems.intake.IntakeConstants.IntakeState;
 
 public class Intake extends StateSubsystem<
-        IntakeConstants.IntakeRequest, IntakeConstants.IntakeState, IntakeIOInputsAutoLogged> {
-
-  private final IntakeIO io;
+        IntakeConstants.IntakeRequest, IntakeConstants.IntakeState, IntakeIOInputsAutoLogged, IntakeIO> {
 
   public Intake(IntakeIO io) {
     super(
         "Subsystems/Intake",
         new IntakeIOInputsAutoLogged(),
+        io,
         IntakeState.class,
         IntakeState.IN,
         IntakeRequest.IN);
-    this.io = io;
     setName("Subsystems/Intake");
     ConstantsLogger.logConstants(IntakeConstants.class, getName());
 
@@ -75,9 +73,4 @@ public class Intake extends StateSubsystem<
       (currentRequest == IntakeRequest.OUT && getState() == IntakeState.OUT) ||
       (currentRequest == IntakeRequest.COLLECT && getState() == IntakeState.COLLECT);
   }  
-  
-  @Override
-  protected void updateInputs() {
-    io.updateInputs(inputs);
-  }
 }

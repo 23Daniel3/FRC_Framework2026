@@ -5,18 +5,16 @@ import frc.robot.subsystems.climber.ClimberConstants.ClimberRequest;
 import frc.robot.subsystems.climber.ClimberConstants.ClimberState;
 
 public class Climber
-    extends StateSubsystem<ClimberRequest, ClimberState, ClimberIOInputsAutoLogged> {
-
-  private final ClimberIO io;
+    extends StateSubsystem<ClimberRequest, ClimberState, ClimberIOInputsAutoLogged, ClimberIO> {
 
   public Climber(ClimberIO io) {
     super(
         "Subsystems/Climber",
         new ClimberIOInputsAutoLogged(),
+        io,
         ClimberState.class,
         ClimberState.RETRACTED,
         ClimberRequest.LOW);
-    this.io = io;
 
     fsm.state(ClimberState.EXTENDING)
         .onEnter(() -> io.controlMotor().runPosition(ClimberConstants.HIGH_POSITION))
@@ -37,11 +35,6 @@ public class Climber
         () ->
             currentRequest == ClimberRequest.LOW
                 && getState() != ClimberState.RETRACTED);
-  }
-
-  @Override
-  protected void updateInputs() {
-    io.updateInputs(inputs);
   }
 
   @Override

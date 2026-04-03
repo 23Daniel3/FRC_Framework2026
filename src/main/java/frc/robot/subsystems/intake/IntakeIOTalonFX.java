@@ -31,7 +31,7 @@ public class IntakeIOTalonFX implements IntakeIO {
   }
 
   @Override
-  public void updateInputs(IntakeIOInputs inputs) {
+  public void updateInputs(IntakeIOInputsAutoLogged inputs) {
     rollerMotor.updateInputs(inputs.rollerMotorInputs);
     intakeMotor.updateInputs(inputs.intakeMotorInputs);
 

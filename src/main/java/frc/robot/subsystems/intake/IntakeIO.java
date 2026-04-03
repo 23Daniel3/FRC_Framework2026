@@ -2,9 +2,11 @@ package frc.robot.subsystems.intake;
 
 import frc.lib.interfaces.motor.MotorController;
 import frc.lib.interfaces.motor.MotorIO.MotorIOInputs;
+import frc.lib.interfaces.subsystem.SubsystemIO;
+
 import org.littletonrobotics.junction.AutoLog;
 
-public interface IntakeIO {
+public interface IntakeIO extends SubsystemIO<IntakeIOInputsAutoLogged> {
   @AutoLog
   public static class IntakeIOInputs {
     public MotorIOInputs rollerMotorInputs = new MotorIOInputs();
@@ -12,7 +14,8 @@ public interface IntakeIO {
     public boolean coastButtonPressed = false;
   }
 
-  public default void updateInputs(IntakeIOInputs inputs) {}
+  @Override
+  public default void updateInputs(IntakeIOInputsAutoLogged inputs) {}
 
   public default MotorController controlIntakeMotor() {
     return null;
