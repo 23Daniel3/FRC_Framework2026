@@ -27,15 +27,12 @@ public class Climber
 
     fsm.addGlobalTransition(
         ClimberState.EXTENDING,
-        () ->
-            currentRequest == ClimberRequest.HIGH
-                && getState() != ClimberState.EXTENDED);
+        () -> isRequest(ClimberRequest.HIGH) && notInState(ClimberState.EXTENDED));
 
     fsm.addGlobalTransition(
         ClimberState.RETRACTING,
-        () ->
-            currentRequest == ClimberRequest.LOW
-                && getState() != ClimberState.RETRACTED);
+        () -> isRequest(ClimberRequest.LOW) && notInState(ClimberState.RETRACTED)
+    );
   }
 
   @Override

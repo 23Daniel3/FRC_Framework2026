@@ -58,6 +58,14 @@ public abstract class StateSubsystem<R extends Enum<R>, S extends Enum<S>, I ext
     return inputs;
   }
 
+  protected boolean isRequest(R request) {
+    return currentRequest == request;
+  }
+
+  protected boolean notInState(S state) {
+      return getState() != state;
+  }
+
   @Override
   public final void periodic() {
     PeriodicTimer.start(getName());

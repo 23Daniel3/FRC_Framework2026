@@ -67,8 +67,10 @@ public class Intake extends StateSubsystem<
 
   @Override
   public boolean atGoal() {
-    return (currentRequest == IntakeRequest.IN && getState() == IntakeState.IN) ||
-      (currentRequest == IntakeRequest.OUT && getState() == IntakeState.OUT) ||
-      (currentRequest == IntakeRequest.COLLECT && getState() == IntakeState.COLLECT);
-  }  
+    return switch (currentRequest) {
+      case IN -> getState() == IntakeState.IN;
+      case OUT -> getState() == IntakeState.OUT;
+      case COLLECT -> getState() == IntakeState.COLLECT;
+    };
+  } 
 }

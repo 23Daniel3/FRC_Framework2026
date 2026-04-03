@@ -5,11 +5,11 @@ import frc.lib.interfaces.motor.MotorController;
 import frc.lib.interfaces.motor.MotorIO;
 import frc.lib.interfaces.motor.MotorIOSparkMax;
 
-public class ClimberIOSpark implements ClimberIO {
+public class ClimberIOHardware implements ClimberIO {
 
   private final MotorIO motor;
 
-  public ClimberIOSpark() {
+  public ClimberIOHardware() {
     motor =
         new MotorIOSparkMax(
             "ClimberMotor",

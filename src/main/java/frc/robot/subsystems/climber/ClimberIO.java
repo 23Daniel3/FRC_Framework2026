@@ -13,9 +13,7 @@ public interface ClimberIO extends SubsystemIO<ClimberIOInputsAutoLogged> {
   }
 
   @Override
-  public default void updateInputs(ClimberIOInputsAutoLogged inputs) {}
+  public void updateInputs(ClimberIOInputsAutoLogged inputs);
 
-  public default MotorController controlMotor() {
-    return null;
-  }
+  public MotorController controlMotor();
 }
