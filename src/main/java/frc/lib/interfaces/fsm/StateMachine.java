@@ -7,11 +7,6 @@ import java.util.Map;
 import java.util.function.BooleanSupplier;
 import org.littletonrobotics.junction.Logger;
 
-/**
- * A generic, fluent State Machine implementation for FRC robots.
- *
- * @param <S> The Enum type defining the states.
- */
 public class StateMachine<S extends Enum<S>> {
 
   private final String name;
@@ -20,13 +15,6 @@ public class StateMachine<S extends Enum<S>> {
   private S current;
   private double stateEnterTimestamp;
 
-  /**
-   * Creates a new StateMachine.
-   *
-   * @param name The name for logging purposes.
-   * @param enumClass The class of the Enum used for states.
-   * @param initialState The starting state.
-   */
   public StateMachine(String name, Class<S> enumClass, S initialState) {
     this.name = name;
     this.states = new EnumMap<>(enumClass);
@@ -34,24 +22,16 @@ public class StateMachine<S extends Enum<S>> {
     this.stateEnterTimestamp = Logger.getTimestamp();
   }
 
-  /**
-   * Starts the configuration for a specific state using a fluent API.
-   *
-   * @param stateEnum The state to configure.
-   * @return A configuration builder for this state.
-   */
   public StateConfig state(S stateEnum) {
     StateConfig config = new StateConfig();
     states.put(stateEnum, config);
     return config;
   }
 
-  /** Manually adds a full State implementation (legacy/complex mode). */
   public void addState(S key, State<S> state) {
     states.put(key, state);
   }
 
-  /** Should be called in the subsystem's periodic method. */
   public void update() {
     State<S> state = states.get(current);
 
@@ -63,7 +43,7 @@ public class StateMachine<S extends Enum<S>> {
     state.onUpdate();
 
     for (Transition t : globalTransitions) {
-      if (t.condition.getAsBoolean()) {
+      if (t.target != current && t.condition.getAsBoolean()) {
         transitionTo(t.target);
         return;
       }
@@ -80,7 +60,6 @@ public class StateMachine<S extends Enum<S>> {
     return this;
   }
 
-  /** Forces a transition to a specific state (failsafe). */
   public void forceState(S next) {
     if (next != current) transitionTo(next);
   }
@@ -106,9 +85,6 @@ public class StateMachine<S extends Enum<S>> {
     if (nextState != null) nextState.onEnter();
   }
 
-  // --- Inner Helper Classes for Fluent API ---
-
-  /** Internal class to build states using lambdas. */
   public class StateConfig implements State<S> {
     private Runnable onEnter = () -> {};
     private Runnable onUpdate = () -> {};
@@ -130,15 +106,13 @@ public class StateMachine<S extends Enum<S>> {
       return this;
     }
 
-    /**
-     * Adds a transition condition.
-     *
-     * @param targetState The state to go to.
-     * @param condition The condition (boolean supplier) that triggers the transition.
-     */
     public StateConfig transitionTo(S targetState, BooleanSupplier condition) {
       transitions.add(new Transition(targetState, condition));
       return this;
+    }
+
+    public StateConfig transitionAfter(double seconds, S targetState) {
+      return transitionTo(targetState, () -> getTimeInState() >= seconds);
     }
 
     @Override
