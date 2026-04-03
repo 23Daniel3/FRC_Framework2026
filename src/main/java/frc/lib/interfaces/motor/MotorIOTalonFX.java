@@ -18,252 +18,338 @@ import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.units.measure.*;
 
 /**
- * Implementação de MotorIO para CTRE TalonFX (Kraken/Falcon).
- * Otimizado para rodar toda a física de controle (SVAG + PID + Motion Magic) nativamente no hardware.
+ * Implementação de MotorIO para CTRE TalonFX (Kraken/Falcon). Otimizado para rodar toda a física de
+ * controle (SVAG + PID + Motion Magic) nativamente no hardware.
  */
 public class MotorIOTalonFX extends MotorBase {
 
-    private final TalonFX motor;
-    private final TalonFXConfiguration driveConfig = new TalonFXConfiguration();
-    private final MotorIOInputs inputs = new MotorIOInputs();
+  private final TalonFX motor;
+  private final TalonFXConfiguration driveConfig = new TalonFXConfiguration();
+  private final MotorIOInputs inputs = new MotorIOInputs();
 
-    // Controle de Requisições (Reutilizados para evitar alocação de memória no loop)
-    private final VoltageOut voltageRequest = new VoltageOut(0);
-    private final VelocityVoltage velocityRequest = new VelocityVoltage(0);
-    private final PositionVoltage positionRequest = new PositionVoltage(0);
-    private final MotionMagicVoltage motionMagicRequest = new MotionMagicVoltage(0);
-    private final DutyCycleOut dutyCycleRequest = new DutyCycleOut(0);
+  // Controle de Requisições (Reutilizados para evitar alocação de memória no loop)
+  private final VoltageOut voltageRequest = new VoltageOut(0);
+  private final VelocityVoltage velocityRequest = new VelocityVoltage(0);
+  private final PositionVoltage positionRequest = new PositionVoltage(0);
+  private final MotionMagicVoltage motionMagicRequest = new MotionMagicVoltage(0);
+  private final DutyCycleOut dutyCycleRequest = new DutyCycleOut(0);
 
-    // Status Signals para telemetria (Phoenix 6 usa sinais otimizados)
-    private final StatusSignal<Angle> posSignal;
-    private final StatusSignal<AngularVelocity> velSignal;
-    private final StatusSignal<Voltage> voltSignal;
-    private final StatusSignal<Current> currentSignal;
-    private final StatusSignal<Temperature> temperatureSignal;
+  // Status Signals para telemetria (Phoenix 6 usa sinais otimizados)
+  private final StatusSignal<Angle> posSignal;
+  private final StatusSignal<AngularVelocity> velSignal;
+  private final StatusSignal<Voltage> voltSignal;
+  private final StatusSignal<Current> currentSignal;
+  private final StatusSignal<Temperature> temperatureSignal;
 
-    public MotorIOTalonFX(String name, int id, CANBus canBus, MotorConfig config) {
-        super(name, config);
+  public MotorIOTalonFX(String name, int id, CANBus canBus, MotorConfig config) {
+    super(name, config);
 
-        this.motor = new TalonFX(id, canBus);
+    this.motor = new TalonFX(id, canBus);
 
-        // --- Configuração de Saída e Neutro ---
-        driveConfig.MotorOutput.Inverted = config.inverted 
-            ? InvertedValue.Clockwise_Positive 
+    // --- Configuração de Saída e Neutro ---
+    driveConfig.MotorOutput.Inverted =
+        config.inverted
+            ? InvertedValue.Clockwise_Positive
             : InvertedValue.CounterClockwise_Positive;
-        
-        driveConfig.MotorOutput.NeutralMode = (config.idleMode == com.revrobotics.spark.config.SparkBaseConfig.IdleMode.kBrake)
-            ? NeutralModeValue.Brake 
+
+    driveConfig.MotorOutput.NeutralMode =
+        (config.idleMode == com.revrobotics.spark.config.SparkBaseConfig.IdleMode.kBrake)
+            ? NeutralModeValue.Brake
             : NeutralModeValue.Coast;
 
-        // --- Limites de Corrente ---
-        driveConfig.CurrentLimits.StatorCurrentLimit = config.currentLimit.in(Amps);
-        driveConfig.CurrentLimits.StatorCurrentLimitEnable = true;
-        driveConfig.CurrentLimits.SupplyCurrentLimit = config.currentLimit.in(Amps); // Proteção da bateria
-        driveConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
+    // --- Limites de Corrente ---
+    driveConfig.CurrentLimits.StatorCurrentLimit = config.currentLimit.in(Amps);
+    driveConfig.CurrentLimits.StatorCurrentLimitEnable = true;
+    driveConfig.CurrentLimits.SupplyCurrentLimit =
+        config.currentLimit.in(Amps); // Proteção da bateria
+    driveConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
 
-        // --- Soft Limits ---
-        if (config.softLimitEnabled) {
-            driveConfig.SoftwareLimitSwitch.ForwardSoftLimitEnable = true;
-            driveConfig.SoftwareLimitSwitch.ForwardSoftLimitThreshold = config.maxPosition.in(Rotations);
-            driveConfig.SoftwareLimitSwitch.ReverseSoftLimitEnable = true;
-            driveConfig.SoftwareLimitSwitch.ReverseSoftLimitThreshold = config.minPosition.in(Rotations);
+    // --- Soft Limits ---
+    if (config.softLimitEnabled) {
+      driveConfig.SoftwareLimitSwitch.ForwardSoftLimitEnable = true;
+      driveConfig.SoftwareLimitSwitch.ForwardSoftLimitThreshold = config.maxPosition.in(Rotations);
+      driveConfig.SoftwareLimitSwitch.ReverseSoftLimitEnable = true;
+      driveConfig.SoftwareLimitSwitch.ReverseSoftLimitThreshold = config.minPosition.in(Rotations);
+    }
+
+    // --- Configure Follower Motor
+    if (config.leaderMotorID != 0) {
+      motor.setControl(
+          new Follower(
+              config.leaderMotorID,
+              config.followerInverted ? MotorAlignmentValue.Opposed : MotorAlignmentValue.Aligned));
+    }
+
+    driveConfig.Voltage.PeakForwardVoltage = config.maxOutput * config.nominalVoltage.in(Volts);
+    driveConfig.Voltage.PeakReverseVoltage = config.minOutput * config.nominalVoltage.in(Volts);
+
+    // --- Relação de Transmissão (Sensor to Mechanism) ---
+    // No Phoenix 6, você define a redução direto aqui e ele escala Posição e Velocidade
+    // automaticamente
+    driveConfig.Feedback.SensorToMechanismRatio =
+        (config.positionConversionFactor != 0.0) ? 1.0 / config.positionConversionFactor : 1.0;
+
+    // --- Slots de Controle (0 a 3) ---
+    // Aplicamos PID e SVAG completo nativo para cada slot definido no MotorConfig
+    applySlotConfig(
+        0,
+        config.kP[0],
+        config.kI[0],
+        config.kD[0],
+        config.kS[0],
+        config.kV[0],
+        config.kA[0],
+        config.kG[0]);
+    applySlotConfig(
+        1,
+        config.kP[1],
+        config.kI[1],
+        config.kD[1],
+        config.kS[1],
+        config.kV[1],
+        config.kA[1],
+        config.kG[1]);
+    applySlotConfig(
+        2,
+        config.kP[2],
+        config.kI[2],
+        config.kD[2],
+        config.kS[2],
+        config.kV[2],
+        config.kA[2],
+        config.kG[2]);
+
+    // --- Motion Magic (Nativo no Hardware) ---
+    // Usamos o Slot 0 como padrão para Motion Magic
+    driveConfig.MotionMagic.MotionMagicCruiseVelocity =
+        config.maxMotionMaxVelocity[0].in(RotationsPerSecond);
+    driveConfig.MotionMagic.MotionMagicAcceleration =
+        config.maxMotionMaxAcceleration[0].in(RotationsPerSecondPerSecond);
+
+    // Aplicação inicial da configuração
+    tryUntilOk(5, () -> motor.getConfigurator().apply(driveConfig));
+
+    // --- Configuração de Sinais ---
+    posSignal = motor.getPosition();
+    velSignal = motor.getVelocity();
+    voltSignal = motor.getMotorVoltage();
+    currentSignal = motor.getStatorCurrent();
+    temperatureSignal = motor.getDeviceTemp();
+
+    // Frequências otimizadas para controle e log
+    BaseStatusSignal.setUpdateFrequencyForAll(100.0, posSignal, velSignal);
+    BaseStatusSignal.setUpdateFrequencyForAll(20.0, voltSignal, currentSignal, temperatureSignal);
+
+    // Otimiza o uso de banda do CAN
+    motor.optimizeBusUtilization();
+
+    motor.setPosition(0);
+  }
+
+  @Override
+  protected void updateHardwareInputs(MotorIOInputs inputs) {
+    BaseStatusSignal.refreshAll(posSignal, velSignal, voltSignal, currentSignal, temperatureSignal);
+
+    inputs.position = posSignal.getValue();
+    inputs.velocity = velSignal.getValue();
+    inputs.appliedVolts = voltSignal.getValue();
+    inputs.current = currentSignal.getValue();
+    inputs.temperature = temperatureSignal.getValue();
+    inputs.isConnected = BaseStatusSignal.isAllGood(posSignal, velSignal);
+
+    if (!inputs.isConnected) {
+      inputs.activeFaults = frc.lib.interfaces.motor.MotorFaults.getTalonFaults(motor);
+    } else {
+      inputs.activeFaults = new String[] {};
+    }
+  }
+
+  // --- Implementação de Controle Nativo ---
+
+  @Override
+  public void runVelocity(AngularVelocity velocity) {
+    motor.setControl(velocityRequest.withVelocity(velocity).withSlot(0));
+  }
+
+  @Override
+  public void runPosition(Angle position) {
+    motor.setControl(positionRequest.withPosition(position).withSlot(0));
+  }
+
+  @Override
+  public void runSmartPosition(Angle position) {
+    // Motion Magic nativo
+    motor.setControl(motionMagicRequest.withPosition(position).withSlot(0));
+  }
+
+  @Override
+  public void runVelocity(AngularVelocity velocity, int slot) {
+    motor.setControl(velocityRequest.withVelocity(velocity).withSlot(slot));
+  }
+
+  @Override
+  public void runPosition(Angle position, int slot) {
+    motor.setControl(positionRequest.withPosition(position).withSlot(slot));
+  }
+
+  @Override
+  public void runSmartPosition(Angle position, int slot) {
+    motor.setControl(motionMagicRequest.withPosition(position).withSlot(slot));
+  }
+
+  @Override
+  public void runVoltage(Voltage volts) {
+    motor.setControl(voltageRequest.withOutput(volts.in(Volts)));
+  }
+
+  @Override
+  public void runPercentOutput(double percent) {
+    motor.setControl(dutyCycleRequest.withOutput(percent));
+  }
+
+  @Override
+  public void stop() {
+    motor.stopMotor();
+  }
+
+  @Override
+  public void setOffset(Angle offset) {
+    motor.setPosition(offset);
+  }
+
+  @Override
+  public void applyHardwareSmartMotion(
+      int slot, double maxVel, double maxAccel, double allowedErr) {
+    // O Phoenix 6 prefere atualizar MotionMagic via TalonFXConfiguration por ser mais estável
+    driveConfig.MotionMagic.MotionMagicCruiseVelocity = maxVel;
+    driveConfig.MotionMagic.MotionMagicAcceleration = maxAccel;
+    motor.getConfigurator().apply(driveConfig.MotionMagic);
+  }
+
+  @Override
+  public void applyHardwareOutputRange(int slot, double min, double max) {
+    driveConfig.Voltage.PeakForwardVoltage = max * 12.0;
+    driveConfig.Voltage.PeakReverseVoltage = min * 12.0;
+    motor.getConfigurator().apply(driveConfig.Voltage);
+  }
+
+  @Override
+  public void setBrakeMode(boolean enabled) {
+    driveConfig.MotorOutput.NeutralMode = enabled ? NeutralModeValue.Brake : NeutralModeValue.Coast;
+    motor.getConfigurator().apply(driveConfig.MotorOutput);
+  }
+
+  @Override
+  public void setCurrentLimit(Current current) {
+    driveConfig.CurrentLimits.StatorCurrentLimit = current.in(Amps);
+    motor.getConfigurator().apply(driveConfig.CurrentLimits);
+  }
+
+  @Override
+  public MotorIOInputs getMotorIOInputs() {
+    return inputs;
+  }
+
+  private void applySlotConfig(
+      int slot, double p, double i, double d, double s, double v, double a, double g) {
+    switch (slot) {
+      case 0 -> {
+        driveConfig.Slot0.kP = p;
+        driveConfig.Slot0.kI = i;
+        driveConfig.Slot0.kD = d;
+        driveConfig.Slot0.kS = s;
+        driveConfig.Slot0.kV = v;
+        driveConfig.Slot0.kA = a;
+        driveConfig.Slot0.kG = g;
+      }
+      case 1 -> {
+        driveConfig.Slot1.kP = p;
+        driveConfig.Slot1.kI = i;
+        driveConfig.Slot1.kD = d;
+        driveConfig.Slot1.kS = s;
+        driveConfig.Slot1.kV = v;
+        driveConfig.Slot1.kA = a;
+        driveConfig.Slot1.kG = g;
+      }
+      case 2 -> {
+        driveConfig.Slot2.kP = p;
+        driveConfig.Slot2.kI = i;
+        driveConfig.Slot2.kD = d;
+        driveConfig.Slot2.kS = s;
+        driveConfig.Slot2.kV = v;
+        driveConfig.Slot2.kA = a;
+        driveConfig.Slot2.kG = g;
+      }
+    }
+  }
+
+  @Override
+  public void applyHardwarePID(int slot, double p, double i, double d) {
+    if (motor == null) return;
+    applySlotUpdate(slot, p, i, d, Double.NaN, Double.NaN, Double.NaN, Double.NaN);
+  }
+
+  @Override
+  public void applyHardwareSVAG(int slot, double s, double v, double a, double g) {
+    if (motor == null) return;
+    applySlotUpdate(slot, Double.NaN, Double.NaN, Double.NaN, s, v, a, g);
+  }
+
+  private void applySlotUpdate(
+      int slot, double p, double i, double d, double s, double v, double a, double g) {
+    switch (slot) {
+      case 0 -> {
+        Slot0Configs s0 = new Slot0Configs();
+        motor.getConfigurator().refresh(s0);
+        if (!Double.isNaN(p)) {
+          s0.kP = p;
+          s0.kI = i;
+          s0.kD = d;
         }
-
-        // --- Configure Follower Motor
-        if (config.leaderMotorID != 0) {
-            motor.setControl(new Follower(config.leaderMotorID, config.followerInverted? MotorAlignmentValue.Opposed : MotorAlignmentValue.Aligned));
+        if (!Double.isNaN(s)) {
+          s0.kS = s;
+          s0.kV = v;
+          s0.kA = a;
+          s0.kG = g;
         }
-
-        driveConfig.Voltage.PeakForwardVoltage = config.maxOutput * config.nominalVoltage.in(Volts);
-        driveConfig.Voltage.PeakReverseVoltage = config.minOutput * config.nominalVoltage.in(Volts);
-
-        // --- Relação de Transmissão (Sensor to Mechanism) ---
-        // No Phoenix 6, você define a redução direto aqui e ele escala Posição e Velocidade automaticamente
-        driveConfig.Feedback.SensorToMechanismRatio = (config.positionConversionFactor != 0.0) 
-            ? 1.0 / config.positionConversionFactor 
-            : 1.0;
-
-        // --- Slots de Controle (0 a 3) ---
-        // Aplicamos PID e SVAG completo nativo para cada slot definido no MotorConfig
-        applySlotConfig(0, config.kP[0], config.kI[0], config.kD[0], config.kS[0], config.kV[0], config.kA[0], config.kG[0]);
-        applySlotConfig(1, config.kP[1], config.kI[1], config.kD[1], config.kS[1], config.kV[1], config.kA[1], config.kG[1]);
-        applySlotConfig(2, config.kP[2], config.kI[2], config.kD[2], config.kS[2], config.kV[2], config.kA[2], config.kG[2]);
-
-        // --- Motion Magic (Nativo no Hardware) ---
-        // Usamos o Slot 0 como padrão para Motion Magic
-        driveConfig.MotionMagic.MotionMagicCruiseVelocity = config.maxMotionMaxVelocity[0].in(RotationsPerSecond);
-        driveConfig.MotionMagic.MotionMagicAcceleration = config.maxMotionMaxAcceleration[0].in(RotationsPerSecondPerSecond);
-
-        // Aplicação inicial da configuração
-        tryUntilOk(5, () -> motor.getConfigurator().apply(driveConfig));
-
-        // --- Configuração de Sinais ---
-        posSignal = motor.getPosition();
-        velSignal = motor.getVelocity();
-        voltSignal = motor.getMotorVoltage();
-        currentSignal = motor.getStatorCurrent();
-        temperatureSignal = motor.getDeviceTemp();
-
-        // Frequências otimizadas para controle e log
-        BaseStatusSignal.setUpdateFrequencyForAll(100.0, posSignal, velSignal);
-        BaseStatusSignal.setUpdateFrequencyForAll(20.0, voltSignal, currentSignal, temperatureSignal);
-        
-        // Otimiza o uso de banda do CAN
-        motor.optimizeBusUtilization();
-
-        motor.setPosition(0);
-    }
-
-    @Override
-    protected void updateHardwareInputs(MotorIOInputs inputs) {
-        BaseStatusSignal.refreshAll(posSignal, velSignal, voltSignal, currentSignal, temperatureSignal);
-
-        inputs.position = posSignal.getValue();
-        inputs.velocity = velSignal.getValue();
-        inputs.appliedVolts = voltSignal.getValue();
-        inputs.current = currentSignal.getValue();
-        inputs.temperature = temperatureSignal.getValue();
-        inputs.isConnected = BaseStatusSignal.isAllGood(posSignal, velSignal);
-
-        if (!inputs.isConnected) {
-            inputs.activeFaults = frc.lib.interfaces.motor.MotorFaults.getTalonFaults(motor);
-        } else {
-            inputs.activeFaults = new String[] {};
+        motor.getConfigurator().apply(s0);
+        break;
+      }
+      case 1 -> {
+        Slot1Configs s1 = new Slot1Configs();
+        motor.getConfigurator().refresh(s1);
+        if (!Double.isNaN(p)) {
+          s1.kP = p;
+          s1.kI = i;
+          s1.kD = d;
         }
-    }
-
-    // --- Implementação de Controle Nativo ---
-
-    @Override
-    public void runVelocity(AngularVelocity velocity) {
-        motor.setControl(velocityRequest.withVelocity(velocity).withSlot(0));
-    }
-
-    @Override
-    public void runPosition(Angle position) {
-        motor.setControl(positionRequest.withPosition(position).withSlot(0));
-    }
-
-    @Override
-    public void runSmartPosition(Angle position) {
-        // Motion Magic nativo
-        motor.setControl(motionMagicRequest.withPosition(position).withSlot(0));
-    }
-
-    @Override
-    public void runVelocity(AngularVelocity velocity, int slot) {
-        motor.setControl(velocityRequest.withVelocity(velocity).withSlot(slot));
-    }
-
-    @Override
-    public void runPosition(Angle position, int slot) {
-        motor.setControl(positionRequest.withPosition(position).withSlot(slot));
-    }
-
-    @Override
-    public void runSmartPosition(Angle position, int slot) {
-        motor.setControl(motionMagicRequest.withPosition(position).withSlot(slot));
-    }
-
-    @Override
-    public void runVoltage(Voltage volts) {
-        motor.setControl(voltageRequest.withOutput(volts.in(Volts)));
-    }
-
-    @Override
-    public void runPercentOutput(double percent) {
-        motor.setControl(dutyCycleRequest.withOutput(percent));
-    }
-
-    @Override
-    public void stop() {
-        motor.stopMotor();
-    }
-
-    @Override
-    public void setOffset(Angle offset) {
-        motor.setPosition(offset);
-    }
-
-    @Override
-    public void applyHardwareSmartMotion(int slot, double maxVel, double maxAccel, double allowedErr) {
-        // O Phoenix 6 prefere atualizar MotionMagic via TalonFXConfiguration por ser mais estável
-        driveConfig.MotionMagic.MotionMagicCruiseVelocity = maxVel;
-        driveConfig.MotionMagic.MotionMagicAcceleration = maxAccel;
-        motor.getConfigurator().apply(driveConfig.MotionMagic);
-    }
-
-    @Override
-    public void applyHardwareOutputRange(int slot, double min, double max) {
-        driveConfig.Voltage.PeakForwardVoltage = max * 12.0;
-        driveConfig.Voltage.PeakReverseVoltage = min * 12.0;
-        motor.getConfigurator().apply(driveConfig.Voltage);
-    }
-
-    @Override
-    public void setBrakeMode(boolean enabled) {
-        driveConfig.MotorOutput.NeutralMode = enabled ? NeutralModeValue.Brake : NeutralModeValue.Coast;
-        motor.getConfigurator().apply(driveConfig.MotorOutput);
-    }
-
-    @Override
-    public void setCurrentLimit(Current current) {
-        driveConfig.CurrentLimits.StatorCurrentLimit = current.in(Amps);
-        motor.getConfigurator().apply(driveConfig.CurrentLimits);
-    }
-
-    @Override
-    public MotorIOInputs getMotorIOInputs() {
-        return inputs;
-    }
-
-    private void applySlotConfig(int slot, double p, double i, double d, double s, double v, double a, double g) {
-        switch (slot) {
-            case 0 -> { driveConfig.Slot0.kP = p; driveConfig.Slot0.kI = i; driveConfig.Slot0.kD = d; driveConfig.Slot0.kS = s; driveConfig.Slot0.kV = v; driveConfig.Slot0.kA = a; driveConfig.Slot0.kG = g; }
-            case 1 -> { driveConfig.Slot1.kP = p; driveConfig.Slot1.kI = i; driveConfig.Slot1.kD = d; driveConfig.Slot1.kS = s; driveConfig.Slot1.kV = v; driveConfig.Slot1.kA = a; driveConfig.Slot1.kG = g; }
-            case 2 -> { driveConfig.Slot2.kP = p; driveConfig.Slot2.kI = i; driveConfig.Slot2.kD = d; driveConfig.Slot2.kS = s; driveConfig.Slot2.kV = v; driveConfig.Slot2.kA = a; driveConfig.Slot2.kG = g; }
+        if (!Double.isNaN(s)) {
+          s1.kS = s;
+          s1.kV = v;
+          s1.kA = a;
+          s1.kG = g;
         }
-    }
-
-@Override
-    public void applyHardwarePID(int slot, double p, double i, double d) {
-        if (motor == null) return;
-        applySlotUpdate(slot, p, i, d, Double.NaN, Double.NaN, Double.NaN, Double.NaN);
-    }
-
-    @Override
-    public void applyHardwareSVAG(int slot, double s, double v, double a, double g) {
-        if (motor == null) return;
-        applySlotUpdate(slot, Double.NaN, Double.NaN, Double.NaN, s, v, a, g);
-    }
-
-    private void applySlotUpdate(int slot, double p, double i, double d, double s, double v, double a, double g) {
-        switch (slot) {
-            case 0 -> {
-                Slot0Configs s0 = new Slot0Configs();
-                motor.getConfigurator().refresh(s0);
-                if (!Double.isNaN(p)) { s0.kP = p; s0.kI = i; s0.kD = d; }
-                if (!Double.isNaN(s)) { s0.kS = s; s0.kV = v; s0.kA = a; s0.kG = g; }
-                motor.getConfigurator().apply(s0);
-              break;
-            }
-            case 1 -> {
-                Slot1Configs s1 = new Slot1Configs();
-                motor.getConfigurator().refresh(s1);
-                if (!Double.isNaN(p)) { s1.kP = p; s1.kI = i; s1.kD = d; }
-                if (!Double.isNaN(s)) { s1.kS = s; s1.kV = v; s1.kA = a; s1.kG = g; }
-                motor.getConfigurator().apply(s1);
-              break;
-            }
-            case 2 -> {
-                Slot2Configs s2 = new Slot2Configs();
-                motor.getConfigurator().refresh(s2);
-                if (!Double.isNaN(p)) { s2.kP = p; s2.kI = i; s2.kD = d; }
-                if (!Double.isNaN(s)) { s2.kS = s; s2.kV = v; s2.kA = a; s2.kG = g; }
-                motor.getConfigurator().apply(s2);
-              break;
-            }
-            default -> System.err.println("[MotorIOTalonFX] Slot " + slot + " não suportado.");
+        motor.getConfigurator().apply(s1);
+        break;
+      }
+      case 2 -> {
+        Slot2Configs s2 = new Slot2Configs();
+        motor.getConfigurator().refresh(s2);
+        if (!Double.isNaN(p)) {
+          s2.kP = p;
+          s2.kI = i;
+          s2.kD = d;
         }
+        if (!Double.isNaN(s)) {
+          s2.kS = s;
+          s2.kV = v;
+          s2.kA = a;
+          s2.kG = g;
+        }
+        motor.getConfigurator().apply(s2);
+        break;
+      }
+      default -> System.err.println("[MotorIOTalonFX] Slot " + slot + " não suportado.");
     }
+  }
 }

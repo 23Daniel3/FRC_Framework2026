@@ -117,7 +117,8 @@ public class MotorConfig {
     return this;
   }
 
-  public MotorConfig smartMotion(int slot, AngularVelocity maxVel, AngularAcceleration maxAccel, Angle allowedError) {
+  public MotorConfig smartMotion(
+      int slot, AngularVelocity maxVel, AngularAcceleration maxAccel, Angle allowedError) {
     this.maxMotionMaxVelocity[slot] = maxVel;
     this.maxMotionMaxAcceleration[slot] = maxAccel;
     this.maxMotionAllowedClosedLoopError[slot] = allowedError;
