@@ -343,8 +343,8 @@ public class RobotContainer {
     new Trigger(() -> vision.getTagCount(VisionCamera.LEFT) == 2)
         .or(() -> vision.getTagCount(VisionCamera.RIGHT) == 2)
         .and(RobotModeTriggers.disabled())
-        .onTrue(LedCommands.red(led).ignoringDisable(true))
-        .onFalse(LedCommands.green(led).ignoringDisable(true));
+        .onTrue(LedCommands.red(led))
+        .onFalse(LedCommands.green(led));
 
     isAtBump
         .and(RobotModeTriggers.autonomous().negate())
