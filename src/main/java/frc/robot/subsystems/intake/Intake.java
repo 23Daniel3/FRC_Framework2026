@@ -54,6 +54,14 @@ public class Intake extends StateSubsystem<
               io.controlRollerMotor().stop();
             });
 
+    fsm.state(IntakeState.STOPING)
+        .onEnter(
+          () -> {
+            io.controlRollerMotor().stop();
+          }
+        )
+        .transitionTo(IntakeState.STOPPED, () -> inputs.rollerMotorInputs.velocity.in(RPM) == 0);
+
     fsm.addGlobalTransition(
         IntakeState.GOING_OUT,
         () -> (currentRequest == IntakeRequest.COLLECT) && (getState() != IntakeState.COLLECT));
@@ -71,6 +79,7 @@ public class Intake extends StateSubsystem<
       case IN -> getState() == IntakeState.IN;
       case OUT -> getState() == IntakeState.OUT;
       case COLLECT -> getState() == IntakeState.COLLECT;
+      case STOP -> getState() == IntakeState.STOPPED;
     };
   } 
 }

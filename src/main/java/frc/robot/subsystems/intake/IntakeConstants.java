@@ -42,12 +42,15 @@ public class IntakeConstants {
   public enum IntakeRequest {
     IN,
     OUT,
-    COLLECT
+    COLLECT,
+    STOP,
   }
 
   public enum IntakeState {
     IN,
     OUT,
+    STOPPED,
+    STOPING,
     COLLECT,
     GOING_IN,
     GOING_OUT

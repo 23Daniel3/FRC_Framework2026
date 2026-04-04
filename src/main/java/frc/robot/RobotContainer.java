@@ -16,28 +16,18 @@ import frc.lib.controller.NaturalXboxController;
 import frc.lib.controller.VibrateXboxController;
 import frc.lib.util.AllianceSelector;
 import frc.lib.zones.LogPolygon2d;
-import frc.robot.commands.ConveyorCommands;
-import frc.robot.commands.FlywheelCommands;
-import frc.robot.commands.KickerCommands;
 import frc.robot.commands.LedCommands;
-import frc.robot.commands.RollerCommands;
-import frc.robot.commands.SuperStructureCommands;
-import frc.robot.commands.auto.AutoTrajetorys;
 import frc.robot.commands.drivetrain.DriveToNextZone;
 import frc.robot.commands.drivetrain.DriveToPreviousZone;
 import frc.robot.commands.drivetrain.DrivetrainCommands;
-import frc.robot.commands.drivetrain.JoystickDriveShooting;
 import frc.robot.commands.drivetrain.align.IntakeBallController;
 import frc.robot.generated.TunerConstants;
-import frc.robot.subsystems.conveyor.*;
 import frc.robot.subsystems.drivetrain.*;
-import frc.robot.subsystems.flywheel.*;
 import frc.robot.subsystems.intake.*;
-import frc.robot.subsystems.kicker.*;
+import frc.robot.subsystems.intake.IntakeConstants.IntakeRequest;
 import frc.robot.subsystems.led.Led;
 import frc.robot.subsystems.led.LedIOReal;
 import frc.robot.subsystems.led.LedIOSim;
-import frc.robot.subsystems.superstructure.SuperStructure;
 import frc.robot.subsystems.vision.*;
 import frc.robot.subsystems.vision.VisionConstants.VisionCamera;
 
@@ -50,17 +40,17 @@ import frc.robot.subsystems.vision.VisionConstants.VisionCamera;
 public class RobotContainer {
 
   // Subsystems
-  private final Conveyor conveyor;
+  //   private final Conveyor conveyor;
   // private final Display display;
   private final Drivetrain drivetrain;
-  private final Flywheel flywheel;
+  //   private final Flywheel flywheel;
   private final Intake intake;
-  private final Kicker kicker;
+  //   private final Kicker kicker;
   private final Led led;
-  private final SuperStructure superStructure;
+  //   private final SuperStructure superStructure;
   private final Vision vision;
 
-  public final AutoTrajetorys auto;
+  //   public final AutoTrajetorys auto;
 
   public final AllianceSelector alliance;
 
@@ -79,11 +69,11 @@ public class RobotContainer {
       case REAL:
         // Real robot, instantiate hardware IO implementations
 
-        conveyor = new Conveyor(new ConveyorIOSpark());
-        // display = new Display(new DisplayIOMXP());
-        flywheel = new Flywheel(new FlywheelIOTalonFX());
-        intake = new Intake(new IntakeIOTalonFX());
-        kicker = new Kicker(new KickerIOSparkFlex());
+        // conveyor = new Conveyor(new ConveyorIOSpark());
+        // // display = new Display(new DisplayIOMXP());
+        // flywheel = new Flywheel(new FlywheelIOTalonFX());
+        intake = new Intake(new IntakeIOHardware());
+        // kicker = new Kicker(new KickerIOSparkFlex());
         led = new Led(new LedIOReal());
         vision =
             new Vision(
@@ -98,11 +88,11 @@ public class RobotContainer {
       case SIM:
         // Sim robot, instantiate physics sim IO implementations
 
-        conveyor = new Conveyor(new ConveyorIO() {});
+        // conveyor = new Conveyor(new ConveyorIO() {});
         // display = new Display(new DisplayIOSim());
-        flywheel = new Flywheel(new FlywheelIO() {});
-        intake = new Intake(new IntakeIO() {});
-        kicker = new Kicker(new KickerIO() {});
+        // flywheel = new Flywheel(new FlywheelIO() {});
+        intake = new Intake(new IntakeIOHardware() {});
+        // kicker = new Kicker(new KickerIO() {});
         led = new Led(new LedIOSim());
         vision =
             new Vision(
@@ -116,11 +106,11 @@ public class RobotContainer {
       default:
         // Replayed robot, disable IO implementations
 
-        conveyor = new Conveyor(new ConveyorIO() {});
+        // conveyor = new Conveyor(new ConveyorIO() {});
         // display = new Display(new DisplayIO() {});
-        flywheel = new Flywheel(new FlywheelIO() {});
-        intake = new Intake(new IntakeIO() {});
-        kicker = new Kicker(new KickerIO() {});
+        // flywheel = new Flywheel(new FlywheelIO() {});
+        intake = new Intake(new IntakeIOHardware() {});
+        // kicker = new Kicker(new KickerIO() {});
         led = new Led(new LedIOSim());
         vision =
             new Vision(
@@ -131,19 +121,19 @@ public class RobotContainer {
         break;
     }
 
-    superStructure =
-        new SuperStructure(
-            conveyor,
-            drivetrain,
-            flywheel,
-            intake,
-            kicker,
-            led,
-            vision,
-            driverController,
-            operatorController);
+    // superStructure =
+    //     new SuperStructure(
+    //         conveyor,
+    //         drivetrain,
+    //         flywheel,
+    //         intake,
+    //         kicker,
+    //         led,
+    //         vision,
+    //         driverController,
+    //         operatorController);
 
-    auto = new AutoTrajetorys(drivetrain, superStructure);
+    // auto = new AutoTrajetorys(drivetrain, superStructure);
 
     driveLogger = new Telemetry(DrivetrainConstants.MAX_SPEED);
 
@@ -176,6 +166,16 @@ public class RobotContainer {
    */
   private void configureButtonBindings() {
 
+    operatorController
+        .leftBumper()
+        .onTrue(new InstantCommand(() -> intake.setRequest(IntakeRequest.COLLECT)));
+    operatorController
+        .povLeft()
+        .onTrue(new InstantCommand(() -> intake.setRequest(IntakeRequest.IN)));
+    operatorController
+        .povRight()
+        .onTrue(new InstantCommand(() -> intake.setRequest(IntakeRequest.OUT)));
+
     // Driver Controller
     drivetrain.setDefaultCommand(
         DrivetrainCommands.joystickDrive(
@@ -184,12 +184,12 @@ public class RobotContainer {
             driverController.getLeftXSupplier(),
             driverController.getRightXSupplier()));
 
-    superStructure.setDefaultCommand(
-        SuperStructureCommands.manageIntentions(
-            superStructure,
-            operatorController.rightBumper(),
-            driverController.rightBumper(),
-            operatorController.leftBumper()));
+    // superStructure.setDefaultCommand(
+    //     SuperStructureCommands.manageIntentions(
+    //         superStructure,
+    //         operatorController.rightBumper(),
+    //         driverController.rightBumper(),
+    //         operatorController.leftBumper()));
 
     operatorController
         .start()
@@ -202,14 +202,14 @@ public class RobotContainer {
                             ? Poses.RESET_POSE_BLUE
                             : Poses.RESET_POSE_RED)));
 
-    driverController
-        .rightBumper()
-        .whileTrue(
-            new JoystickDriveShooting(
-                drivetrain,
-                superStructure,
-                driverController.getLeftYSupplier(),
-                driverController.getLeftXSupplier()));
+    // driverController
+    //     .rightBumper()
+    //     .whileTrue(
+    //         new JoystickDriveShooting(
+    //             drivetrain,
+    //             superStructure,
+    //             driverController.getLeftYSupplier(),
+    //             driverController.getLeftXSupplier()));
 
     driverController
         .leftTrigger(0.5)
@@ -265,45 +265,45 @@ public class RobotContainer {
 
     invertButton.whileTrue(new VibrateXboxController(operatorController).continuous(0, 1, 3, true));
 
-    invertButton
-        .onTrue(
-            new ParallelCommandGroup(
-                conveyor.setToMaxCurrent(),
-                flywheel.setToMaxCurrent(),
-                intake.setToMaxCurrent(),
-                kicker.setToMaxCurrent()))
-        .onFalse(
-            new ParallelCommandGroup(
-                conveyor.setToNormalCurrent(),
-                flywheel.setToNormalCurrent(),
-                intake.setToNormalCurrent(),
-                kicker.setToNormalCurrent()));
+    // invertButton
+    //     .onTrue(
+    //         new ParallelCommandGroup(
+    //             conveyor.setToMaxCurrent(),
+    //             flywheel.setToMaxCurrent(),
+    //             intake.setToMaxCurrent(),
+    //             kicker.setToMaxCurrent()))
+    //     .onFalse(
+    //         new ParallelCommandGroup(
+    //             conveyor.setToNormalCurrent(),
+    //             flywheel.setToNormalCurrent(),
+    //             intake.setToNormalCurrent(),
+    //             kicker.setToNormalCurrent()));
 
-    operatorController.a().whileTrue(RollerCommands.intakeShift(superStructure, invertButton));
+    // operatorController.a().whileTrue(RollerCommands.intakeShift(superStructure, invertButton));
 
-    operatorController
-        .b()
-        .and(operatorController.start().negate())
-        .whileTrue(ConveyorCommands.runShift(superStructure, invertButton));
+    // operatorController
+    //     .b()
+    //     .and(operatorController.start().negate())
+    //     .whileTrue(ConveyorCommands.runShift(superStructure, invertButton));
 
-    operatorController
-        .leftTrigger(0.3)
-        .whileTrue(KickerCommands.shootShift(superStructure, invertButton));
+    // operatorController
+    //     .leftTrigger(0.3)
+    //     .whileTrue(KickerCommands.shootShift(superStructure, invertButton));
 
-    operatorController
-        .rightTrigger(0.3)
-        .whileTrue(FlywheelCommands.shootShift(superStructure, invertButton));
+    // operatorController
+    //     .rightTrigger(0.3)
+    //     .whileTrue(FlywheelCommands.shootShift(superStructure, invertButton));
 
-    operatorController.povUp().whileTrue(ConveyorCommands.wiggle(superStructure));
+    // operatorController.povUp().whileTrue(ConveyorCommands.wiggle(superStructure));
 
-    operatorController
-        .povDown()
-        .whileTrue(
-            new ParallelCommandGroup(
-                RollerCommands.outake(superStructure),
-                ConveyorCommands.reverse(superStructure),
-                KickerCommands.reverse(superStructure),
-                FlywheelCommands.reverse(superStructure)));
+    // operatorController
+    //     .povDown()
+    //     .whileTrue(
+    //         new ParallelCommandGroup(
+    //             RollerCommands.outake(superStructure),
+    //             ConveyorCommands.reverse(superStructure),
+    //             KickerCommands.reverse(superStructure),
+    //             FlywheelCommands.reverse(superStructure)));
 
     operatorController
         .start()
@@ -335,7 +335,8 @@ public class RobotContainer {
    * @return the command to run in autonomous
    */
   public Command getAutonomousCommand() {
-    return auto.auto();
+    // return auto.auto();
+    return Commands.none();
   }
 
   public void triggersActions() {

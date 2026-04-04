@@ -25,7 +25,7 @@ import frc.lib.util.drivetrain.ZoneRepulsionModifier;
 import frc.lib.util.drivetrain.ZoneSuctionModifier;
 import frc.lib.zones.Polygon2d;
 import frc.robot.subsystems.drivetrain.Drivetrain;
-import frc.robot.subsystems.superstructure.SuperStructure;
+// import frc.robot.subsystems.superstructure.SuperStructure;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 
@@ -130,12 +130,12 @@ public class DrivetrainCommands {
             }));
   }
 
-  public static Command joystickDriveAimHub(
-      Drivetrain drivetrain, SuperStructure superStructure, DoubleSupplier x, DoubleSupplier y) {
+  // public static Command joystickDriveAimHub(
+  // Drivetrain drivetrain, SuperStructure superStructure, DoubleSupplier x, DoubleSupplier y) {
 
-    return driveCore(
-        drivetrain, x, y, new PIDRotation(() -> superStructure.getPredictiveAimAngle()));
-  }
+  // return driveCore(
+  // drivetrain, x, y, new PIDRotation(() -> superStructure.getPredictiveAimAngle()));
+  // }
 
   public static Command joystickDriveTrench(
       Drivetrain drivetrain, DoubleSupplier x, DoubleSupplier y) {

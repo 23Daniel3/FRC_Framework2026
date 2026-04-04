@@ -33,12 +33,27 @@ public final class Constants {
     BRAKE
   }
 
-  public static enum GeneralIntention {
+  public static enum RobotState {
+    GOING_COLLECT,
+    GOING_SHOOT,
+    GOING_COLLECT_SHOOT,
+    COLLECTING,
+    SHOOTING,
+    SHOOTING_RECOVERY,
+    COLLECT_SHOOTING,
+    COLLECT_SHOOTING_RECOVERY,
+    IDLE,
+    IDLEING,
+    CLOSING,
+    CLOSED
+  }
+
+  public static enum RobotRequest {
     COLLECT,
     SHOOT,
-    COLLECT_SHOOTING,
+    COLLECT_SHOOT,
     IDLE,
-    CLOSED
+    CLOSE
   }
 
   /** Alliance pre-seted just for security if have no connection */

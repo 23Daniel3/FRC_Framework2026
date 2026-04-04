@@ -24,6 +24,7 @@ import edu.wpi.first.units.measure.AngularAcceleration;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.LinearAcceleration;
 import edu.wpi.first.units.measure.LinearVelocity;
+import edu.wpi.first.units.measure.Velocity;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Notifier;
@@ -621,6 +622,22 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem {
   public ChassisSpeeds getRobotVelocity() {
     return getState().Speeds;
   }
+
+  @AutoLogOutput(key = "Subsystems/Drivetrain/RobotTotalVelocity")
+  public LinearVelocity getLinearVelocity() {
+    var velocity = getRobotVelocity();
+    double vx = velocity.vxMetersPerSecond;
+    double vy = velocity.vyMetersPerSecond;
+
+    double finalVelocity = Math.hypot(vx, vy);
+
+    return MetersPerSecond.of(finalVelocity);
+  }
+
+  @AutoLogOutput(key = "Subsystems/Drivetrain/IsMoving")
+  public boolean IsMoving() {
+    return getLinearVelocity().in(MetersPerSecond) != 0;
+  }  
 
   public boolean isAtTrench() {
     Translation2d robot = getPose().getTranslation();
