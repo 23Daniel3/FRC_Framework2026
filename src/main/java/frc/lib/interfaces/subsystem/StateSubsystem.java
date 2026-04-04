@@ -7,7 +7,8 @@ import frc.lib.util.PeriodicTimer;
 import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.inputs.LoggableInputs;
 
-public abstract class StateSubsystem<R extends Enum<R>, S extends Enum<S>, I extends LoggableInputs, T extends SubsystemIO<I>>
+public abstract class StateSubsystem<
+        R extends Enum<R>, S extends Enum<S>, I extends LoggableInputs, T extends SubsystemIO<I>>
     extends SubsystemBase {
 
   protected final StateMachine<S> fsm;
@@ -25,7 +26,7 @@ public abstract class StateSubsystem<R extends Enum<R>, S extends Enum<S>, I ext
     this.fsm = new StateMachine<>(name, stateEnum, initialState);
   }
 
-    public StateSubsystem(
+  public StateSubsystem(
       String name,
       I inputs,
       T io,
@@ -63,7 +64,7 @@ public abstract class StateSubsystem<R extends Enum<R>, S extends Enum<S>, I ext
   }
 
   protected boolean notInState(S state) {
-      return getState() != state;
+    return getState() != state;
   }
 
   @Override

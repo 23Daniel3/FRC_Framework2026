@@ -7,7 +7,7 @@ import frc.robot.subsystems.intake.IntakeConstants.IntakeRequest;
 import frc.robot.subsystems.superstructure.SuperStructure;
 
 public final class IntakeCommands {
-  
+
   private IntakeCommands() {}
 
   public static Command defaultCommand(SuperStructure superStructure, Intake intake) {

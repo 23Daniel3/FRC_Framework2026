@@ -6,7 +6,6 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.geometry.Translation3d;
 import frc.lib.calculus.ThrottleMap;
 import frc.lib.interfaces.motor.MotorConfig;
-
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import org.littletonrobotics.junction.Logger;
@@ -90,7 +89,7 @@ public final class ConstantsLogger {
 
     } else if (value instanceof MotorConfig) {
       ((MotorConfig) value).toLog(path);
-      
+
     } else {
       try {
         Logger.recordOutput(path, String.valueOf(value));

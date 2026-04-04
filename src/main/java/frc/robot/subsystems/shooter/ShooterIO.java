@@ -3,7 +3,6 @@ package frc.robot.subsystems.shooter;
 import frc.lib.interfaces.motor.MotorController;
 import frc.lib.interfaces.motor.MotorIO.MotorIOInputs;
 import frc.lib.interfaces.subsystem.SubsystemIO;
-
 import org.littletonrobotics.junction.AutoLog;
 
 public interface ShooterIO extends SubsystemIO<ShooterIOInputsAutoLogged> {
@@ -15,7 +14,8 @@ public interface ShooterIO extends SubsystemIO<ShooterIOInputsAutoLogged> {
   }
 
   public void updateInputs(ShooterIOInputsAutoLogged inputs);
-  
+
   public MotorController controlFlywheel();
+
   public MotorController controlKicker();
 }

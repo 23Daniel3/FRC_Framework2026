@@ -2,10 +2,9 @@ package frc.lib.interfaces.motor;
 
 import static edu.wpi.first.units.Units.*;
 
-import org.littletonrobotics.junction.Logger;
-
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import edu.wpi.first.units.measure.*;
+import org.littletonrobotics.junction.Logger;
 
 public class MotorConfig {
 
@@ -186,10 +185,16 @@ public class MotorConfig {
     }
 
     for (int i = 0; i < 4; i++) {
-      boolean hasGains = kP[i] != 0 || kI[i] != 0 || kD[i] != 0
-          || kS[i] != 0 || kV[i] != 0 || kA[i] != 0 || kG[i] != 0;
-      boolean hasMotion = maxMotionMaxVelocity[i] != null
-          && maxMotionMaxVelocity[i].in(RotationsPerSecond) != 0;
+      boolean hasGains =
+          kP[i] != 0
+              || kI[i] != 0
+              || kD[i] != 0
+              || kS[i] != 0
+              || kV[i] != 0
+              || kA[i] != 0
+              || kG[i] != 0;
+      boolean hasMotion =
+          maxMotionMaxVelocity[i] != null && maxMotionMaxVelocity[i].in(RotationsPerSecond) != 0;
 
       if (!hasGains && !hasMotion) continue;
 
@@ -206,12 +211,11 @@ public class MotorConfig {
       }
 
       if (hasMotion && maxMotionMaxVelocity[i] != null) {
-        Logger.recordOutput(slot + "/maxVelRPS",
-            maxMotionMaxVelocity[i].in(RotationsPerSecond));
-        Logger.recordOutput(slot + "/maxAccelRPSS",
-            maxMotionMaxAcceleration[i].in(RotationsPerSecondPerSecond));
-        Logger.recordOutput(slot + "/allowedErrorRot",
-            maxMotionAllowedClosedLoopError[i].in(Rotations));
+        Logger.recordOutput(slot + "/maxVelRPS", maxMotionMaxVelocity[i].in(RotationsPerSecond));
+        Logger.recordOutput(
+            slot + "/maxAccelRPSS", maxMotionMaxAcceleration[i].in(RotationsPerSecondPerSecond));
+        Logger.recordOutput(
+            slot + "/allowedErrorRot", maxMotionAllowedClosedLoopError[i].in(Rotations));
       }
     }
   }

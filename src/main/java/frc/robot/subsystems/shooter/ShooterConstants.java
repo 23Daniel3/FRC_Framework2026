@@ -23,42 +23,42 @@ public class ShooterConstants {
   public static final double IDLE_SPIN_VELOCITY = 1800;
 
   public static final MotorConfig KICKER_MOTOR_CONFIG =
-        new MotorConfig()
+      new MotorConfig()
           .currentLimit(Amps.of(40))
           .coastMode()
           .nominalVoltage(Volts.of(10.0))
           .svag(0, 0.17, 0.01727, 0, 0);
 
   public static final MotorConfig MOTOR_LEADER_CONFIG =
-        new MotorConfig()
-            .currentLimit(Amps.of(40))
-            .coastMode()
-            .nominalVoltage(Volts.of(10))
-            .inverted(true)
-            .pid(0, 0, 0, 0.013)
-            .svag(0, 0.24, 0.1157, 0.0, 0.0)
-            .withVelocityTolerance(RPM.of(100));
+      new MotorConfig()
+          .currentLimit(Amps.of(40))
+          .coastMode()
+          .nominalVoltage(Volts.of(10))
+          .inverted(true)
+          .pid(0, 0, 0, 0.013)
+          .svag(0, 0.24, 0.1157, 0.0, 0.0)
+          .withVelocityTolerance(RPM.of(100));
 
   public static final MotorConfig MOTOR_FOLLOWER_CONFIG =
-        new MotorConfig()
-            .currentLimit(Amps.of(40))
-            .coastMode()
-            .nominalVoltage(Volts.of(10))
-            .withMotorLeader(LEADER_ID)
-            .withFollowerInverted(true)
-            .withVelocityTolerance(RPM.of(300));
+      new MotorConfig()
+          .currentLimit(Amps.of(40))
+          .coastMode()
+          .nominalVoltage(Volts.of(10))
+          .withMotorLeader(LEADER_ID)
+          .withFollowerInverted(true)
+          .withVelocityTolerance(RPM.of(300));
 
   public enum ShooterRequest {
-      STOP,
-      SHOOT,
-      REVERSE
+    STOP,
+    SHOOT,
+    REVERSE
   }
 
   public enum ShooterState {
-      IDLE,
-      FLYWHEEL_RAMPING,
-      KICKER_RAMPING,
-      SHOOTING,   
-      REVERSING
+    IDLE,
+    FLYWHEEL_RAMPING,
+    KICKER_RAMPING,
+    SHOOTING,
+    REVERSING
   }
 }

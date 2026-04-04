@@ -7,7 +7,7 @@ import frc.robot.subsystems.shooter.ShooterConstants.ShooterRequest;
 import frc.robot.subsystems.superstructure.SuperStructure;
 
 public final class ShooterCommands {
-  
+
   private ShooterCommands() {}
 
   public static Command defaultCommand(SuperStructure superStructure, Shooter shooter) {

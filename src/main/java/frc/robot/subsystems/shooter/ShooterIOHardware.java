@@ -2,7 +2,6 @@ package frc.robot.subsystems.shooter;
 
 import com.ctre.phoenix6.CANBus;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
-
 import frc.lib.interfaces.motor.MotorController;
 import frc.lib.interfaces.motor.MotorIO;
 import frc.lib.interfaces.motor.MotorIOSparkFlex;
@@ -15,9 +14,24 @@ public class ShooterIOHardware implements ShooterIO {
   private final MotorIO kickerMotor;
 
   public ShooterIOHardware() {
-    leader = new MotorIOTalonFX("ShooterLeaderMotor", ShooterConstants.LEADER_ID, new CANBus(), ShooterConstants.MOTOR_LEADER_CONFIG);
-    follower = new MotorIOTalonFX("ShooterFollowerMotor", ShooterConstants.FOLLOWER_ID, new CANBus(), ShooterConstants.MOTOR_FOLLOWER_CONFIG);
-    kickerMotor = new MotorIOSparkFlex("ShooterKickerMotor", ShooterConstants.KICKER_MOTOR_ID, MotorType.kBrushless, ShooterConstants.KICKER_MOTOR_CONFIG);
+    leader =
+        new MotorIOTalonFX(
+            "ShooterLeaderMotor",
+            ShooterConstants.LEADER_ID,
+            new CANBus(),
+            ShooterConstants.MOTOR_LEADER_CONFIG);
+    follower =
+        new MotorIOTalonFX(
+            "ShooterFollowerMotor",
+            ShooterConstants.FOLLOWER_ID,
+            new CANBus(),
+            ShooterConstants.MOTOR_FOLLOWER_CONFIG);
+    kickerMotor =
+        new MotorIOSparkFlex(
+            "ShooterKickerMotor",
+            ShooterConstants.KICKER_MOTOR_ID,
+            MotorType.kBrushless,
+            ShooterConstants.KICKER_MOTOR_CONFIG);
   }
 
   @Override
@@ -31,7 +45,7 @@ public class ShooterIOHardware implements ShooterIO {
   public MotorController controlFlywheel() {
     return leader.getMotorController();
   }
-  
+
   @Override
   public MotorController controlKicker() {
     return kickerMotor.getMotorController();

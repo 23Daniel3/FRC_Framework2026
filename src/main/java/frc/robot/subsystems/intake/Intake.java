@@ -7,8 +7,12 @@ import frc.lib.interfaces.subsystem.StateSubsystem;
 import frc.robot.subsystems.intake.IntakeConstants.IntakeRequest;
 import frc.robot.subsystems.intake.IntakeConstants.IntakeState;
 
-public class Intake extends StateSubsystem<
-        IntakeConstants.IntakeRequest, IntakeConstants.IntakeState, IntakeIOInputsAutoLogged, IntakeIO> {
+public class Intake
+    extends StateSubsystem<
+        IntakeConstants.IntakeRequest,
+        IntakeConstants.IntakeState,
+        IntakeIOInputsAutoLogged,
+        IntakeIO> {
 
   public Intake(IntakeIO io) {
     super(
@@ -56,20 +60,19 @@ public class Intake extends StateSubsystem<
 
     fsm.state(IntakeState.STOPING)
         .onEnter(
-          () -> {
-            io.controlRollerMotor().stop();
-          }
-        )
+            () -> {
+              io.controlRollerMotor().stop();
+            })
         .transitionTo(IntakeState.STOPPED, () -> inputs.rollerMotorInputs.velocity.in(RPM) == 0);
 
     fsm.addGlobalTransition(
         IntakeState.GOING_OUT,
         () -> (currentRequest == IntakeRequest.COLLECT) && (getState() != IntakeState.COLLECT));
-    
+
     fsm.addGlobalTransition(
         IntakeState.GOING_OUT,
         () -> (currentRequest == IntakeRequest.OUT) && (getState() != IntakeState.OUT));
-    
+
     fsm.addGlobalTransition(IntakeState.GOING_IN, () -> currentRequest == IntakeRequest.IN);
   }
 
@@ -81,5 +84,5 @@ public class Intake extends StateSubsystem<
       case COLLECT -> getState() == IntakeState.COLLECT;
       case STOP -> getState() == IntakeState.STOPPED;
     };
-  } 
+  }
 }

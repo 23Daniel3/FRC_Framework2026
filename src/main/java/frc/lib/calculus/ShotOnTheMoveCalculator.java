@@ -15,6 +15,7 @@ import org.littletonrobotics.junction.Logger;
  * permitindo múltiplas instâncias com targets diferentes (hub, feed, etc).
  *
  * <p>Exemplo de uso com dois targets distintos:
+ *
  * <pre>
  *   // Hub shot: target fixo baseado na aliança
  *   hubCalc = new ShotOnTheMoveCalculator("SOTM/Hub",
@@ -74,8 +75,8 @@ public class ShotOnTheMoveCalculator {
   /**
    * Executa o cálculo completo de SOTM para o ciclo atual.
    *
-   * <p>Deve ser chamado uma vez por ciclo (no periodic da SuperStructure)
-   * independente de estar atirando, para manter os logs sempre atualizados.
+   * <p>Deve ser chamado uma vez por ciclo (no periodic da SuperStructure) independente de estar
+   * atirando, para manter os logs sempre atualizados.
    *
    * @return {@link ShotParameters} com ângulo e RPM calculados
    */
@@ -100,18 +101,15 @@ public class ShotOnTheMoveCalculator {
     Translation2d unitToTarget = robotToTarget.div(distance);
 
     double radialVelocity =
-        robotVelocity.getX() * unitToTarget.getX()
-            + robotVelocity.getY() * unitToTarget.getY();
+        robotVelocity.getX() * unitToTarget.getX() + robotVelocity.getY() * unitToTarget.getY();
 
     double tangentialVelocity =
-        robotVelocity.getY() * unitToTarget.getX()
-            - robotVelocity.getX() * unitToTarget.getY();
+        robotVelocity.getY() * unitToTarget.getX() - robotVelocity.getX() * unitToTarget.getY();
 
     double lateralDisplacement = tangentialVelocity * timeOfFlight * aimScalar.get();
     double compensationAngle = Math.atan2(lateralDisplacement, distance);
 
-    double offsetRatio =
-        Math.max(-0.99, Math.min(0.99, config.shooterOffsetMeters() / distance));
+    double offsetRatio = Math.max(-0.99, Math.min(0.99, config.shooterOffsetMeters() / distance));
     double offsetCorrection = Math.asin(offsetRatio);
 
     Rotation2d aimAngle =

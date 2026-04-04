@@ -5,7 +5,7 @@ import frc.lib.interfaces.subsystem.StateSubsystem;
 import frc.robot.subsystems.conveyor.ConveyorConstants.ConveyorRequest;
 import frc.robot.subsystems.conveyor.ConveyorConstants.ConveyorState;
 
-public class Conveyor 
+public class Conveyor
     extends StateSubsystem<ConveyorRequest, ConveyorState, ConveyorIOInputsAutoLogged, ConveyorIO> {
 
   public Conveyor(ConveyorIO io) {
@@ -20,8 +20,7 @@ public class Conveyor
 
     // --- Definição dos Estados ---
 
-    fsm.state(ConveyorState.IDLE)
-        .onEnter(() -> io.controlMotor().stop());
+    fsm.state(ConveyorState.IDLE).onEnter(() -> io.controlMotor().stop());
 
     fsm.state(ConveyorState.RUNNING)
         .onEnter(() -> io.controlMotor().runPercentOutput(ConveyorConstants.POWER));
@@ -36,32 +35,39 @@ public class Conveyor
         .onEnter(() -> io.controlMotor().runPercentOutput(ConveyorConstants.SLOW_REVERSE_POWER));
 
     fsm.state(ConveyorState.WIGGLING)
-        .onUpdate(() -> {
-            double currentTime = Timer.getFPGATimestamp();
-            double phase = currentTime % ConveyorConstants.WIGGLE_PERIOD;
-            boolean forward = phase < (ConveyorConstants.WIGGLE_PERIOD / 2.0);
+        .onUpdate(
+            () -> {
+              double currentTime = Timer.getFPGATimestamp();
+              double phase = currentTime % ConveyorConstants.WIGGLE_PERIOD;
+              boolean forward = phase < (ConveyorConstants.WIGGLE_PERIOD / 2.0);
 
-            double power =
-                forward ? ConveyorConstants.WIGGLE_POWER : -ConveyorConstants.WIGGLE_POWER;
-            io.controlMotor().runPercentOutput(power);
-        });
+              double power =
+                  forward ? ConveyorConstants.WIGGLE_POWER : -ConveyorConstants.WIGGLE_POWER;
+              io.controlMotor().runPercentOutput(power);
+            });
 
-    fsm.addGlobalTransition(ConveyorState.IDLE, 
+    fsm.addGlobalTransition(
+        ConveyorState.IDLE,
         () -> isRequest(ConveyorRequest.STOP) && notInState(ConveyorState.IDLE));
 
-    fsm.addGlobalTransition(ConveyorState.RUNNING, 
+    fsm.addGlobalTransition(
+        ConveyorState.RUNNING,
         () -> isRequest(ConveyorRequest.RUN) && notInState(ConveyorState.RUNNING));
 
-    fsm.addGlobalTransition(ConveyorState.RUNNING_SLOW, 
+    fsm.addGlobalTransition(
+        ConveyorState.RUNNING_SLOW,
         () -> isRequest(ConveyorRequest.RUN_SLOW) && notInState(ConveyorState.RUNNING_SLOW));
 
-    fsm.addGlobalTransition(ConveyorState.REVERSING, 
+    fsm.addGlobalTransition(
+        ConveyorState.REVERSING,
         () -> isRequest(ConveyorRequest.REVERSE) && notInState(ConveyorState.REVERSING));
 
-    fsm.addGlobalTransition(ConveyorState.REVERSING_SLOW, 
+    fsm.addGlobalTransition(
+        ConveyorState.REVERSING_SLOW,
         () -> isRequest(ConveyorRequest.SLOW_REVERSE) && notInState(ConveyorState.REVERSING_SLOW));
 
-    fsm.addGlobalTransition(ConveyorState.WIGGLING, 
+    fsm.addGlobalTransition(
+        ConveyorState.WIGGLING,
         () -> isRequest(ConveyorRequest.WIGGLE) && notInState(ConveyorState.WIGGLING));
   }
 

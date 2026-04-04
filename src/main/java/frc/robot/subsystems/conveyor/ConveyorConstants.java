@@ -16,11 +16,11 @@ public class ConveyorConstants {
   public static final double WIGGLE_POWER = 1.0;
 
   public static final MotorConfig MOTOR_CONFIG =
-        new MotorConfig()
-            .currentLimit(Amps.of(32))
-            .coastMode()
-            .nominalVoltage(Volts.of(10))
-            .inverted(false);
+      new MotorConfig()
+          .currentLimit(Amps.of(32))
+          .coastMode()
+          .nominalVoltage(Volts.of(10))
+          .inverted(false);
 
   public enum ConveyorRequest {
     RUN,
