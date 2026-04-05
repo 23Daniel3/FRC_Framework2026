@@ -11,7 +11,9 @@ public interface ConveyorIO extends SubsystemIO<ConveyorIOInputsAutoLogged> {
     public MotorIOInputs motorInputs = new MotorIOInputs();
   }
 
-  public void updateInputs(ConveyorIOInputsAutoLogged inputs);
+  public default void updateInputs(ConveyorIOInputsAutoLogged inputs) {}
 
-  public MotorController controlMotor();
+  public default MotorController controlMotor() {
+    return null;
+  }
 }

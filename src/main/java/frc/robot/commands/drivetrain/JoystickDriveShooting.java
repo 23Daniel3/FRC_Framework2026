@@ -1,17 +1,21 @@
 package frc.robot.commands.drivetrain;
 
 import edu.wpi.first.math.controller.PIDController;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.game.AllianceManager;
 import frc.robot.subsystems.drivetrain.Drivetrain;
 import frc.robot.subsystems.drivetrain.DrivetrainConstants;
-// import frc.robot.subsystems.superstructure.SuperStructure;
+import frc.robot.subsystems.superstructure.SuperStructure;
+
+import static edu.wpi.first.units.Units.MetersPerSecond;
+
 import java.util.function.DoubleSupplier;
 
 public class JoystickDriveShooting extends Command {
   private final Drivetrain drivetrain;
-  // private final SuperStructure superStructure;
+  private final SuperStructure superStructure;
   private final DoubleSupplier xSupplier;
   private final DoubleSupplier ySupplier;
 
@@ -23,12 +27,12 @@ public class JoystickDriveShooting extends Command {
 
   public JoystickDriveShooting(
       Drivetrain drivetrain,
-      // SuperStructure superStructure,
+      SuperStructure superStructure,
       DoubleSupplier xSupplier,
       DoubleSupplier ySupplier) {
 
     this.drivetrain = drivetrain;
-    // this.superStructure = superStructure;
+    this.superStructure = superStructure;
     this.xSupplier = xSupplier;
     this.ySupplier = ySupplier;
 
@@ -52,16 +56,16 @@ public class JoystickDriveShooting extends Command {
       yController = -yController;
     }
 
-    // Rotation2d targetAngle = superStructure.calculateDynamicTargetAngle();
+    Rotation2d targetAngle = superStructure.getActiveShotParameters().aimAngle();
 
-    // double angularSpeed =
-    //     rotationController.calculate(
-    //         drivetrain.getRotation().getRadians(), targetAngle.getRadians());
+    double angularSpeed =
+        rotationController.calculate(
+            drivetrain.getRotation().getRadians(), targetAngle.getRadians());
 
-    // drivetrain.driveFieldRelative(
-    //     xController * drivetrain.getMaxSpeed().in(MetersPerSecond),
-    //     yController * drivetrain.getMaxSpeed().in(MetersPerSecond),
-    //     angularSpeed);
+    drivetrain.driveFieldRelative(
+        xController * drivetrain.getMaxSpeed().in(MetersPerSecond),
+        yController * drivetrain.getMaxSpeed().in(MetersPerSecond),
+        angularSpeed);
   }
 
   @Override

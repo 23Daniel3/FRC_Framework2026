@@ -102,11 +102,9 @@ public class AutoTrajetorys {
         Commands.deadline(
             new PathPlannerAuto("CollectingNeutralZoneShotting"),
             new ParallelCommandGroup(
-                SuperStructureCommands.collectShooting(superStructure).until(() -> false),
-                new InstantCommand(() -> superStructure.setForceShoot(true)).until(() -> false))),
+                SuperStructureCommands.collectShooting(superStructure).until(() -> false))),
         new ParallelCommandGroup(
-            SuperStructureCommands.collectShooting(superStructure).until(() -> false),
-            new InstantCommand(() -> superStructure.setForceShoot(true))));
+            SuperStructureCommands.collectShooting(superStructure).until(() -> false)));
   }
 
   public Command Aim_Shoot() {

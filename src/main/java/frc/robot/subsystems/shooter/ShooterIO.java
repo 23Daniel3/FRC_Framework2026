@@ -13,9 +13,13 @@ public interface ShooterIO extends SubsystemIO<ShooterIOInputsAutoLogged> {
     public MotorIOInputs kickerInputs = new MotorIOInputs();
   }
 
-  public void updateInputs(ShooterIOInputsAutoLogged inputs);
+  public default void updateInputs(ShooterIOInputsAutoLogged inputs) {}
 
-  public MotorController controlFlywheel();
+  public default MotorController controlFlywheel() {
+    return null;
+  }
 
-  public MotorController controlKicker();
+  public default MotorController controlKicker() {
+    return null;
+  }
 }

@@ -14,9 +14,13 @@ public interface IntakeIO extends SubsystemIO<IntakeIOInputsAutoLogged> {
   }
 
   @Override
-  public void updateInputs(IntakeIOInputsAutoLogged inputs);
+  public default void updateInputs(IntakeIOInputsAutoLogged inputs) {}
 
-  public MotorController controlIntakeMotor();
+  public default MotorController controlIntakeMotor() {
+    return null;
+  }
 
-  public MotorController controlRollerMotor();
+  public default MotorController controlRollerMotor() {
+    return null;
+  }
 }

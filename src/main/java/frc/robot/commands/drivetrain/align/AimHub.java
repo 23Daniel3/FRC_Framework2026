@@ -38,7 +38,7 @@ public class AimHub extends Command {
   @Override
   public void execute() {
     Rotation2d currentRotation = drivetrain.getPose().getRotation();
-    Rotation2d targetHeading = superStructure.getPredictiveAimAngle();
+    Rotation2d targetHeading = superStructure.getActiveShotParameters().aimAngle();
 
     double omega =
         thetaController.calculate(currentRotation.getRadians(), targetHeading.getRadians());
