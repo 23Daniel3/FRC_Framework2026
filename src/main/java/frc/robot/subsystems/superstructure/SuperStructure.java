@@ -411,6 +411,7 @@ public class SuperStructure extends SubsystemBase {
 
     ShotParameters active = getActiveShotParameters();
     Logger.recordOutput("SuperStructure/GeneralFSM/State", generalFsm.getCurrentState());
+    Logger.recordOutput("SuperStructure/GeneralFSM/Request", robotRequest);
     Logger.recordOutput("SuperStructure/GeneralFSM/TimeInState", generalFsm.getTimeInState());
     Logger.recordOutput("SuperStructure/Shooting/DistanceToHub", distanceFromRobotToHub());
     Logger.recordOutput("SuperStructure/Shooting/ActiveAimAngle", active.aimAngle().getDegrees());
