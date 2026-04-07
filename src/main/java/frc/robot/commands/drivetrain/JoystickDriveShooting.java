@@ -1,5 +1,7 @@
 package frc.robot.commands.drivetrain;
 
+import static edu.wpi.first.units.Units.MetersPerSecond;
+
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
@@ -8,9 +10,6 @@ import frc.game.AllianceManager;
 import frc.robot.subsystems.drivetrain.Drivetrain;
 import frc.robot.subsystems.drivetrain.DrivetrainConstants;
 import frc.robot.subsystems.superstructure.SuperStructure;
-
-import static edu.wpi.first.units.Units.MetersPerSecond;
-
 import java.util.function.DoubleSupplier;
 
 public class JoystickDriveShooting extends Command {

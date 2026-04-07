@@ -39,7 +39,7 @@ import frc.robot.subsystems.vision.VisionConstants.VisionCamera;
 public class RobotContainer {
 
   // Subsystems
-    private final Conveyor conveyor;
+  private final Conveyor conveyor;
   private final Drivetrain drivetrain;
   private final Intake intake;
   private final Shooter shooter;

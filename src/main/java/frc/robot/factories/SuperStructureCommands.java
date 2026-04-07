@@ -73,8 +73,7 @@ public final class SuperStructureCommands {
   }
 
   public static Command idle(SuperStructure superStructure) {
-    return Commands.run(
-        () -> superStructure.setRequest(RobotRequest.IDLE), superStructure)
+    return Commands.run(() -> superStructure.setRequest(RobotRequest.IDLE), superStructure)
         .withName("Idle Request");
   }
 }

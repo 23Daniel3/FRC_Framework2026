@@ -131,10 +131,13 @@ public class DrivetrainCommands {
   }
 
   public static Command joystickDriveAimHub(
-    Drivetrain drivetrain, SuperStructure superStructure, DoubleSupplier x, DoubleSupplier y) {
+      Drivetrain drivetrain, SuperStructure superStructure, DoubleSupplier x, DoubleSupplier y) {
 
     return driveCore(
-    drivetrain, x, y, new PIDRotation(() -> superStructure.getActiveShotParameters().aimAngle()));
+        drivetrain,
+        x,
+        y,
+        new PIDRotation(() -> superStructure.getActiveShotParameters().aimAngle()));
   }
 
   public static Command joystickDriveTrench(
