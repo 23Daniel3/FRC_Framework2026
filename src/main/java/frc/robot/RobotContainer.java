@@ -170,9 +170,9 @@ public class RobotContainer {
     superStructure.setDefaultCommand(
         SuperStructureCommands.manageRequests(
             superStructure,
-            operatorController.rightBumper(),
+            driverController.leftBumper(),
             driverController.rightBumper(),
-            operatorController.leftBumper()));
+            driverController.povLeft()));
 
     driverController
         .start()

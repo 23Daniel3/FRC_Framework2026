@@ -79,6 +79,7 @@ public abstract class StateSubsystem<
     sPeriodic();
 
     Logger.recordOutput(getName() + "/request", currentRequest.toString());
+    Logger.recordOutput(getName() + "/atGoal", atGoal());
 
     PeriodicTimer.stop(getName());
   }

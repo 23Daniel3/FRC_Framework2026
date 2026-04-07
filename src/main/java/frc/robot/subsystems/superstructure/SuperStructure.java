@@ -225,7 +225,8 @@ public class SuperStructure extends SubsystemBase {
               conveyorRequest = ConveyorRequest.STOP;
               drivetrain.setMaxSpeed(MetersPerSecond.of(DrivetrainConstants.MAX_SPEED));
               schedule(LedCommands.chase(led, Color.kCyan));
-            });
+            })
+        .transitionTo(RobotState.COLLECTING, () -> intake.atGoal());
 
     generalFsm
         .state(RobotState.GOING_SHOOT)

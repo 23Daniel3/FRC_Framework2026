@@ -73,7 +73,13 @@ public class Intake
         IntakeState.GOING_OUT,
         () -> (currentRequest == IntakeRequest.OUT) && (getState() != IntakeState.OUT));
 
-    fsm.addGlobalTransition(IntakeState.GOING_IN, () -> currentRequest == IntakeRequest.IN);
+    fsm.addGlobalTransition(
+        IntakeState.GOING_IN,
+        () -> currentRequest == IntakeRequest.IN && notInState(IntakeState.IN));
+
+    fsm.addGlobalTransition(
+        IntakeState.STOPING,
+        () -> currentRequest == IntakeRequest.STOP && notInState(IntakeState.STOPPED));
   }
 
   @Override

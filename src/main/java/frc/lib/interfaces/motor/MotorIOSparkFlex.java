@@ -21,7 +21,7 @@ import com.revrobotics.spark.SparkFlex;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.config.FeedForwardConfig;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
-import com.revrobotics.spark.config.SparkFlexConfig;
+import com.revrobotics.spark.config.SparkMaxConfig;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
@@ -33,7 +33,7 @@ public class MotorIOSparkFlex extends MotorBase {
 
   private final SparkFlex motor;
   private final SparkClosedLoopController closedLoopController;
-  private final SparkFlexConfig motorConfig;
+  private final SparkMaxConfig motorConfig;
   private final MotorIOInputs inputs = new MotorIOInputs();
 
   // Sensores
@@ -49,7 +49,7 @@ public class MotorIOSparkFlex extends MotorBase {
 
     this.motor = new SparkFlex(id, type);
     this.closedLoopController = motor.getClosedLoopController();
-    this.motorConfig = new SparkFlexConfig();
+    this.motorConfig = new SparkMaxConfig();
     this.sensorType = config.feedbackType;
 
     // --- Configure Follower Motor
@@ -70,7 +70,7 @@ public class MotorIOSparkFlex extends MotorBase {
     switch (config.feedbackType) {
       case ALTERNATE -> {
         motorConfig
-            .externalEncoder
+            .alternateEncoder
             .countsPerRevolution(config.countsPerRevolution)
             .positionConversionFactor(config.positionConversionFactor)
             .velocityConversionFactor(config.velocityConversionFactor);
@@ -105,9 +105,7 @@ public class MotorIOSparkFlex extends MotorBase {
           .i(config.kI[i], slot)
           .d(config.kD[i], slot)
           .outputRange(config.minOutput, config.maxOutput, slot)
-          .apply(
-              new FeedForwardConfig()
-                  .svag(config.kS[i], config.kV[i], config.kA[i], config.kG[i], slot));
+          .apply(new FeedForwardConfig().kV(config.kV[i], slot));
 
       // Configuração do MAXMotion
       if (config.maxMotionMaxVelocity[i].in(RadiansPerSecond) > 0) {
@@ -143,6 +141,9 @@ public class MotorIOSparkFlex extends MotorBase {
 
     // --- Push final das configurações para o Hardware ---
     applyConfig(true);
+
+    if (internalEncoder != null) internalEncoder.setPosition(0);
+    if (externalEncoder != null) externalEncoder.setPosition(0);
   }
 
   @Override

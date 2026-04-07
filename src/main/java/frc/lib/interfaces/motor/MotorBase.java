@@ -209,6 +209,11 @@ public abstract class MotorBase implements MotorIO {
   private boolean calculateAtSetpoint(MotorIOInputs inputs) {
     switch (currentMode) {
       case POSITION:
+        {
+          double error = Math.abs(inputs.position.in(Rotations) - targetPosition.in(Rotations));
+
+          return error < positionTolerance;
+        }
       case SMART_POSITION:
         {
           double error = Math.abs(inputs.position.in(Rotations) - targetPosition.in(Rotations));
