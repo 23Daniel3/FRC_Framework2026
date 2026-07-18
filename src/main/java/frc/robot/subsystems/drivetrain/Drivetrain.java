@@ -252,9 +252,7 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem {
   }
 
   public void startPoseFromAlliance() {
-    boolean blueAlliance =
-        DriverStation.getAlliance().orElse(AllianceSelector.getInstance().getAlliance())
-            == Alliance.Blue;
+    boolean blueAlliance = AllianceSelector.getInstance().getResolvedAlliance() == Alliance.Blue;
 
     int station = DriverStation.getLocation().orElse(1);
 
@@ -289,9 +287,7 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem {
               new PIDConstants(7, 0, 0)),
           config,
           // Assume the path needs to be flipped for Red vs Blue, this is normally the case
-          () ->
-              DriverStation.getAlliance().orElse(AllianceSelector.getInstance().getAlliance())
-                  == Alliance.Red,
+          () -> AllianceSelector.getInstance().shouldFlip(),
           this // Subsystem for requirements
           );
     } catch (Exception ex) {
@@ -708,7 +704,6 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem {
   }
 
   public boolean isBlue() {
-    return DriverStation.getAlliance().orElse(AllianceSelector.getInstance().getAlliance())
-        == Alliance.Blue;
+    return AllianceSelector.getInstance().getResolvedAlliance() == Alliance.Blue;
   }
 }

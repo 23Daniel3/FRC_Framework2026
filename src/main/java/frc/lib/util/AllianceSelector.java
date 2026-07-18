@@ -1,5 +1,6 @@
 package frc.lib.util;
 
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import frc.robot.Constants;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
@@ -29,9 +30,25 @@ public class AllianceSelector {
     return instance;
   }
 
-  /** Retorna a aliança selecionada (Garante um valor não nulo). */
+  /** Retorna a aliança selecionada no dashboard (Garante um valor não nulo). */
   public Alliance getAlliance() {
     return chooser.get();
+  }
+
+  /**
+   * Fonte canônica da aliança do robô: usa o DriverStation/FMS quando conectado e cai para o
+   * seletor do dashboard (cujo default vem de {@code Constants.alliance}) caso contrário.
+   *
+   * <p>Todo código que precisa da aliança deve passar por aqui (diretamente na lib, ou via
+   * {@code AllianceManager} no código de robô/jogo) — nunca reimplementar o fallback.
+   */
+  public Alliance getResolvedAlliance() {
+    return DriverStation.getAlliance().orElseGet(this::getAlliance);
+  }
+
+  /** true se a aliança resolvida é a Vermelha (convenção de flip do campo). */
+  public boolean shouldFlip() {
+    return getResolvedAlliance() == Alliance.Red;
   }
 
   /** Atalho para verificar se o robô está no lado Vermelho. */

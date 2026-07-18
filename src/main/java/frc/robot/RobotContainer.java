@@ -5,7 +5,6 @@ import static edu.wpi.first.units.Units.RadiansPerSecond;
 
 import com.ctre.phoenix6.swerve.SwerveRequest;
 import edu.wpi.first.wpilibj.*;
-import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj2.command.*;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
@@ -49,7 +48,6 @@ public class RobotContainer {
 
   public final AutoTrajetorys auto;
 
-  public final AllianceSelector alliance;
 
   private final Trigger isAtBump;
   // Controller
@@ -60,7 +58,8 @@ public class RobotContainer {
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
-    alliance = AllianceSelector.getInstance();
+    // Garante que o seletor de alianca (fallback sem FMS) aparece no dashboard desde o boot.
+    AllianceSelector.getInstance();
     drivetrain = TunerConstants.createDrivetrain();
     switch (Constants.currentMode) {
       case REAL:
@@ -112,16 +111,7 @@ public class RobotContainer {
         break;
     }
 
-    superStructure =
-        new SuperStructure(
-            conveyor,
-            drivetrain,
-            intake,
-            led,
-            shooter,
-            vision,
-            driverController,
-            operatorController);
+    superStructure = new SuperStructure(conveyor, drivetrain, intake, shooter);
 
     auto = new AutoTrajetorys(drivetrain, superStructure);
 
@@ -163,9 +153,12 @@ public class RobotContainer {
             driverController.getLeftXSupplier(),
             driverController.getRightXSupplier()));
 
-    conveyor.setDefaultCommand(ConveyorCommands.defaultCommand(superStructure, conveyor));
-    intake.setDefaultCommand(IntakeCommands.defaultCommand(superStructure, intake));
-    shooter.setDefaultCommand(ShooterCommands.defaultCommand(superStructure, shooter));
+    // Modelo A: a SuperStructure escreve os requests diretamente nos subsistemas dentro
+    // dos onEnter da FSM geral — nao ha mais default commands de relay (que reescreviam o
+    // request a cada ciclo e tornavam qualquer setRequest externo inutil).
+
+    // A "cara" do robo e um observador do estado, definido em LedCommands.STATE_EFFECTS.
+    led.setDefaultCommand(LedCommands.followRobotState(led, superStructure::getRobotState));
 
     superStructure.setDefaultCommand(
         SuperStructureCommands.manageRequests(
@@ -180,7 +173,7 @@ public class RobotContainer {
             new InstantCommand(
                 () ->
                     drivetrain.resetPose(
-                        DriverStation.getAlliance().orElse(alliance.getAlliance()) == Alliance.Blue
+                        AllianceManager.getInstance().isBlue()
                             ? Poses.RESET_POSE_BLUE
                             : Poses.RESET_POSE_RED)));
 
@@ -321,11 +314,21 @@ public class RobotContainer {
   }
 
   public void triggersActions() {
-    new Trigger(() -> vision.getTagCount(VisionCamera.LEFT) == 2)
-        .or(() -> vision.getTagCount(VisionCamera.RIGHT) == 2)
+    // Em disabled: vermelho persistente se alguma camera lateral ve 2 tags, verde caso
+    // contrario. Comandos persistentes (run) interrompem o followRobotState enquanto ativos
+    // e o devolvem ao terminar — os antigos runOnce eram desfeitos no ciclo seguinte.
+    Trigger twoTags =
+        new Trigger(() -> vision.getTagCount(VisionCamera.LEFT) == 2)
+            .or(() -> vision.getTagCount(VisionCamera.RIGHT) == 2);
+
+    twoTags
         .and(RobotModeTriggers.disabled())
-        .onTrue(LedCommands.red(led))
-        .onFalse(LedCommands.green(led));
+        .whileTrue(LedCommands.solidPersistent(led, edu.wpi.first.wpilibj.util.Color.kRed));
+
+    twoTags
+        .negate()
+        .and(RobotModeTriggers.disabled())
+        .whileTrue(LedCommands.solidPersistent(led, edu.wpi.first.wpilibj.util.Color.kGreen));
 
     isAtBump
         .and(RobotModeTriggers.autonomous().negate())

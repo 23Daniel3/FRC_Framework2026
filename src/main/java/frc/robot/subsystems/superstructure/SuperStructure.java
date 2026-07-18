@@ -9,9 +9,6 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.PowerDistribution;
-import edu.wpi.first.wpilibj.util.Color;
-import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.game.AllianceManager;
 import frc.game.FieldConstants.Poses;
@@ -19,24 +16,20 @@ import frc.lib.calculus.LinearInterpolation.Point;
 import frc.lib.calculus.LoggedTunableMap;
 import frc.lib.calculus.ShotOnTheMoveCalculator;
 import frc.lib.calculus.ShotParameters;
-import frc.lib.controller.NaturalXboxController;
 import frc.lib.interfaces.fsm.StateMachine;
 import frc.lib.logger.LoggedTunableNumber;
 import frc.lib.util.ConstantsLogger;
 import frc.lib.util.PeriodicTimer;
 import frc.robot.Constants.RobotRequest;
 import frc.robot.Constants.RobotState;
-import frc.robot.factories.LedCommands;
 import frc.robot.subsystems.conveyor.Conveyor;
 import frc.robot.subsystems.conveyor.ConveyorConstants.ConveyorRequest;
 import frc.robot.subsystems.drivetrain.Drivetrain;
 import frc.robot.subsystems.drivetrain.DrivetrainConstants;
 import frc.robot.subsystems.intake.Intake;
 import frc.robot.subsystems.intake.IntakeConstants.IntakeRequest;
-import frc.robot.subsystems.led.Led;
 import frc.robot.subsystems.shooter.Shooter;
 import frc.robot.subsystems.shooter.ShooterConstants.ShooterRequest;
-import frc.robot.subsystems.vision.Vision;
 import org.littletonrobotics.junction.Logger;
 
 public class SuperStructure extends SubsystemBase {
@@ -44,14 +37,10 @@ public class SuperStructure extends SubsystemBase {
   private final Conveyor conveyor;
   private final Drivetrain drivetrain;
   private final Intake intake;
-  private final Led led;
   private final Shooter shooter;
   private final PowerDistribution pd = new PowerDistribution();
 
   private RobotRequest robotRequest = RobotRequest.IDLE;
-  private ShooterRequest shooterRequest = ShooterRequest.STOP;
-  private IntakeRequest intakeRequest = IntakeRequest.IN;
-  private ConveyorRequest conveyorRequest = ConveyorRequest.STOP;
 
   private final ShotOnTheMoveCalculator hubCalculator;
   private final ShotOnTheMoveCalculator feedCalculator;
@@ -78,21 +67,12 @@ public class SuperStructure extends SubsystemBase {
   private final AllianceManager allianceManager = AllianceManager.getInstance();
   private final StateMachine<RobotState> generalFsm;
 
-  public SuperStructure(
-      Conveyor conveyor,
-      Drivetrain drivetrain,
-      Intake intake,
-      Led led,
-      Shooter shooter,
-      Vision vision,
-      NaturalXboxController driverControl,
-      NaturalXboxController operatorControl) {
+  public SuperStructure(Conveyor conveyor, Drivetrain drivetrain, Intake intake, Shooter shooter) {
 
     this.conveyor = conveyor;
     this.drivetrain = drivetrain;
     this.intake = intake;
     this.shooter = shooter;
-    this.led = led;
 
     ShotOnTheMoveCalculator.Config shotConfig = buildShotConfig(1.0);
     ShotOnTheMoveCalculator.Config feedConfig = buildShotConfig(0.05);
@@ -156,16 +136,9 @@ public class SuperStructure extends SubsystemBase {
     this.robotRequest = request;
   }
 
-  public ShooterRequest getShooterRequest() {
-    return shooterRequest;
-  }
-
-  public IntakeRequest getIntakeRequest() {
-    return intakeRequest;
-  }
-
-  public ConveyorRequest getConveyorRequest() {
-    return conveyorRequest;
+  /** Estado atual da FSM geral (consumido pelo observador de LEDs e por telemetria). */
+  public RobotState getRobotState() {
+    return generalFsm.getCurrentState();
   }
 
   public ShotParameters getActiveShotParameters() {
@@ -188,22 +161,20 @@ public class SuperStructure extends SubsystemBase {
         .state(RobotState.IDLE)
         .onEnter(
             () -> {
-              shooterRequest = ShooterRequest.STOP;
-              intakeRequest = IntakeRequest.STOP;
-              conveyorRequest = ConveyorRequest.STOP;
+              shooter.setRequest(ShooterRequest.STOP);
+              intake.setRequest(IntakeRequest.STOP);
+              conveyor.setRequest(ConveyorRequest.STOP);
               drivetrain.setMaxSpeed(MetersPerSecond.of(DrivetrainConstants.MAX_SPEED));
-              schedule(LedCommands.breathe(led, Color.kViolet));
             });
 
     generalFsm
         .state(RobotState.IDLEING)
         .onEnter(
             () -> {
-              shooterRequest = ShooterRequest.STOP;
-              intakeRequest = IntakeRequest.STOP;
-              conveyorRequest = ConveyorRequest.STOP;
+              shooter.setRequest(ShooterRequest.STOP);
+              intake.setRequest(IntakeRequest.STOP);
+              conveyor.setRequest(ConveyorRequest.STOP);
               drivetrain.setMaxSpeed(MetersPerSecond.of(DrivetrainConstants.MAX_SPEED));
-              schedule(LedCommands.chase(led, Color.kCyan));
             })
         .transitionTo(
             RobotState.IDLE,
@@ -214,22 +185,20 @@ public class SuperStructure extends SubsystemBase {
         .state(RobotState.COLLECTING)
         .onEnter(
             () -> {
-              shooterRequest = ShooterRequest.STOP;
-              intakeRequest = IntakeRequest.COLLECT;
-              conveyorRequest = ConveyorRequest.STOP;
+              shooter.setRequest(ShooterRequest.STOP);
+              intake.setRequest(IntakeRequest.COLLECT);
+              conveyor.setRequest(ConveyorRequest.STOP);
               drivetrain.setMaxSpeed(MetersPerSecond.of(DrivetrainConstants.MAX_SPEED));
-              schedule(LedCommands.chase(led, Color.kCyan));
             });
 
     generalFsm
         .state(RobotState.GOING_COLLECT)
         .onEnter(
             () -> {
-              shooterRequest = ShooterRequest.STOP;
-              intakeRequest = IntakeRequest.COLLECT;
-              conveyorRequest = ConveyorRequest.STOP;
+              shooter.setRequest(ShooterRequest.STOP);
+              intake.setRequest(IntakeRequest.COLLECT);
+              conveyor.setRequest(ConveyorRequest.STOP);
               drivetrain.setMaxSpeed(MetersPerSecond.of(DrivetrainConstants.MAX_SPEED));
-              schedule(LedCommands.chase(led, Color.kCyan));
             })
         .transitionTo(RobotState.COLLECTING, () -> intake.atGoal());
 
@@ -237,11 +206,10 @@ public class SuperStructure extends SubsystemBase {
         .state(RobotState.GOING_SHOOT)
         .onEnter(
             () -> {
-              shooterRequest = ShooterRequest.SHOOT;
-              intakeRequest = IntakeRequest.OUT;
-              conveyorRequest = ConveyorRequest.STOP;
+              shooter.setRequest(ShooterRequest.SHOOT);
+              intake.setRequest(IntakeRequest.OUT);
+              conveyor.setRequest(ConveyorRequest.STOP);
               drivetrain.setMaxSpeed(SuperStructureConstants.MAX_VELOCITY_TO_SHOOT);
-              schedule(LedCommands.chase(led, Color.kCyan));
             })
         .transitionTo(RobotState.SHOOTING, () -> shooter.readyToShoot() && isAtSetpointAngle());
 
@@ -249,8 +217,7 @@ public class SuperStructure extends SubsystemBase {
         .state(RobotState.SHOOTING)
         .onEnter(
             () -> {
-              conveyorRequest = ConveyorRequest.RUN;
-              schedule(LedCommands.rainbowContinuous(led, 8));
+              conveyor.setRequest(ConveyorRequest.RUN);
             })
         .transitionTo(RobotState.SHOOTING_RECOVERY, () -> !shooter.readyToShoot())
         .transitionTo(RobotState.GOING_SHOOT, () -> !isAtSetpointAngle());
@@ -259,11 +226,10 @@ public class SuperStructure extends SubsystemBase {
         .state(RobotState.SHOOTING_RECOVERY)
         .onEnter(
             () -> {
-              shooterRequest = ShooterRequest.SHOOT;
-              intakeRequest = IntakeRequest.OUT;
-              conveyorRequest = ConveyorRequest.RUN_SLOW;
+              shooter.setRequest(ShooterRequest.SHOOT);
+              intake.setRequest(IntakeRequest.OUT);
+              conveyor.setRequest(ConveyorRequest.RUN_SLOW);
               drivetrain.setMaxSpeed(SuperStructureConstants.MAX_VELOCITY_TO_SHOOT);
-              schedule(LedCommands.breathe(led, Color.kYellow));
             })
         .transitionTo(RobotState.SHOOTING, () -> shooter.readyToShoot());
 
@@ -271,11 +237,10 @@ public class SuperStructure extends SubsystemBase {
         .state(RobotState.GOING_COLLECT_SHOOT)
         .onEnter(
             () -> {
-              shooterRequest = ShooterRequest.SHOOT;
-              intakeRequest = IntakeRequest.COLLECT;
-              conveyorRequest = ConveyorRequest.STOP;
+              shooter.setRequest(ShooterRequest.SHOOT);
+              intake.setRequest(IntakeRequest.COLLECT);
+              conveyor.setRequest(ConveyorRequest.STOP);
               drivetrain.setMaxSpeed(SuperStructureConstants.MAX_VELOCITY_TO_SHOOT);
-              schedule(LedCommands.chase(led, Color.kCyan));
             })
         .transitionTo(
             RobotState.COLLECT_SHOOTING, () -> shooter.readyToShoot() && isAtSetpointAngle());
@@ -284,8 +249,7 @@ public class SuperStructure extends SubsystemBase {
         .state(RobotState.COLLECT_SHOOTING)
         .onEnter(
             () -> {
-              conveyorRequest = ConveyorRequest.RUN;
-              schedule(LedCommands.rainbowContinuous(led, 8));
+              conveyor.setRequest(ConveyorRequest.RUN);
             })
         .transitionTo(RobotState.COLLECT_SHOOTING_RECOVERY, () -> !shooter.readyToShoot())
         // Perder o alinhamento em modo COLLECT_SHOOT volta para GOING_COLLECT_SHOOT
@@ -296,11 +260,10 @@ public class SuperStructure extends SubsystemBase {
         .state(RobotState.COLLECT_SHOOTING_RECOVERY)
         .onEnter(
             () -> {
-              shooterRequest = ShooterRequest.SHOOT;
-              intakeRequest = IntakeRequest.COLLECT;
-              conveyorRequest = ConveyorRequest.RUN_SLOW;
-              schedule(LedCommands.breathe(led, Color.kYellow));
-              drivetrain.setMaxSpeed(SuperStructureConstants.MAX_VELOCITY_TO_SHOOT);
+              shooter.setRequest(ShooterRequest.SHOOT);
+              intake.setRequest(IntakeRequest.COLLECT);
+              conveyor.setRequest(ConveyorRequest.RUN_SLOW);
+drivetrain.setMaxSpeed(SuperStructureConstants.MAX_VELOCITY_TO_SHOOT);
             })
         .transitionTo(RobotState.COLLECT_SHOOTING, () -> shooter.readyToShoot());
 
@@ -308,11 +271,10 @@ public class SuperStructure extends SubsystemBase {
         .state(RobotState.CLOSING)
         .onEnter(
             () -> {
-              shooterRequest = ShooterRequest.STOP;
-              intakeRequest = IntakeRequest.IN;
-              conveyorRequest = ConveyorRequest.STOP;
+              shooter.setRequest(ShooterRequest.STOP);
+              intake.setRequest(IntakeRequest.IN);
+              conveyor.setRequest(ConveyorRequest.STOP);
               drivetrain.setMaxSpeed(MetersPerSecond.of(DrivetrainConstants.MAX_SPEED));
-              schedule(LedCommands.chase(led, Color.kCyan));
             })
         .transitionTo(
             RobotState.CLOSED, () -> intake.atGoal() && conveyor.atGoal() && shooter.atGoal());
@@ -321,11 +283,10 @@ public class SuperStructure extends SubsystemBase {
         .state(RobotState.CLOSED)
         .onEnter(
             () -> {
-              shooterRequest = ShooterRequest.STOP;
-              intakeRequest = IntakeRequest.IN;
-              conveyorRequest = ConveyorRequest.STOP;
+              shooter.setRequest(ShooterRequest.STOP);
+              intake.setRequest(IntakeRequest.IN);
+              conveyor.setRequest(ConveyorRequest.STOP);
               drivetrain.setMaxSpeed(MetersPerSecond.of(DrivetrainConstants.MAX_SPEED));
-              schedule(LedCommands.breathe(led, Color.kViolet));
             });
 
     // Mapeamento request → (estado de entrada, estados que ja satisfazem o request).
@@ -354,10 +315,6 @@ public class SuperStructure extends SubsystemBase {
         () -> robotRequest == RobotRequest.IDLE, RobotState.IDLEING, RobotState.IDLE);
 
     generalFsm.validateComplete();
-  }
-
-  private void schedule(Command command) {
-    CommandScheduler.getInstance().schedule(command);
   }
 
   private Translation2d resolveHubTarget(Pose2d robotPose) {

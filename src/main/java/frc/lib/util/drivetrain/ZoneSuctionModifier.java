@@ -1,7 +1,6 @@
 package frc.lib.util.drivetrain;
 
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import frc.lib.util.AllianceSelector;
 import frc.lib.zones.Polygon2d;
@@ -28,7 +27,7 @@ public class ZoneSuctionModifier implements TranslationModifier {
     }
 
     boolean isBlue =
-        DriverStation.getAlliance().orElse(AllianceSelector.getInstance().getAlliance())
+        AllianceSelector.getInstance().getResolvedAlliance()
             == Alliance.Blue;
     double allianceSign = isBlue ? 1.0 : -1.0;
 
