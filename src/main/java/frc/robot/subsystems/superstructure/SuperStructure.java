@@ -140,6 +140,11 @@ public class SuperStructure extends SubsystemBase {
     hubCalculator.calculate(pose, speeds);
     feedCalculator.calculate(pose, speeds);
 
+    // Alimenta o shooter continuamente com o RPM calculado pelo SOTM. Sem isto o
+    // flywheel roda eternamente no setpoint inicial (0 RPM) — o ciclo completo e:
+    // calculadores → setVelocity aqui → estados do Shooter aplicam no onUpdate.
+    shooter.setVelocity(RPM.of(getActiveShotParameters().rpm()));
+
     generalFsm.update();
 
     log();
@@ -283,7 +288,9 @@ public class SuperStructure extends SubsystemBase {
               schedule(LedCommands.rainbowContinuous(led, 8));
             })
         .transitionTo(RobotState.COLLECT_SHOOTING_RECOVERY, () -> !shooter.readyToShoot())
-        .transitionTo(RobotState.GOING_SHOOT, () -> !isAtSetpointAngle());
+        // Perder o alinhamento em modo COLLECT_SHOOT volta para GOING_COLLECT_SHOOT
+        // (nao GOING_SHOOT), para o intake continuar coletando durante o realinhamento.
+        .transitionTo(RobotState.GOING_COLLECT_SHOOT, () -> !isAtSetpointAngle());
 
     generalFsm
         .state(RobotState.COLLECT_SHOOTING_RECOVERY)
@@ -321,35 +328,32 @@ public class SuperStructure extends SubsystemBase {
               schedule(LedCommands.breathe(led, Color.kViolet));
             });
 
-    generalFsm.addGlobalTransition(
+    // Mapeamento request → (estado de entrada, estados que ja satisfazem o request).
+    // O estado de entrada e excluido automaticamente pelo framework.
+    generalFsm.addRequestTransition(
+        () -> robotRequest == RobotRequest.SHOOT,
         RobotState.GOING_SHOOT,
-        () ->
-            robotRequest == RobotRequest.SHOOT
-                && generalFsm.getCurrentState() != RobotState.SHOOTING
-                && generalFsm.getCurrentState() != RobotState.SHOOTING_RECOVERY);
+        RobotState.SHOOTING,
+        RobotState.SHOOTING_RECOVERY);
 
-    generalFsm.addGlobalTransition(
+    generalFsm.addRequestTransition(
+        () -> robotRequest == RobotRequest.COLLECT,
         RobotState.GOING_COLLECT,
-        () ->
-            robotRequest == RobotRequest.COLLECT
-                && generalFsm.getCurrentState() != RobotState.COLLECTING);
+        RobotState.COLLECTING);
 
-    generalFsm.addGlobalTransition(
+    generalFsm.addRequestTransition(
+        () -> robotRequest == RobotRequest.COLLECT_SHOOT,
         RobotState.GOING_COLLECT_SHOOT,
-        () ->
-            robotRequest == RobotRequest.COLLECT_SHOOT
-                && generalFsm.getCurrentState() != RobotState.COLLECT_SHOOTING
-                && generalFsm.getCurrentState() != RobotState.COLLECT_SHOOTING_RECOVERY);
+        RobotState.COLLECT_SHOOTING,
+        RobotState.COLLECT_SHOOTING_RECOVERY);
 
-    generalFsm.addGlobalTransition(
-        RobotState.CLOSING,
-        () ->
-            robotRequest == RobotRequest.CLOSE
-                && generalFsm.getCurrentState() != RobotState.CLOSED);
+    generalFsm.addRequestTransition(
+        () -> robotRequest == RobotRequest.CLOSE, RobotState.CLOSING, RobotState.CLOSED);
 
-    generalFsm.addGlobalTransition(
-        RobotState.IDLEING,
-        () -> robotRequest == RobotRequest.IDLE && generalFsm.getCurrentState() != RobotState.IDLE);
+    generalFsm.addRequestTransition(
+        () -> robotRequest == RobotRequest.IDLE, RobotState.IDLEING, RobotState.IDLE);
+
+    generalFsm.validateComplete();
   }
 
   private void schedule(Command command) {

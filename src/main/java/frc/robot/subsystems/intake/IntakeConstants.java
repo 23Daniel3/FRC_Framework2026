@@ -22,6 +22,9 @@ public class IntakeConstants {
 
   public static final double INTAKE_REVERSE_POWER = -0.45;
 
+  /** Abaixo deste modulo de RPM o roller e considerado parado (deadband anti-ruido). */
+  public static final double STOPPED_RPM_TOLERANCE = 20.0;
+
   public static final MotorConfig CONFIG_ROLLER_MOTOR =
       new MotorConfig()
           .currentLimit(Amps.of(30))
@@ -50,7 +53,7 @@ public class IntakeConstants {
     IN,
     OUT,
     STOPPED,
-    STOPING,
+    STOPPING,
     COLLECT,
     GOING_IN,
     GOING_OUT

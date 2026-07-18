@@ -58,37 +58,31 @@ public class Intake
               io.controlRollerMotor().stop();
             });
 
-    fsm.state(IntakeState.STOPING)
+    fsm.state(IntakeState.OUT).onEnter(() -> io.controlRollerMotor().stop());
+
+    fsm.state(IntakeState.STOPPING)
         .onEnter(
             () -> {
               io.controlRollerMotor().stop();
             })
-        .transitionTo(IntakeState.STOPPED, () -> inputs.rollerMotorInputs.velocity.in(RPM) == 0);
+        // Deadband em vez de igualdade exata com zero: com ruido de sensor a leitura
+        // raramente e exatamente 0.0, o que travava a FSM em STOPPING para sempre.
+        .transitionTo(
+            IntakeState.STOPPED,
+            () ->
+                Math.abs(inputs.rollerMotorInputs.velocity.in(RPM))
+                    < IntakeConstants.STOPPED_RPM_TOLERANCE);
 
-    fsm.addGlobalTransition(
-        IntakeState.GOING_OUT,
-        () -> (currentRequest == IntakeRequest.COLLECT) && (getState() != IntakeState.COLLECT));
+    fsm.state(IntakeState.STOPPED).onEnter(() -> io.controlRollerMotor().stop());
 
-    fsm.addGlobalTransition(
-        IntakeState.GOING_OUT,
-        () -> (currentRequest == IntakeRequest.OUT) && (getState() != IntakeState.OUT));
+    // Request → (estado de entrada, estado goal, intermediarios protegidos).
+    // OUT e COLLECT compartilham a mesma entrada (GOING_OUT); o alvo final e decidido
+    // pelas transicoes locais de GOING_OUT com base no request atual.
+    bindRequest(IntakeRequest.IN, IntakeState.GOING_IN, IntakeState.IN);
+    bindRequest(IntakeRequest.OUT, IntakeState.GOING_OUT, IntakeState.OUT);
+    bindRequest(IntakeRequest.COLLECT, IntakeState.GOING_OUT, IntakeState.COLLECT);
+    bindRequest(IntakeRequest.STOP, IntakeState.STOPPING, IntakeState.STOPPED);
 
-    fsm.addGlobalTransition(
-        IntakeState.GOING_IN,
-        () -> currentRequest == IntakeRequest.IN && notInState(IntakeState.IN));
-
-    fsm.addGlobalTransition(
-        IntakeState.STOPING,
-        () -> currentRequest == IntakeRequest.STOP && notInState(IntakeState.STOPPED));
-  }
-
-  @Override
-  public boolean atGoal() {
-    return switch (currentRequest) {
-      case IN -> getState() == IntakeState.IN;
-      case OUT -> getState() == IntakeState.OUT;
-      case COLLECT -> getState() == IntakeState.COLLECT;
-      case STOP -> getState() == IntakeState.STOPPED;
-    };
+    fsm.validateComplete();
   }
 }

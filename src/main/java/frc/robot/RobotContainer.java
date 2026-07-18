@@ -198,27 +198,26 @@ public class RobotContainer {
         .whileTrue(
             new IntakeBallController(drivetrain, vision, driverController.getLeftYSupplier()));
 
+    // Modo lento do piloto: escreve apenas no limite do PILOTO. A SuperStructure escreve
+    // no limite de ESTADO (setMaxSpeed). O drivetrain usa o minimo dos dois, entao uma
+    // transicao de estado nao desfaz mais o modo lento (e vice-versa).
     driverController
         .rightTrigger(0.7)
         .onTrue(
-            new ParallelCommandGroup(
-                new InstantCommand(
-                    () ->
-                        drivetrain.setMaxSpeed(
-                            MetersPerSecond.of(DrivetrainConstants.MAX_SPEED_LIMITED))),
-                new InstantCommand(
-                    () ->
-                        drivetrain.setMaxAngularSpeed(
-                            RadiansPerSecond.of(DrivetrainConstants.MAX_ANGULAR_SPEED_LIMITED)))))
-        .whileFalse(
-            new ParallelCommandGroup(
-                new InstantCommand(
-                    () ->
-                        drivetrain.setMaxSpeed(MetersPerSecond.of(DrivetrainConstants.MAX_SPEED))),
-                new InstantCommand(
-                    () ->
-                        drivetrain.setMaxAngularSpeed(
-                            RadiansPerSecond.of(DrivetrainConstants.MAX_ANGULAR_SPEED)))));
+            new InstantCommand(
+                () -> {
+                  drivetrain.setPilotMaxSpeed(
+                      MetersPerSecond.of(DrivetrainConstants.MAX_SPEED_LIMITED));
+                  drivetrain.setPilotMaxAngularSpeed(
+                      RadiansPerSecond.of(DrivetrainConstants.MAX_ANGULAR_SPEED_LIMITED));
+                }))
+        .onFalse(
+            new InstantCommand(
+                () -> {
+                  drivetrain.setPilotMaxSpeed(MetersPerSecond.of(DrivetrainConstants.MAX_SPEED));
+                  drivetrain.setPilotMaxAngularSpeed(
+                      RadiansPerSecond.of(DrivetrainConstants.MAX_ANGULAR_SPEED));
+                }));
 
     driverController
         .povUp()

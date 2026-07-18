@@ -37,8 +37,4 @@ public final class ConveyorCommands {
   public static Command wiggle(Conveyor conveyor) {
     return Commands.runOnce(() -> conveyor.setRequest(ConveyorRequest.WIGGLE), conveyor);
   }
-
-  public static Command idle(Conveyor conveyor) {
-    return Commands.runOnce(() -> conveyor.setRequest(ConveyorRequest.NON_INTENTION), conveyor);
-  }
 }
