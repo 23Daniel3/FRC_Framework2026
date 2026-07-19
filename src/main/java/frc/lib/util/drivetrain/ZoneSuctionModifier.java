@@ -26,9 +26,7 @@ public class ZoneSuctionModifier implements TranslationModifier {
       return input;
     }
 
-    boolean isBlue =
-        AllianceSelector.getInstance().getResolvedAlliance()
-            == Alliance.Blue;
+    boolean isBlue = AllianceSelector.getInstance().getResolvedAlliance() == Alliance.Blue;
     double allianceSign = isBlue ? 1.0 : -1.0;
 
     Translation2d center = zone.getCenter();

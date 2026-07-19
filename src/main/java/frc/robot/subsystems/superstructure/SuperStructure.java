@@ -141,6 +141,18 @@ public class SuperStructure extends SubsystemBase {
     return generalFsm.getCurrentState();
   }
 
+  public ConveyorRequest getConveyorRequest() {
+    return conveyor.getRequest();
+  }
+
+  public IntakeRequest getIntakeRequest() {
+    return intake.getRequest();
+  }
+
+  public ShooterRequest getShooterRequest() {
+    return shooter.getRequest();
+  }
+
   public ShotParameters getActiveShotParameters() {
     return isInAllianceZone() ? hubCalculator.getLastResult() : feedCalculator.getLastResult();
   }
@@ -263,7 +275,7 @@ public class SuperStructure extends SubsystemBase {
               shooter.setRequest(ShooterRequest.SHOOT);
               intake.setRequest(IntakeRequest.COLLECT);
               conveyor.setRequest(ConveyorRequest.RUN_SLOW);
-drivetrain.setMaxSpeed(SuperStructureConstants.MAX_VELOCITY_TO_SHOOT);
+              drivetrain.setMaxSpeed(SuperStructureConstants.MAX_VELOCITY_TO_SHOOT);
             })
         .transitionTo(RobotState.COLLECT_SHOOTING, () -> shooter.readyToShoot());
 

@@ -94,8 +94,7 @@ public class AutoTrajectories {
             new PathPlannerAuto(pathName), SuperStructureCommands.collect(superStructure)),
         // Ultimo passo: nunca termina (roda ate o fim do periodo autonomo).
         Commands.parallel(
-            new AimHub(drivetrain, superStructure),
-            SuperStructureCommands.shoot(superStructure)));
+            new AimHub(drivetrain, superStructure), SuperStructureCommands.shoot(superStructure)));
   }
 
   /** Atira > segue o path em modo coletar+atirar > continua coletando+atirando ate o fim. */
@@ -103,8 +102,7 @@ public class AutoTrajectories {
     return new SequentialCommandGroup(
         aimAndShoot(AutoConstants.AIM_SHOOT_MIN_TIME_SEC),
         Commands.deadline(
-            new PathPlannerAuto(pathName),
-            SuperStructureCommands.collectShooting(superStructure)),
+            new PathPlannerAuto(pathName), SuperStructureCommands.collectShooting(superStructure)),
         // Ultimo passo: nunca termina (roda ate o fim do periodo autonomo).
         SuperStructureCommands.collectShooting(superStructure));
   }

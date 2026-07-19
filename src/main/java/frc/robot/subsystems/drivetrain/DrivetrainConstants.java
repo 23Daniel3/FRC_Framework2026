@@ -28,6 +28,7 @@ public class DrivetrainConstants {
 
   /** Abaixo desta velocidade linear (m/s) o robo e considerado parado (deadband anti-ruido). */
   public static final double MOVING_DEADBAND_MPS = 0.05;
+
   public static final double MAX_SPEED_LIMITED = 1.4;
   public static final double MAX_ACCELERATION = 6.0;
 

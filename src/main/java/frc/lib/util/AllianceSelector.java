@@ -39,8 +39,8 @@ public class AllianceSelector {
    * Fonte canônica da aliança do robô: usa o DriverStation/FMS quando conectado e cai para o
    * seletor do dashboard (cujo default vem de {@code Constants.alliance}) caso contrário.
    *
-   * <p>Todo código que precisa da aliança deve passar por aqui (diretamente na lib, ou via
-   * {@code AllianceManager} no código de robô/jogo) — nunca reimplementar o fallback.
+   * <p>Todo código que precisa da aliança deve passar por aqui (diretamente na lib, ou via {@code
+   * AllianceManager} no código de robô/jogo) — nunca reimplementar o fallback.
    */
   public Alliance getResolvedAlliance() {
     return DriverStation.getAlliance().orElseGet(this::getAlliance);

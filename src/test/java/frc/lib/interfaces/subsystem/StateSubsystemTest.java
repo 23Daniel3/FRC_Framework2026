@@ -12,8 +12,8 @@ import org.littletonrobotics.junction.inputs.LoggableInputs;
 
 /**
  * Testes do padrao Request → State do StateSubsystem: verifica que bindRequest registra as
- * transicoes globais com as exclusoes certas e que atGoal() derivado bate com o mapa declarado.
- * Usa um subsistema fake sem hardware (IO vazio + "sensor" simulado por flag).
+ * transicoes globais com as exclusoes certas e que atGoal() derivado bate com o mapa declarado. Usa
+ * um subsistema fake sem hardware (IO vazio + "sensor" simulado por flag).
  */
 class StateSubsystemTest {
 

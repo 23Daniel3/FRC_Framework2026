@@ -79,8 +79,7 @@ public abstract class StateSubsystem<
    * @param intermediateStates estados intermediarios que ja estao "a caminho" do goal
    */
   @SafeVarargs
-  protected final void bindRequest(
-      R request, S entryState, S goalState, S... intermediateStates) {
+  protected final void bindRequest(R request, S entryState, S goalState, S... intermediateStates) {
     requestGoals.put(request, goalState);
 
     final Set<S> satisfied = new HashSet<>();

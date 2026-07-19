@@ -11,9 +11,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /**
- * Testes do nucleo da FSM — l 100% logica pura, roda sem robo. Protege as garantias que o
- * template promete: ordem de avaliacao, um salto por ciclo, exclusoes das request transitions e
- * unidades de tempo em segundos.
+ * Testes do nucleo da FSM — l 100% logica pura, roda sem robo. Protege as garantias que o template
+ * promete: ordem de avaliacao, um salto por ciclo, exclusoes das request transitions e unidades de
+ * tempo em segundos.
  */
 class StateMachineTest {
 

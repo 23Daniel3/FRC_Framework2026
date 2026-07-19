@@ -25,16 +25,16 @@ import frc.robot.subsystems.example.ExampleConstants.ExampleState;
  *
  * <ol>
  *   <li>{@code onEnter} para efeitos discretos; {@code onUpdate} para setpoints dinamicos;
- *   <li>{@code bindRequest(request, entrada, goal, intermediarios...)} declara a transicao global
- *       E deriva {@code atGoal()} — nao sobrescreva atGoal com switch manual;
+ *   <li>{@code bindRequest(request, entrada, goal, intermediarios...)} declara a transicao global E
+ *       deriva {@code atGoal()} — nao sobrescreva atGoal com switch manual;
  *   <li>Deadband em comparacoes com sensores (nunca {@code == 0});
  *   <li>{@code fsm.validateComplete()} no fim do construtor pega estados esquecidos em bancada.
  * </ol>
  *
- * <p>Para criar um subsistema novo a partir deste: use {@code tools/new_subsystem.py NomeDoMecanismo}
- * ou copie a pasta e renomeie Example → NomeDoMecanismo em classes, arquivos e enums. Depois:
- * instancie no RobotContainer com o IO certo por modo (Hardware / Sim / replay {}), adicione os
- * requests aos onEnter da FSM geral da SuperStructure, e mapeie a "cara" do robo em
+ * <p>Para criar um subsistema novo a partir deste: use {@code tools/new_subsystem.py
+ * NomeDoMecanismo} ou copie a pasta e renomeie Example → NomeDoMecanismo em classes, arquivos e
+ * enums. Depois: instancie no RobotContainer com o IO certo por modo (Hardware / Sim / replay {}),
+ * adicione os requests aos onEnter da FSM geral da SuperStructure, e mapeie a "cara" do robo em
  * LedCommands.STATE_EFFECTS se o novo estado geral existir.
  */
 public class ExampleSubsystem

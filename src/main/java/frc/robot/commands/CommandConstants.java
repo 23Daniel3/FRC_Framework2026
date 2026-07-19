@@ -29,10 +29,6 @@ public final class CommandConstants {
     public static final double k_D = 0;
   }
 
-
-
-
-
   public static final class IntakeBallHConstants {
     public static final double k_P = 0.1;
     public static final double k_I = 0.0;
@@ -41,6 +37,30 @@ public final class CommandConstants {
 
   public static final class IntakeBallGeneralConstants {
     public static final double H_SETPOINT = 0;
+    public static final double H_TOLERANCE = 1.0;
+  }
+
+  public static final class AlignToReefXConstants {
+    public static final double k_P = 0.4;
+    public static final double k_I = 0.0;
+    public static final double k_D = 0.0;
+  }
+
+  public static final class AlignToReefYConstants {
+    public static final double k_P = 0.4;
+    public static final double k_I = 0.0;
+    public static final double k_D = 0.0;
+  }
+
+  public static final class AlignToReefHConstants {
+    public static final double k_P = 0.1;
+    public static final double k_I = 0.0;
+    public static final double k_D = 0.0;
+  }
+
+  public static final class AlignToReefGeneralConstants {
+    public static final double X_TOLERANCE = 0.05;
+    public static final double Y_TOLERANCE = 0.05;
     public static final double H_TOLERANCE = 1.0;
   }
 }

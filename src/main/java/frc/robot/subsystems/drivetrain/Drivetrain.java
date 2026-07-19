@@ -446,9 +446,7 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem {
     return new ChassisSpeeds(
         xLimiter.calculate(MetersPerSecond.of(speeds.vxMetersPerSecond)).in(MetersPerSecond),
         yLimiter.calculate(MetersPerSecond.of(speeds.vyMetersPerSecond)).in(MetersPerSecond),
-        hLimiter
-            .calculate(RadiansPerSecond.of(speeds.omegaRadiansPerSecond))
-            .in(RadiansPerSecond));
+        hLimiter.calculate(RadiansPerSecond.of(speeds.omegaRadiansPerSecond)).in(RadiansPerSecond));
   }
 
   private ChassisSpeeds fieldToRobot(ChassisSpeeds fieldSpeeds) {
@@ -564,8 +562,7 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem {
   }
 
   private static LinearVelocity clampLinear(LinearVelocity v) {
-    double mps =
-        Math.max(0.0, Math.min(v.in(MetersPerSecond), DrivetrainConstants.MAX_SPEED));
+    double mps = Math.max(0.0, Math.min(v.in(MetersPerSecond), DrivetrainConstants.MAX_SPEED));
     return MetersPerSecond.of(mps);
   }
 

@@ -124,8 +124,7 @@ public class DriveToNextZone extends Command {
 
   private void calculateTargets() {
     Pose2d robotPose = drivetrain.getPose();
-    Alliance alliance =
-        AllianceSelector.getInstance().getResolvedAlliance();
+    Alliance alliance = AllianceSelector.getInstance().getResolvedAlliance();
     boolean isBlue = alliance == Alliance.Blue;
 
     boolean inNeutral = Zones.NEUTRAL_ZONE.contains(robotPose.getTranslation());

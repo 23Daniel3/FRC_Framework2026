@@ -48,7 +48,6 @@ public class RobotContainer {
 
   public final AutoTrajectories auto;
 
-
   private final Trigger isAtBump;
   // Controller
   private final NaturalXboxController driverController = new NaturalXboxController(0);
@@ -244,7 +243,6 @@ public class RobotContainer {
         .start()
         .and(operatorController.b())
         .onTrue(AllianceManager.getInstance().setRedStartsScoring());
-
 
     // Idle while the robot is disabled. This ensures the configured
     // neutral mode is applied to the drive motors while disabled.

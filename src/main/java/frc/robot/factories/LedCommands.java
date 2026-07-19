@@ -22,9 +22,9 @@ import java.util.function.Supplier;
 public final class LedCommands {
 
   /**
-   * Mapa declarativo RobotState → efeito de LED. Este e o UNICO lugar do codigo que decide a
-   * "cara" do robo por estado — a FSM da SuperStructure nao conhece LEDs. Para retematizar em uma
-   * nova temporada, edite apenas este mapa.
+   * Mapa declarativo RobotState → efeito de LED. Este e o UNICO lugar do codigo que decide a "cara"
+   * do robo por estado — a FSM da SuperStructure nao conhece LEDs. Para retematizar em uma nova
+   * temporada, edite apenas este mapa.
    */
   private static final Map<RobotState, Consumer<Led>> STATE_EFFECTS =
       new EnumMap<>(RobotState.class);
@@ -45,10 +45,10 @@ public final class LedCommands {
   }
 
   /**
-   * Default command do Led: observa o estado da SuperStructure e aplica o efeito mapeado em
-   * {@link #STATE_EFFECTS} apenas quando o estado muda (os efeitos tem estado interno — chase,
-   * rainbow — e nao devem ser re-inicializados todo ciclo). Ao ser retomado apos uma interrupcao
-   * (ex.: indicador de visao), reaplica o efeito do estado atual.
+   * Default command do Led: observa o estado da SuperStructure e aplica o efeito mapeado em {@link
+   * #STATE_EFFECTS} apenas quando o estado muda (os efeitos tem estado interno — chase, rainbow — e
+   * nao devem ser re-inicializados todo ciclo). Ao ser retomado apos uma interrupcao (ex.:
+   * indicador de visao), reaplica o efeito do estado atual.
    */
   public static Command followRobotState(Led leds, Supplier<RobotState> stateSupplier) {
     return new Command() {
