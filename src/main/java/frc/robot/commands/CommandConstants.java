@@ -2,6 +2,15 @@ package frc.robot.commands;
 
 public final class CommandConstants {
 
+  /** Constantes dos autonomos (tempos minimos/maximos das fases de mira e tiro). */
+  public static final class AutoConstants {
+    /** Tempo minimo (s) mirando+atirando no inicio dos autos de ciclo. */
+    public static final double AIM_SHOOT_MIN_TIME_SEC = 5.0;
+
+    /** Tempo minimo (s) da fase de mira+tiro do auto "so mirar e atirar". */
+    public static final double AIM_ONLY_SHOOT_TIME_SEC = 10.0;
+  }
+
   public static final class MoveXConstants {
     public static final double k_P = 0.4;
     public static final double k_I = 0.2;
@@ -20,38 +29,9 @@ public final class CommandConstants {
     public static final double k_D = 0;
   }
 
-  public static final class AlignToReefXConstants {
-    public static final double k_P = 3.2;
-    public static final double k_I = 0.0;
-    public static final double k_D = 0;
-  }
 
-  public static final class AlignToReefYConstants {
-    public static final double k_P = 3.8;
-    public static final double k_I = 0.0;
-    public static final double k_D = 0.0;
-  }
 
-  public static final class AlignToReefHConstants {
-    public static final double k_P = 0.1;
-    public static final double k_I = 0.0;
-    public static final double k_D = 0.0;
-  }
 
-  public static final class AlignToReefGeneralConstants {
-    public static final double X_SETPOINT = -0.61;
-    public static final double Y_SETPOINT_LEFT = -0.2;
-    public static final double Y_SETPOINT_RIGHT = 0.15;
-    public static final double H_SETPOINT = -2.0;
-
-    public static final double X_TOLERANCE = 0.02;
-    public static final double Y_TOLERANCE = 0.02;
-    public static final double H_TOLERANCE = 3.0;
-
-    public static final int CAMERA_X_VALUE = 2;
-    public static final int CAMERA_Y_VALUE = 0;
-    public static final int CAMERA_H_VALUE = 4;
-  }
 
   public static final class IntakeBallHConstants {
     public static final double k_P = 0.1;

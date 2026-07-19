@@ -43,7 +43,7 @@ public final class Constants {
     COLLECT_SHOOTING,
     COLLECT_SHOOTING_RECOVERY,
     IDLE,
-    IDLEING,
+    IDLING,
     CLOSING,
     CLOSED
   }

@@ -19,7 +19,7 @@ import org.littletonrobotics.junction.networktables.LoggedNetworkInput;
  * <p>Observação: chame periodicamente {@link #periodic()} (ex.: robotPeriodic()).
  *
  * <p>NOTE: foram adicionados métodos públicos para permitir atualizações em cascata por quem
- * coordena múltiplos choosers (ex: AutoTrajetorys).
+ * coordena múltiplos choosers (ex: AutoTrajectories).
  */
 public class LoggedSequentialDashboardChooser<V> extends LoggedNetworkInput {
   private final String keyPrefix;

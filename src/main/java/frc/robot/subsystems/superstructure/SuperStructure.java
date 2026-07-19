@@ -141,18 +141,6 @@ public class SuperStructure extends SubsystemBase {
     return generalFsm.getCurrentState();
   }
 
-  public ConveyorRequest getConveyorRequest() {
-    return conveyor.getRequest();
-  }
-
-  public IntakeRequest getIntakeRequest() {
-    return intake.getRequest();
-  }
-
-  public ShooterRequest getShooterRequest() {
-    return shooter.getRequest();
-  }
-
   public ShotParameters getActiveShotParameters() {
     return isInAllianceZone() ? hubCalculator.getLastResult() : feedCalculator.getLastResult();
   }
@@ -180,7 +168,7 @@ public class SuperStructure extends SubsystemBase {
             });
 
     generalFsm
-        .state(RobotState.IDLEING)
+        .state(RobotState.IDLING)
         .onEnter(
             () -> {
               shooter.setRequest(ShooterRequest.STOP);
@@ -191,7 +179,7 @@ public class SuperStructure extends SubsystemBase {
         .transitionTo(
             RobotState.IDLE,
             () ->
-                intake.atGoal() && shooter.atGoal() && conveyor.atGoal() && !drivetrain.IsMoving());
+                intake.atGoal() && shooter.atGoal() && conveyor.atGoal() && !drivetrain.isMoving());
 
     generalFsm
         .state(RobotState.COLLECTING)
@@ -324,7 +312,7 @@ drivetrain.setMaxSpeed(SuperStructureConstants.MAX_VELOCITY_TO_SHOOT);
         () -> robotRequest == RobotRequest.CLOSE, RobotState.CLOSING, RobotState.CLOSED);
 
     generalFsm.addRequestTransition(
-        () -> robotRequest == RobotRequest.IDLE, RobotState.IDLEING, RobotState.IDLE);
+        () -> robotRequest == RobotRequest.IDLE, RobotState.IDLING, RobotState.IDLE);
 
     generalFsm.validateComplete();
   }

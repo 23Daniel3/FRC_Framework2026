@@ -31,7 +31,7 @@ public final class LedCommands {
 
   static {
     STATE_EFFECTS.put(RobotState.IDLE, led -> led.breathe(Color.kViolet));
-    STATE_EFFECTS.put(RobotState.IDLEING, led -> led.chase(Color.kCyan));
+    STATE_EFFECTS.put(RobotState.IDLING, led -> led.chase(Color.kCyan));
     STATE_EFFECTS.put(RobotState.GOING_COLLECT, led -> led.chase(Color.kCyan));
     STATE_EFFECTS.put(RobotState.COLLECTING, led -> led.chase(Color.kCyan));
     STATE_EFFECTS.put(RobotState.GOING_SHOOT, led -> led.chase(Color.kCyan));

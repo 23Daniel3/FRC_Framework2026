@@ -663,8 +663,8 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem {
     return MetersPerSecond.of(finalVelocity);
   }
 
-  @AutoLogOutput(key = "Subsystems/Drivetrain/IsMoving")
-  public boolean IsMoving() {
+  @AutoLogOutput(key = "Subsystems/Drivetrain/isMoving")
+  public boolean isMoving() {
     // Deadband em vez de comparacao exata com zero: com ruido de odometria a velocidade
     // raramente e exatamente 0.0, o que tornava este predicado quase sempre verdadeiro.
     return getLinearVelocity().in(MetersPerSecond) > DrivetrainConstants.MOVING_DEADBAND_MPS;

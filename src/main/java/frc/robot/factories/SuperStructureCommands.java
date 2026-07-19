@@ -8,6 +8,23 @@ import java.util.function.BooleanSupplier;
 
 public final class SuperStructureCommands {
 
+  /**
+   * Default command da SuperStructure: traduz os botoes do piloto no {@link RobotRequest} ativo, a
+   * cada ciclo. Este e o UNICO ponto de entrada de intencao do piloto na FSM geral.
+   *
+   * <p><b>Tabela de prioridade (a primeira linha verdadeira vence):</b>
+   *
+   * <pre>
+   * close                      -> CLOSE          (recolhe tudo; vence qualquer outro botao)
+   * collect + shoot            -> COLLECT_SHOOT  (coleta enquanto atira)
+   * collect                    -> COLLECT
+   * shoot                      -> SHOOT
+   * (nenhum botao)             -> IDLE
+   * </pre>
+   *
+   * <p>Para adicionar um modo novo: crie o RobotRequest, insira a linha na posicao de prioridade
+   * correta abaixo e atualize esta tabela.
+   */
   public static Command manageRequests(
       SuperStructure superStructure,
       BooleanSupplier collectBtn,
