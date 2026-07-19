@@ -1,6 +1,7 @@
 package frc.lib.interfaces.fsm;
 
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.Timer;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.EnumSet;
@@ -50,9 +51,9 @@ public class StateMachine<S extends Enum<S>> {
     this.stateEnterTimestampSec = nowSeconds();
   }
 
-  /** Timestamp atual em segundos (Logger.getTimestamp() retorna microssegundos). */
+  /** Timestamp atual em segundos da FPGA (compatível com SimHooks.stepTiming nos testes). */
   private static double nowSeconds() {
-    return Logger.getTimestamp() / 1e6;
+    return Timer.getFPGATimestamp();
   }
 
   public StateConfig state(S stateEnum) {
