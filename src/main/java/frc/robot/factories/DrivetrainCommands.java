@@ -54,17 +54,18 @@ public class DrivetrainCommands {
 
               double omega = rotationStrategy.calculate(drivetrain);
 
-              ChassisSpeeds speeds =
-                  AllianceFlipUtil.apply(
-                      drivetrain,
-                      translation.getX() * drivetrain.getMaxSpeed().in(MetersPerSecond),
-                      translation.getY() * drivetrain.getMaxSpeed().in(MetersPerSecond),
-                      omega,
-                      true);
+              // Sticks sao intencao FIELD-relative do piloto. Na alianca Vermelha o "campo do
+              // piloto" esta girado 180 graus, o que equivale a negar X e Y. Uma unica conversao
+              // field -> robot acontece dentro de driveFieldRelative. (Substitui a antiga cadeia
+              // de tres conversoes de frame, que produzia o mesmo resultado de forma opaca.)
+              double flip = AllianceFlipUtil.shouldFlip() ? -1.0 : 1.0;
+              double maxSpeed = drivetrain.getMaxSpeed().in(MetersPerSecond);
 
-              speeds = ChassisSpeeds.fromFieldRelativeSpeeds(speeds, drivetrain.getRotation());
-
-              drivetrain.driveFieldRelative(speeds);
+              drivetrain.driveFieldRelative(
+                  new ChassisSpeeds(
+                      flip * translation.getX() * maxSpeed,
+                      flip * translation.getY() * maxSpeed,
+                      omega));
             },
             drivetrain)
         .beforeStarting(() -> rotationStrategy.reset(drivetrain));

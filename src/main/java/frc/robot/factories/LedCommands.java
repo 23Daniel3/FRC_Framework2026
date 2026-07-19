@@ -3,7 +3,12 @@ package frc.robot.factories;
 import edu.wpi.first.wpilibj.util.Color;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import frc.robot.Constants.RobotState;
 import frc.robot.subsystems.led.Led;
+import java.util.EnumMap;
+import java.util.Map;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
  * Utility class that provides factory methods for creating LED-related commands.
@@ -15,6 +20,73 @@ import frc.robot.subsystems.led.Led;
  * requirement.
  */
 public final class LedCommands {
+
+  /**
+   * Mapa declarativo RobotState → efeito de LED. Este e o UNICO lugar do codigo que decide a "cara"
+   * do robo por estado — a FSM da SuperStructure nao conhece LEDs. Para retematizar em uma nova
+   * temporada, edite apenas este mapa.
+   */
+  private static final Map<RobotState, Consumer<Led>> STATE_EFFECTS =
+      new EnumMap<>(RobotState.class);
+
+  static {
+    STATE_EFFECTS.put(RobotState.IDLE, led -> led.breathe(Color.kViolet));
+    STATE_EFFECTS.put(RobotState.IDLING, led -> led.chase(Color.kCyan));
+    STATE_EFFECTS.put(RobotState.GOING_COLLECT, led -> led.chase(Color.kCyan));
+    STATE_EFFECTS.put(RobotState.COLLECTING, led -> led.chase(Color.kCyan));
+    STATE_EFFECTS.put(RobotState.GOING_SHOOT, led -> led.chase(Color.kCyan));
+    STATE_EFFECTS.put(RobotState.SHOOTING, led -> led.rainbowContinuous(8));
+    STATE_EFFECTS.put(RobotState.SHOOTING_RECOVERY, led -> led.breathe(Color.kYellow));
+    STATE_EFFECTS.put(RobotState.GOING_COLLECT_SHOOT, led -> led.chase(Color.kCyan));
+    STATE_EFFECTS.put(RobotState.COLLECT_SHOOTING, led -> led.rainbowContinuous(8));
+    STATE_EFFECTS.put(RobotState.COLLECT_SHOOTING_RECOVERY, led -> led.breathe(Color.kYellow));
+    STATE_EFFECTS.put(RobotState.CLOSING, led -> led.chase(Color.kCyan));
+    STATE_EFFECTS.put(RobotState.CLOSED, led -> led.breathe(Color.kViolet));
+  }
+
+  /**
+   * Default command do Led: observa o estado da SuperStructure e aplica o efeito mapeado em {@link
+   * #STATE_EFFECTS} apenas quando o estado muda (os efeitos tem estado interno — chase, rainbow — e
+   * nao devem ser re-inicializados todo ciclo). Ao ser retomado apos uma interrupcao (ex.:
+   * indicador de visao), reaplica o efeito do estado atual.
+   */
+  public static Command followRobotState(Led leds, Supplier<RobotState> stateSupplier) {
+    return new Command() {
+      private RobotState lastApplied = null;
+
+      {
+        addRequirements(leds);
+        setName("Led Follow RobotState");
+      }
+
+      @Override
+      public void initialize() {
+        lastApplied = null; // forca reaplicar apos interrupcoes
+      }
+
+      @Override
+      public void execute() {
+        RobotState state = stateSupplier.get();
+        if (state != lastApplied) {
+          STATE_EFFECTS.getOrDefault(state, led -> led.breathe(Color.kViolet)).accept(leds);
+          lastApplied = state;
+        }
+      }
+
+      @Override
+      public boolean runsWhenDisabled() {
+        return true;
+      }
+    };
+  }
+
+  /**
+   * Efeito solido persistente (mantem o requirement do Led enquanto ativo). Use com {@code
+   * whileTrue} para indicadores que devem prevalecer sobre o followRobotState.
+   */
+  public static Command solidPersistent(Led leds, Color color) {
+    return Commands.run(() -> leds.solid(color), leds).ignoringDisable(true);
+  }
 
   /**
    * Creates a command that turns all LEDs off.

@@ -1,0 +1,52 @@
+# CI do template FRC: compila, roda os testes de unidade (JUnit) e checa formatacao.
+# Roda em todo push e pull request. Nao precisa de roboRIO: o build desktop do
+# GradleRIO + HAL simulado cobrem tudo que os testes exercitam.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    # Alternativa oficial da WPILib (ja traz JDK/toolchains do ano):
+    #   container: wpilib/ubuntu-base:22.04
+    # Mantemos setup-java por ser mais simples de atualizar entre temporadas.
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: JDK 17 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Gradle (com cache)
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Permissao do wrapper
+        run: chmod +x gradlew
+
+      # 'build' ja compila main + test e executa os testes JUnit.
+      - name: Build + testes
+        run: ./gradlew build --max-workers 2
+
+      # Formatacao e obrigatoria (TEMPLATE.md). Se o projeto ainda nao tiver o
+      # plugin Spotless, este passo falha "task nao encontrada" — remova a linha
+      # ou adicione o plugin ao build.gradle.
+      - name: Spotless
+        run: ./gradlew spotlessCheck
+
+      - name: Publicar resultados dos testes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: build/test-results/test/
+          if-no-files-found: ignore

@@ -18,7 +18,7 @@ public class Conveyor
         ConveyorRequest.STOP,
         ConveyorConstants.class);
 
-    // --- Definição dos Estados ---
+    // --- Definicao dos Estados ---
 
     fsm.state(ConveyorState.IDLE).onEnter(() -> io.controlMotor().stop());
 
@@ -46,41 +46,15 @@ public class Conveyor
               io.controlMotor().runPercentOutput(power);
             });
 
-    fsm.addGlobalTransition(
-        ConveyorState.IDLE,
-        () -> isRequest(ConveyorRequest.STOP) && notInState(ConveyorState.IDLE));
+    // Requests diretos: entrada == goal. atGoal() e derivado automaticamente.
+    bindRequest(ConveyorRequest.STOP, ConveyorState.IDLE, ConveyorState.IDLE);
+    bindRequest(ConveyorRequest.RUN, ConveyorState.RUNNING, ConveyorState.RUNNING);
+    bindRequest(ConveyorRequest.RUN_SLOW, ConveyorState.RUNNING_SLOW, ConveyorState.RUNNING_SLOW);
+    bindRequest(ConveyorRequest.REVERSE, ConveyorState.REVERSING, ConveyorState.REVERSING);
+    bindRequest(
+        ConveyorRequest.SLOW_REVERSE, ConveyorState.REVERSING_SLOW, ConveyorState.REVERSING_SLOW);
+    bindRequest(ConveyorRequest.WIGGLE, ConveyorState.WIGGLING, ConveyorState.WIGGLING);
 
-    fsm.addGlobalTransition(
-        ConveyorState.RUNNING,
-        () -> isRequest(ConveyorRequest.RUN) && notInState(ConveyorState.RUNNING));
-
-    fsm.addGlobalTransition(
-        ConveyorState.RUNNING_SLOW,
-        () -> isRequest(ConveyorRequest.RUN_SLOW) && notInState(ConveyorState.RUNNING_SLOW));
-
-    fsm.addGlobalTransition(
-        ConveyorState.REVERSING,
-        () -> isRequest(ConveyorRequest.REVERSE) && notInState(ConveyorState.REVERSING));
-
-    fsm.addGlobalTransition(
-        ConveyorState.REVERSING_SLOW,
-        () -> isRequest(ConveyorRequest.SLOW_REVERSE) && notInState(ConveyorState.REVERSING_SLOW));
-
-    fsm.addGlobalTransition(
-        ConveyorState.WIGGLING,
-        () -> isRequest(ConveyorRequest.WIGGLE) && notInState(ConveyorState.WIGGLING));
-  }
-
-  @Override
-  public boolean atGoal() {
-    return switch (currentRequest) {
-      case RUN -> getState() == ConveyorState.RUNNING;
-      case RUN_SLOW -> getState() == ConveyorState.RUNNING_SLOW;
-      case REVERSE -> getState() == ConveyorState.REVERSING;
-      case SLOW_REVERSE -> getState() == ConveyorState.REVERSING_SLOW;
-      case WIGGLE -> getState() == ConveyorState.WIGGLING;
-      case STOP -> getState() == ConveyorState.IDLE;
-      case NON_INTENTION -> true;
-    };
+    fsm.validateComplete();
   }
 }

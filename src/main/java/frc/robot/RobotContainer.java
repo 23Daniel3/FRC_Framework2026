@@ -5,7 +5,6 @@ import static edu.wpi.first.units.Units.RadiansPerSecond;
 
 import com.ctre.phoenix6.swerve.SwerveRequest;
 import edu.wpi.first.wpilibj.*;
-import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj2.command.*;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
@@ -16,7 +15,7 @@ import frc.lib.controller.NaturalXboxController;
 import frc.lib.controller.VibrateXboxController;
 import frc.lib.util.AllianceSelector;
 import frc.lib.zones.LogPolygon2d;
-import frc.robot.commands.auto.AutoTrajetorys;
+import frc.robot.commands.auto.AutoTrajectories;
 import frc.robot.commands.drivetrain.*;
 import frc.robot.commands.drivetrain.align.IntakeBallController;
 import frc.robot.factories.*;
@@ -47,9 +46,7 @@ public class RobotContainer {
   private final SuperStructure superStructure;
   private final Vision vision;
 
-  public final AutoTrajetorys auto;
-
-  public final AllianceSelector alliance;
+  public final AutoTrajectories auto;
 
   private final Trigger isAtBump;
   // Controller
@@ -60,7 +57,8 @@ public class RobotContainer {
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
-    alliance = AllianceSelector.getInstance();
+    // Garante que o seletor de alianca (fallback sem FMS) aparece no dashboard desde o boot.
+    AllianceSelector.getInstance();
     drivetrain = TunerConstants.createDrivetrain();
     switch (Constants.currentMode) {
       case REAL:
@@ -112,18 +110,9 @@ public class RobotContainer {
         break;
     }
 
-    superStructure =
-        new SuperStructure(
-            conveyor,
-            drivetrain,
-            intake,
-            led,
-            shooter,
-            vision,
-            driverController,
-            operatorController);
+    superStructure = new SuperStructure(conveyor, drivetrain, intake, shooter);
 
-    auto = new AutoTrajetorys(drivetrain, superStructure);
+    auto = new AutoTrajectories(drivetrain, superStructure);
 
     driveLogger = new Telemetry(DrivetrainConstants.MAX_SPEED);
 
@@ -163,9 +152,12 @@ public class RobotContainer {
             driverController.getLeftXSupplier(),
             driverController.getRightXSupplier()));
 
-    conveyor.setDefaultCommand(ConveyorCommands.defaultCommand(superStructure, conveyor));
-    intake.setDefaultCommand(IntakeCommands.defaultCommand(superStructure, intake));
-    shooter.setDefaultCommand(ShooterCommands.defaultCommand(superStructure, shooter));
+    // Modelo A: a SuperStructure escreve os requests diretamente nos subsistemas dentro
+    // dos onEnter da FSM geral — nao ha mais default commands de relay (que reescreviam o
+    // request a cada ciclo e tornavam qualquer setRequest externo inutil).
+
+    // A "cara" do robo e um observador do estado, definido em LedCommands.STATE_EFFECTS.
+    led.setDefaultCommand(LedCommands.followRobotState(led, superStructure::getRobotState));
 
     superStructure.setDefaultCommand(
         SuperStructureCommands.manageRequests(
@@ -180,7 +172,7 @@ public class RobotContainer {
             new InstantCommand(
                 () ->
                     drivetrain.resetPose(
-                        DriverStation.getAlliance().orElse(alliance.getAlliance()) == Alliance.Blue
+                        AllianceManager.getInstance().isBlue()
                             ? Poses.RESET_POSE_BLUE
                             : Poses.RESET_POSE_RED)));
 
@@ -198,27 +190,26 @@ public class RobotContainer {
         .whileTrue(
             new IntakeBallController(drivetrain, vision, driverController.getLeftYSupplier()));
 
+    // Modo lento do piloto: escreve apenas no limite do PILOTO. A SuperStructure escreve
+    // no limite de ESTADO (setMaxSpeed). O drivetrain usa o minimo dos dois, entao uma
+    // transicao de estado nao desfaz mais o modo lento (e vice-versa).
     driverController
         .rightTrigger(0.7)
         .onTrue(
-            new ParallelCommandGroup(
-                new InstantCommand(
-                    () ->
-                        drivetrain.setMaxSpeed(
-                            MetersPerSecond.of(DrivetrainConstants.MAX_SPEED_LIMITED))),
-                new InstantCommand(
-                    () ->
-                        drivetrain.setMaxAngularSpeed(
-                            RadiansPerSecond.of(DrivetrainConstants.MAX_ANGULAR_SPEED_LIMITED)))))
-        .whileFalse(
-            new ParallelCommandGroup(
-                new InstantCommand(
-                    () ->
-                        drivetrain.setMaxSpeed(MetersPerSecond.of(DrivetrainConstants.MAX_SPEED))),
-                new InstantCommand(
-                    () ->
-                        drivetrain.setMaxAngularSpeed(
-                            RadiansPerSecond.of(DrivetrainConstants.MAX_ANGULAR_SPEED)))));
+            new InstantCommand(
+                () -> {
+                  drivetrain.setPilotMaxSpeed(
+                      MetersPerSecond.of(DrivetrainConstants.MAX_SPEED_LIMITED));
+                  drivetrain.setPilotMaxAngularSpeed(
+                      RadiansPerSecond.of(DrivetrainConstants.MAX_ANGULAR_SPEED_LIMITED));
+                }))
+        .onFalse(
+            new InstantCommand(
+                () -> {
+                  drivetrain.setPilotMaxSpeed(MetersPerSecond.of(DrivetrainConstants.MAX_SPEED));
+                  drivetrain.setPilotMaxAngularSpeed(
+                      RadiansPerSecond.of(DrivetrainConstants.MAX_ANGULAR_SPEED));
+                }));
 
     driverController
         .povUp()
@@ -239,53 +230,9 @@ public class RobotContainer {
                 driverController.getRightXSupplier()));
 
     // Operator Controller
-    // operatorController.leftBumper().whileTrue(IntakeCommands.in(superStructure));
-
-    // operatorController.rightBumper().whileTrue(IntakeCommands.out(superStructure));
-
     Trigger invertButton = operatorController.leftStick();
 
     invertButton.whileTrue(new VibrateXboxController(operatorController).continuous(0, 1, 3, true));
-
-    // invertButton
-    //     .onTrue(
-    //         new ParallelCommandGroup(
-    //             conveyor.setToMaxCurrent(),
-    //             flywheel.setToMaxCurrent(),
-    //             intake.setToMaxCurrent(),
-    //             kicker.setToMaxCurrent()))
-    //     .onFalse(
-    //         new ParallelCommandGroup(
-    //             conveyor.setToNormalCurrent(),
-    //             flywheel.setToNormalCurrent(),
-    //             intake.setToNormalCurrent(),
-    //             kicker.setToNormalCurrent()));
-
-    // operatorController.a().whileTrue(RollerCommands.intakeShift(superStructure, invertButton));
-
-    // operatorController
-    //     .b()
-    //     .and(operatorController.start().negate())
-    //     .whileTrue(ConveyorCommands.runShift(superStructure, invertButton));
-
-    // operatorController
-    //     .leftTrigger(0.3)
-    //     .whileTrue(KickerCommands.shootShift(superStructure, invertButton));
-
-    // operatorController
-    //     .rightTrigger(0.3)
-    //     .whileTrue(FlywheelCommands.shootShift(superStructure, invertButton));
-
-    // operatorController.povUp().whileTrue(ConveyorCommands.wiggle(superStructure));
-
-    // operatorController
-    //     .povDown()
-    //     .whileTrue(
-    //         new ParallelCommandGroup(
-    //             RollerCommands.outake(superStructure),
-    //             ConveyorCommands.reverse(superStructure),
-    //             KickerCommands.reverse(superStructure),
-    //             FlywheelCommands.reverse(superStructure)));
 
     operatorController
         .start()
@@ -296,11 +243,6 @@ public class RobotContainer {
         .start()
         .and(operatorController.b())
         .onTrue(AllianceManager.getInstance().setRedStartsScoring());
-
-    // driverController.a().whileTrue(DrivetrainCommands.sysIdDynamicReverse(drivetrain));
-    // driverController.b().whileTrue(DrivetrainCommands.sysIdDynamicForward(drivetrain));
-    // driverController.x().whileTrue(DrivetrainCommands.sysIdQuasistaticReverse(drivetrain));
-    // driverController.y().whileTrue(DrivetrainCommands.sysIdQuasistaticForward(drivetrain));
 
     // Idle while the robot is disabled. This ensures the configured
     // neutral mode is applied to the drive motors while disabled.
@@ -318,15 +260,24 @@ public class RobotContainer {
    */
   public Command getAutonomousCommand() {
     return auto.auto();
-    // return Commands.none();
   }
 
   public void triggersActions() {
-    new Trigger(() -> vision.getTagCount(VisionCamera.LEFT) == 2)
-        .or(() -> vision.getTagCount(VisionCamera.RIGHT) == 2)
+    // Em disabled: vermelho persistente se alguma camera lateral ve 2 tags, verde caso
+    // contrario. Comandos persistentes (run) interrompem o followRobotState enquanto ativos
+    // e o devolvem ao terminar — os antigos runOnce eram desfeitos no ciclo seguinte.
+    Trigger twoTags =
+        new Trigger(() -> vision.getTagCount(VisionCamera.LEFT) == 2)
+            .or(() -> vision.getTagCount(VisionCamera.RIGHT) == 2);
+
+    twoTags
         .and(RobotModeTriggers.disabled())
-        .onTrue(LedCommands.red(led))
-        .onFalse(LedCommands.green(led));
+        .whileTrue(LedCommands.solidPersistent(led, edu.wpi.first.wpilibj.util.Color.kRed));
+
+    twoTags
+        .negate()
+        .and(RobotModeTriggers.disabled())
+        .whileTrue(LedCommands.solidPersistent(led, edu.wpi.first.wpilibj.util.Color.kGreen));
 
     isAtBump
         .and(RobotModeTriggers.autonomous().negate())

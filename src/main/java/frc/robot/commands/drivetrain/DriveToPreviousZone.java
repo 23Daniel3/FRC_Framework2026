@@ -2,7 +2,6 @@ package frc.robot.commands.drivetrain;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.game.FieldConstants.Poses;
@@ -128,8 +127,7 @@ public class DriveToPreviousZone extends Command {
 
   private void calculateTargets() {
     Pose2d robotPose = drivetrain.getPose();
-    Alliance alliance =
-        DriverStation.getAlliance().orElse(AllianceSelector.getInstance().getAlliance());
+    Alliance alliance = AllianceSelector.getInstance().getResolvedAlliance();
     boolean isBlue = alliance == Alliance.Blue;
 
     boolean inNeutral = Zones.NEUTRAL_ZONE.contains(robotPose.getTranslation());

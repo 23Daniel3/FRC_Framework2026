@@ -130,8 +130,18 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem {
 
   private final SwerveRequest idle = new SwerveRequest.Idle();
 
-  private LinearVelocity maxSpeed = MetersPerSecond.of(DrivetrainConstants.MAX_SPEED);
-  private AngularVelocity maxAngularSpeed =
+  /*
+   * Limite de velocidade com dois donos independentes (arbitragem por minimo):
+   * - stateMaxSpeed: escrito pela SuperStructure a cada mudanca de estado (via setMaxSpeed);
+   * - pilotMaxSpeed: escrito pelos bindings do piloto (modo lento, via setPilotMaxSpeed).
+   * getMaxSpeed() retorna o MENOR dos dois, entao nenhum dos lados desfaz o outro.
+   */
+  private LinearVelocity stateMaxSpeed = MetersPerSecond.of(DrivetrainConstants.MAX_SPEED);
+  private AngularVelocity stateMaxAngularSpeed =
+      RadiansPerSecond.of(DrivetrainConstants.MAX_ANGULAR_SPEED);
+
+  private LinearVelocity pilotMaxSpeed = MetersPerSecond.of(DrivetrainConstants.MAX_SPEED);
+  private AngularVelocity pilotMaxAngularSpeed =
       RadiansPerSecond.of(DrivetrainConstants.MAX_ANGULAR_SPEED);
 
   private LinearAcceleration maxAcceleration =
@@ -242,9 +252,7 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem {
   }
 
   public void startPoseFromAlliance() {
-    boolean blueAlliance =
-        DriverStation.getAlliance().orElse(AllianceSelector.getInstance().getAlliance())
-            == Alliance.Blue;
+    boolean blueAlliance = AllianceSelector.getInstance().getResolvedAlliance() == Alliance.Blue;
 
     int station = DriverStation.getLocation().orElse(1);
 
@@ -279,9 +287,7 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem {
               new PIDConstants(7, 0, 0)),
           config,
           // Assume the path needs to be flipped for Red vs Blue, this is normally the case
-          () ->
-              DriverStation.getAlliance().orElse(AllianceSelector.getInstance().getAlliance())
-                  == Alliance.Red,
+          () -> AllianceSelector.getInstance().shouldFlip(),
           this // Subsystem for requirements
           );
     } catch (Exception ex) {
@@ -438,7 +444,9 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem {
 
   private ChassisSpeeds applyLimitersRobotRelative(ChassisSpeeds speeds) {
     return new ChassisSpeeds(
-        speeds.vxMetersPerSecond, speeds.vyMetersPerSecond, speeds.omegaRadiansPerSecond);
+        xLimiter.calculate(MetersPerSecond.of(speeds.vxMetersPerSecond)).in(MetersPerSecond),
+        yLimiter.calculate(MetersPerSecond.of(speeds.vyMetersPerSecond)).in(MetersPerSecond),
+        hLimiter.calculate(RadiansPerSecond.of(speeds.omegaRadiansPerSecond)).in(RadiansPerSecond));
   }
 
   private ChassisSpeeds fieldToRobot(ChassisSpeeds fieldSpeeds) {
@@ -553,30 +561,49 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem {
         visionRobotPoseMeters, Utils.fpgaToCurrentTime(timestampSeconds), visionMeasurementStdDevs);
   }
 
+  private static LinearVelocity clampLinear(LinearVelocity v) {
+    double mps = Math.max(0.0, Math.min(v.in(MetersPerSecond), DrivetrainConstants.MAX_SPEED));
+    return MetersPerSecond.of(mps);
+  }
+
+  private static AngularVelocity clampAngular(AngularVelocity v) {
+    double radps =
+        Math.max(0.0, Math.min(v.in(RadiansPerSecond), DrivetrainConstants.MAX_ANGULAR_SPEED));
+    return RadiansPerSecond.of(radps);
+  }
+
+  /** Limite de velocidade imposto pelo estado do robo (dono: SuperStructure). */
   public void setMaxSpeed(LinearVelocity maxSpeed) {
-    if (maxSpeed.in(MetersPerSecond) >= DrivetrainConstants.MAX_SPEED) {
-      this.maxSpeed = MetersPerSecond.of(DrivetrainConstants.MAX_SPEED);
-    } else {
-      this.maxSpeed = maxSpeed;
-    }
+    this.stateMaxSpeed = clampLinear(maxSpeed);
+  }
+
+  /** Limite de velocidade imposto pelo piloto (ex.: modo lento no gatilho). */
+  public void setPilotMaxSpeed(LinearVelocity maxSpeed) {
+    this.pilotMaxSpeed = clampLinear(maxSpeed);
   }
 
   @AutoLogOutput(key = "Subsystems/Drivetrain/MaxSpeed")
   public LinearVelocity getMaxSpeed() {
-    return this.maxSpeed;
+    return stateMaxSpeed.in(MetersPerSecond) <= pilotMaxSpeed.in(MetersPerSecond)
+        ? stateMaxSpeed
+        : pilotMaxSpeed;
   }
 
+  /** Limite angular imposto pelo estado do robo (dono: SuperStructure). */
   public void setMaxAngularSpeed(AngularVelocity maxAngularSpeed) {
-    if (maxAngularSpeed.in(RadiansPerSecond) >= DrivetrainConstants.MAX_ANGULAR_SPEED) {
-      this.maxAngularSpeed = RadiansPerSecond.of(DrivetrainConstants.MAX_ANGULAR_SPEED);
-    } else {
-      this.maxAngularSpeed = maxAngularSpeed;
-    }
+    this.stateMaxAngularSpeed = clampAngular(maxAngularSpeed);
+  }
+
+  /** Limite angular imposto pelo piloto (ex.: modo lento no gatilho). */
+  public void setPilotMaxAngularSpeed(AngularVelocity maxAngularSpeed) {
+    this.pilotMaxAngularSpeed = clampAngular(maxAngularSpeed);
   }
 
   @AutoLogOutput(key = "Subsystems/Drivetrain/MaxAngularSpeed")
   public AngularVelocity getMaxAngularSpeed() {
-    return this.maxAngularSpeed;
+    return stateMaxAngularSpeed.in(RadiansPerSecond) <= pilotMaxAngularSpeed.in(RadiansPerSecond)
+        ? stateMaxAngularSpeed
+        : pilotMaxAngularSpeed;
   }
 
   public void setMaxAcceleration(LinearAcceleration maxAcceleration) {
@@ -633,9 +660,11 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem {
     return MetersPerSecond.of(finalVelocity);
   }
 
-  @AutoLogOutput(key = "Subsystems/Drivetrain/IsMoving")
-  public boolean IsMoving() {
-    return getLinearVelocity().in(MetersPerSecond) != 0;
+  @AutoLogOutput(key = "Subsystems/Drivetrain/isMoving")
+  public boolean isMoving() {
+    // Deadband em vez de comparacao exata com zero: com ruido de odometria a velocidade
+    // raramente e exatamente 0.0, o que tornava este predicado quase sempre verdadeiro.
+    return getLinearVelocity().in(MetersPerSecond) > DrivetrainConstants.MOVING_DEADBAND_MPS;
   }
 
   public boolean isAtTrench() {
@@ -672,7 +701,6 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem {
   }
 
   public boolean isBlue() {
-    return DriverStation.getAlliance().orElse(AllianceSelector.getInstance().getAlliance())
-        == Alliance.Blue;
+    return AllianceSelector.getInstance().getResolvedAlliance() == Alliance.Blue;
   }
 }

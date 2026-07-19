@@ -39,12 +39,20 @@ public class AllianceManager {
   }
 
   public Alliance myAlliance() {
-    return DriverStation.getAlliance()
-        .orElseGet(() -> AllianceSelector.getInstance().getAlliance());
+    return AllianceSelector.getInstance().getResolvedAlliance();
   }
 
   public boolean isBlue() {
     return myAlliance() == Alliance.Blue;
+  }
+
+  public boolean isRed() {
+    return myAlliance() == Alliance.Red;
+  }
+
+  /** true se as poses/velocidades de campo devem ser espelhadas (aliança Vermelha). */
+  public boolean shouldFlip() {
+    return isRed();
   }
 
   public Zones myAllianceZone() {

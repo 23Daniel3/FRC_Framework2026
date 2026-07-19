@@ -2,7 +2,6 @@ package frc.lib.util;
 
 import edu.wpi.first.math.geometry.*;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
-import edu.wpi.first.wpilibj.DriverStation;
 import frc.game.FieldConstants;
 import frc.lib.zones.Polygon2d;
 import frc.robot.subsystems.drivetrain.Drivetrain;
@@ -288,8 +287,9 @@ public class AllianceFlipUtil {
    * @return {@code true} if the robot is on the Red Alliance; {@code false} otherwise
    */
   public static boolean shouldFlip() {
-    return DriverStation.getAlliance().isPresent()
-        && DriverStation.getAlliance().get() == DriverStation.Alliance.Red;
+    // Delega para a fonte canônica (DS -> seletor do dashboard). Antes, sem FMS o flip
+    // nunca acontecia aqui, divergindo do resto do código que usava o fallback.
+    return AllianceSelector.getInstance().shouldFlip();
   }
 
   public static ChassisSpeeds apply(

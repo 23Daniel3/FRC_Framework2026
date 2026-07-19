@@ -28,8 +28,7 @@ public class ConveyorConstants {
     REVERSE,
     SLOW_REVERSE,
     STOP,
-    WIGGLE,
-    NON_INTENTION
+    WIGGLE
   }
 
   public enum ConveyorState {

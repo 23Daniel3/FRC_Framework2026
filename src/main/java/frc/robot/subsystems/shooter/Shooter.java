@@ -30,16 +30,15 @@ public class Shooter
               io.controlKicker().stop();
             });
 
+    // Setpoints aplicados no onUpdate: o RPM do SOTM muda a cada ciclo enquanto o robo
+    // se move, entao o alvo precisa ser reaplicado continuamente (nao apenas no onEnter).
     fsm.state(ShooterState.FLYWHEEL_RAMPING)
-        .onEnter(
-            () -> {
-              io.controlFlywheel().runVelocity(velocity);
-              io.controlKicker().stop();
-            })
+        .onEnter(() -> io.controlKicker().stop())
+        .onUpdate(() -> io.controlFlywheel().runVelocity(velocity))
         .transitionTo(ShooterState.KICKER_RAMPING, () -> isFlywheelReadyToKick());
 
     fsm.state(ShooterState.KICKER_RAMPING)
-        .onEnter(
+        .onUpdate(
             () -> {
               io.controlFlywheel().runVelocity(velocity);
               io.controlKicker().runVelocity(velocity);
@@ -47,7 +46,7 @@ public class Shooter
         .transitionTo(ShooterState.SHOOTING, () -> readyToStateShooting());
 
     fsm.state(ShooterState.SHOOTING)
-        .onEnter(
+        .onUpdate(
             () -> {
               io.controlFlywheel().runVelocity(velocity);
               io.controlKicker().runVelocity(velocity);
@@ -61,19 +60,17 @@ public class Shooter
               io.controlKicker().runPercentOutput(ShooterConstants.KICKER_REVERSE_POWER);
             });
 
-    fsm.addGlobalTransition(
-        ShooterState.IDLE, () -> isRequest(ShooterRequest.STOP) && notInState(ShooterState.IDLE));
-
-    fsm.addGlobalTransition(
+    // Request → (estado de entrada, estado goal, intermediarios protegidos).
+    // atGoal() e derivado automaticamente destes vinculos.
+    bindRequest(ShooterRequest.STOP, ShooterState.IDLE, ShooterState.IDLE);
+    bindRequest(
+        ShooterRequest.SHOOT,
         ShooterState.FLYWHEEL_RAMPING,
-        () ->
-            isRequest(ShooterRequest.SHOOT)
-                && notInState(ShooterState.KICKER_RAMPING)
-                && notInState(ShooterState.SHOOTING));
+        ShooterState.SHOOTING,
+        ShooterState.KICKER_RAMPING);
+    bindRequest(ShooterRequest.REVERSE, ShooterState.REVERSING, ShooterState.REVERSING);
 
-    fsm.addGlobalTransition(
-        ShooterState.REVERSING,
-        () -> isRequest(ShooterRequest.REVERSE) && notInState(ShooterState.REVERSING));
+    fsm.validateComplete();
   }
 
   private boolean isFlywheelReadyToKick() {
@@ -95,15 +92,10 @@ public class Shooter
     return getState() == ShooterState.KICKER_RAMPING;
   }
 
-  @Override
-  public boolean atGoal() {
-    return switch (currentRequest) {
-      case STOP -> getState() == ShooterState.IDLE;
-      case SHOOT -> getState() == ShooterState.SHOOTING;
-      case REVERSE -> getState() == ShooterState.REVERSING;
-    };
-  }
-
+  /**
+   * Define a velocidade alvo do flywheel/kicker. Deve ser alimentada continuamente (todo ciclo)
+   * pela SuperStructure com o RPM calculado pelo SOTM.
+   */
   public void setVelocity(AngularVelocity velocity) {
     this.velocity = velocity;
   }
