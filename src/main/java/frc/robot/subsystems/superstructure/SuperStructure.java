@@ -141,6 +141,18 @@ public class SuperStructure extends SubsystemBase {
     return generalFsm.getCurrentState();
   }
 
+  public ConveyorRequest getConveyorRequest() {
+    return conveyor.getRequest();
+  }
+
+  public IntakeRequest getIntakeRequest() {
+    return intake.getRequest();
+  }
+
+  public ShooterRequest getShooterRequest() {
+    return shooter.getRequest();
+  }
+
   public ShotParameters getActiveShotParameters() {
     return isInAllianceZone() ? hubCalculator.getLastResult() : feedCalculator.getLastResult();
   }
