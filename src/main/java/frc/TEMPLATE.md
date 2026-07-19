@@ -2,7 +2,7 @@
 
 Este documento é a referência rápida das regras do template. Leia antes de escrever código novo.
 O exemplo canônico de subsistema está em `robot/subsystems/example/` (não instanciado); para gerar
-um mecanismo novo use `python3 tools/new_subsystem.py NomeDoMecanismo [--vendor talonfx|sparkmax|sparkflex]`.
+um mecanismo novo use `python3 src/main/java/frc/tools/new_subsystem.py NomeDoMecanismo [--vendor talonfx|sparkmax|sparkflex]`.
 
 ## Camadas
 

@@ -28,6 +28,10 @@ import org.littletonrobotics.junction.Logger;
  * modo, resetar controlador) e {@code onUpdate} para setpoints que seguem um alvo dinamico (ex.:
  * RPM de shot-on-the-move) — um setpoint aplicado apenas no {@code onEnter} fica congelado no valor
  * do momento da transicao.
+ *
+ * <p><b>Observacao importante:</b> o {@code onEnter} do estado inicial <b>nao</b> e executado no
+ * construtor nem no primeiro {@link #update()}; ele roda apenas quando ha transicao para esse
+ * estado (ou via {@link #forceState(Enum)}).
  */
 public class StateMachine<S extends Enum<S>> {
 

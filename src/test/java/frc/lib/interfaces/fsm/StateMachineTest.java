@@ -170,4 +170,21 @@ class StateMachineTest {
     assertEquals(1, exitA[0]);
     assertEquals(1, enterC[0]);
   }
+
+  @Test
+  void initialStateOnEnterIsNotCalledAtInitialization() {
+    StateMachine<S> fsm = new StateMachine<>("t", S.class, S.A);
+    int[] enterA = {0};
+
+    fsm.state(S.A).onEnter(() -> enterA[0]++);
+    fsm.state(S.B);
+    fsm.state(S.C);
+
+    fsm.update();
+    assertEquals(0, enterA[0], "onEnter do estado inicial nao roda automaticamente");
+
+    fsm.forceState(S.B);
+    fsm.forceState(S.A);
+    assertEquals(1, enterA[0], "onEnter roda quando A e reentrado por transicao");
+  }
 }
