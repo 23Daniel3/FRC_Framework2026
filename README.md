@@ -2,6 +2,9 @@
 
 **Idioma:** **Português** | [English](./README.en.md)
 
+[![CI/CD](https://github.com/23Daniel3/FRC_Framework2026/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/23Daniel3/FRC_Framework2026/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/23Daniel3/FRC_Framework2026?display_name=tag)](https://github.com/23Daniel3/FRC_Framework2026/releases)
+
 Framework de robô FRC em Java (WPILib + GradleRIO + CTRE Phoenix 6 + PathPlanner + AdvantageKit), organizado para acelerar desenvolvimento de subsistemas com arquitetura **Request → State (FSM)**.
 
 > Este README é o guia principal para uso no GitHub. Para convenções internas detalhadas, veja também `src/main/java/frc/TEMPLATE.md`.

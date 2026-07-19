@@ -1,11 +1,15 @@
-# CI do template FRC: compila, roda os testes de unidade (JUnit) e checa formatacao.
-# Roda em todo push e pull request. Nao precisa de roboRIO: o build desktop do
+# CI/CD do template FRC: compila, roda os testes de unidade (JUnit), checa formatacao
+# em PR/push para main e cria release automatica em push no main. Nao precisa de roboRIO: o build desktop do
 # GradleRIO + HAL simulado cobrem tudo que os testes exercitam.
-name: CI
+name: CI/CD
 
 on:
   push:
+    branches:
+      - main
   pull_request:
+    branches:
+      - main
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -13,6 +17,7 @@ concurrency:
 
 jobs:
   build-and-test:
+    name: CI - Build, Test and Format
     runs-on: ubuntu-latest
     # Alternativa oficial da WPILib (ja traz JDK/toolchains do ano):
     #   container: wpilib/ubuntu-base:22.04
@@ -50,3 +55,27 @@ jobs:
           name: test-results
           path: build/test-results/test/
           if-no-files-found: ignore
+
+  release:
+    name: CD - GitHub Release
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Gerar tag
+        id: tag
+        run: echo "tag=v$(date -u +'%Y.%m.%d').${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}" >> $GITHUB_OUTPUT
+
+      - name: Criar release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: Release ${{ steps.tag.outputs.tag }}
+          generate_release_notes: true
