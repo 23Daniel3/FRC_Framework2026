@@ -90,3 +90,11 @@ Regras:
   (uma tag por temporada).
 - Nomes em inglês, enums em SCREAMING_CASE sem typos (é `IDLING`, `STOPPING`).
 - Rode `./gradlew spotlessApply build` antes de todo commit.
+
+## Testes e CI
+
+- Testes de unidade em `src/test/java/frc/` cobrem a FSM, o padrão Request → State e os
+  utilitários puros (interpolação, zonas, setpoint). Rode com `./gradlew test`.
+- O workflow `.github/workflows/ci.yml` roda build + testes + Spotless em todo push/PR.
+- Toda mudança na `lib/` (especialmente `StateMachine`/`StateSubsystem`) deve vir com teste —
+  são as classes que todos os robôs futuros herdam.
