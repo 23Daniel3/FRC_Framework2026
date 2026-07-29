@@ -4,9 +4,11 @@ import static edu.wpi.first.units.Units.RPM;
 import static edu.wpi.first.units.Units.Rotations;
 
 import frc.lib.interfaces.subsystem.StateSubsystem;
+import frc.robot.annotations.AutoCommandFactory;
 import frc.robot.subsystems.intake.IntakeConstants.IntakeRequest;
 import frc.robot.subsystems.intake.IntakeConstants.IntakeState;
 
+@AutoCommandFactory(requestEnum = IntakeConstants.IntakeRequest.class)
 public class Intake
     extends StateSubsystem<
         IntakeConstants.IntakeRequest,

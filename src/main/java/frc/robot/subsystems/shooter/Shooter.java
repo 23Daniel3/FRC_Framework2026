@@ -5,9 +5,11 @@ import static edu.wpi.first.units.Units.RPM;
 import edu.wpi.first.units.measure.AngularVelocity;
 import frc.lib.interfaces.subsystem.StateSubsystem;
 import frc.lib.util.SetpointTracker;
+import frc.robot.annotations.AutoCommandFactory;
 import frc.robot.subsystems.shooter.ShooterConstants.ShooterRequest;
 import frc.robot.subsystems.shooter.ShooterConstants.ShooterState;
 
+@AutoCommandFactory(requestEnum = ShooterConstants.ShooterRequest.class)
 public class Shooter
     extends StateSubsystem<ShooterRequest, ShooterState, ShooterIOInputsAutoLogged, ShooterIO> {
 

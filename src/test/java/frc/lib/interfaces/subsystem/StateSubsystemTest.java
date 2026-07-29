@@ -5,7 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import edu.wpi.first.hal.HAL;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.littletonrobotics.junction.LogTable;
 import org.littletonrobotics.junction.inputs.LoggableInputs;
@@ -68,9 +68,9 @@ class StateSubsystemTest {
     }
   }
 
-  @BeforeEach
-  void setup() {
-    assertTrue(HAL.initialize(500, 0));
+  @BeforeAll
+  static void initHAL() {
+    HAL.initialize(500, 0);
   }
 
   @Test

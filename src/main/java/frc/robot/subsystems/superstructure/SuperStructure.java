@@ -8,7 +8,6 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
-import frc.robot.power.RobotPowerDistribution;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.game.AllianceManager;
 import frc.game.FieldConstants.Poses;
@@ -22,6 +21,7 @@ import frc.lib.util.ConstantsLogger;
 import frc.lib.util.PeriodicTimer;
 import frc.robot.Constants.RobotRequest;
 import frc.robot.Constants.RobotState;
+import frc.robot.power.RobotPowerDistribution;
 import frc.robot.subsystems.conveyor.Conveyor;
 import frc.robot.subsystems.conveyor.ConveyorConstants.ConveyorRequest;
 import frc.robot.subsystems.drivetrain.Drivetrain;
@@ -203,7 +203,8 @@ public class SuperStructure extends SubsystemBase {
         .state(RobotState.COLLECTING)
         .onEnter(
             () -> {
-              setSubsystemRequests(ShooterRequest.STOP, IntakeRequest.COLLECT, ConveyorRequest.STOP);
+              setSubsystemRequests(
+                  ShooterRequest.STOP, IntakeRequest.COLLECT, ConveyorRequest.STOP);
               drivetrain.setMaxSpeed(MetersPerSecond.of(DrivetrainConstants.MAX_SPEED));
             });
 
@@ -211,7 +212,8 @@ public class SuperStructure extends SubsystemBase {
         .state(RobotState.GOING_COLLECT)
         .onEnter(
             () -> {
-              setSubsystemRequests(ShooterRequest.STOP, IntakeRequest.COLLECT, ConveyorRequest.STOP);
+              setSubsystemRequests(
+                  ShooterRequest.STOP, IntakeRequest.COLLECT, ConveyorRequest.STOP);
               drivetrain.setMaxSpeed(MetersPerSecond.of(DrivetrainConstants.MAX_SPEED));
             })
         .transitionTo(RobotState.COLLECTING, () -> intake.atGoal());
@@ -238,7 +240,8 @@ public class SuperStructure extends SubsystemBase {
         .state(RobotState.SHOOTING_RECOVERY)
         .onEnter(
             () -> {
-              setSubsystemRequests(ShooterRequest.SHOOT, IntakeRequest.OUT, ConveyorRequest.RUN_SLOW);
+              setSubsystemRequests(
+                  ShooterRequest.SHOOT, IntakeRequest.OUT, ConveyorRequest.RUN_SLOW);
               drivetrain.setMaxSpeed(SuperStructureConstants.MAX_VELOCITY_TO_SHOOT);
             })
         .transitionTo(RobotState.SHOOTING, () -> shooter.readyToShoot());
@@ -247,7 +250,8 @@ public class SuperStructure extends SubsystemBase {
         .state(RobotState.GOING_COLLECT_SHOOT)
         .onEnter(
             () -> {
-              setSubsystemRequests(ShooterRequest.SHOOT, IntakeRequest.COLLECT, ConveyorRequest.STOP);
+              setSubsystemRequests(
+                  ShooterRequest.SHOOT, IntakeRequest.COLLECT, ConveyorRequest.STOP);
               drivetrain.setMaxSpeed(SuperStructureConstants.MAX_VELOCITY_TO_SHOOT);
             })
         .transitionTo(
@@ -268,7 +272,8 @@ public class SuperStructure extends SubsystemBase {
         .state(RobotState.COLLECT_SHOOTING_RECOVERY)
         .onEnter(
             () -> {
-              setSubsystemRequests(ShooterRequest.SHOOT, IntakeRequest.COLLECT, ConveyorRequest.RUN_SLOW);
+              setSubsystemRequests(
+                  ShooterRequest.SHOOT, IntakeRequest.COLLECT, ConveyorRequest.RUN_SLOW);
               drivetrain.setMaxSpeed(SuperStructureConstants.MAX_VELOCITY_TO_SHOOT);
             })
         .transitionTo(RobotState.COLLECT_SHOOTING, () -> shooter.readyToShoot());

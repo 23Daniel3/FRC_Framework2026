@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import edu.wpi.first.hal.HAL;
 import edu.wpi.first.wpilibj.simulation.SimHooks;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -23,10 +24,14 @@ class StateMachineTest {
     C
   }
 
+  @BeforeAll
+  static void initHAL() {
+    HAL.initialize(500, 0);
+  }
+
   @BeforeEach
   void setup() {
     // HAL simulado: necessario porque a FSM le o timestamp da FPGA (Logger.getTimestamp).
-    assertTrue(HAL.initialize(500, 0));
     SimHooks.pauseTiming(); // tempo determinista nos testes de transitionAfter
     SimHooks.restartTiming();
   }
