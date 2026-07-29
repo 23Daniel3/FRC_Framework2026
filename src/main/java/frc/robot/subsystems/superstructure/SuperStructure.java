@@ -8,7 +8,7 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
-import edu.wpi.first.wpilibj.PowerDistribution;
+import frc.robot.power.RobotPowerDistribution;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.game.AllianceManager;
 import frc.game.FieldConstants.Poses;
@@ -38,7 +38,6 @@ public class SuperStructure extends SubsystemBase {
   private final Drivetrain drivetrain;
   private final Intake intake;
   private final Shooter shooter;
-  private final PowerDistribution pd = new PowerDistribution();
 
   private RobotRequest robotRequest = RobotRequest.IDLE;
 
@@ -393,9 +392,6 @@ public class SuperStructure extends SubsystemBase {
     Logger.recordOutput("SuperStructure/Flags/DrivetrainAligned", isAtSetpointAngle());
     Logger.recordOutput("SuperStructure/Flags/InAllianceZone", isInAllianceZone());
 
-    Logger.recordOutput("Subsystems/PDH/totalCurrent", pd.getTotalCurrent());
-    Logger.recordOutput("Subsystems/PDH/voltage", pd.getVoltage());
-    Logger.recordOutput("Subsystems/PDH/totalEnergy", pd.getTotalEnergy());
-    Logger.recordOutput("Subsystems/PDH/totalPower", pd.getTotalPower());
+    RobotPowerDistribution.getInstance().log();
   }
 }

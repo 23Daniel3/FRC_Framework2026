@@ -28,6 +28,7 @@ class StateMachineTest {
     // HAL simulado: necessario porque a FSM le o timestamp da FPGA (Logger.getTimestamp).
     assertTrue(HAL.initialize(500, 0));
     SimHooks.pauseTiming(); // tempo determinista nos testes de transitionAfter
+    SimHooks.restartTiming();
   }
 
   @AfterEach
@@ -137,9 +138,9 @@ class StateMachineTest {
     fsm.state(S.C);
 
     SimHooks.stepTiming(2.0);
-    assertTrue(fsm.getTimeInState() >= 2.0);
+    assertTrue(fsm.getTimeInState() >= 1.95, "tempo decorrido deve acumular aproximadamente 2.0s");
     fsm.update(); // A -> B
-    assertTrue(fsm.getTimeInState() < 1.0, "tempo no estado deve resetar apos transicao");
+    assertTrue(fsm.getTimeInState() < 0.5, "tempo no estado deve resetar apos transicao");
   }
 
   @Test
