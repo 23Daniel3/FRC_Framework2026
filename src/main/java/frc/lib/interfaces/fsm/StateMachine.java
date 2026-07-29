@@ -72,26 +72,38 @@ public class StateMachine<S extends Enum<S>> {
   }
 
   public void update() {
-    State<S> state = states.get(current);
+    // 1. Limite de segurança para evitar loops infinitos (máximo 3 transições por ciclo)
+    for (int i = 0; i < 3; i++) {
+        S next = checkTransitions();
+        if (next != null && next != current) {
+            transitionTo(next);
+        } else {
+            break; 
+        }
+    }
 
+    // 2. Executa a lógica do estado atual (garante que o hardware seja atualizado)
+    State<S> state = states.get(current);
+    if (state != null) {
+        state.onUpdate();
+    }
+
+    // Logs
     Logger.recordOutput("FSM/" + name + "/State", current.toString());
     Logger.recordOutput("FSM/" + name + "/TimeInState", getTimeInState());
+  }
 
-    if (state == null) return;
-
-    state.onUpdate();
-
-    for (Transition t : globalTransitions) {
-      if (t.target != current && t.condition.getAsBoolean()) {
-        transitionTo(t.target);
-        return;
+  private S checkTransitions() {
+      // Prioridade 1: Transições Globais (Interrupções externas)
+      for (Transition t : globalTransitions) {
+          if (t.target != current && t.condition.getAsBoolean()) {
+              return t.target;
+          }
       }
-    }
 
-    S next = state.nextState();
-    if (next != null && next != current) {
-      transitionTo(next);
-    }
+      // Prioridade 2: Transições Locais (Fluxo lógico do estado)
+      State<S> state = states.get(current);
+      return (state != null) ? state.nextState() : null;
   }
 
   public StateMachine<S> addGlobalTransition(S target, BooleanSupplier condition) {

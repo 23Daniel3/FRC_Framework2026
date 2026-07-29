@@ -51,7 +51,7 @@ public class Shooter
               io.controlFlywheel().runVelocity(velocity);
               io.controlKicker().runVelocity(velocity);
             })
-        .transitionTo(ShooterState.FLYWHEEL_RAMPING, () -> !readyToStateShooting());
+        .transitionTo(ShooterState.KICKER_RAMPING, () -> !readyToStateShooting());
 
     fsm.state(ShooterState.REVERSING)
         .onEnter(

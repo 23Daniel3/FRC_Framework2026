@@ -2,6 +2,8 @@ package frc.lib.logger;
 
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import frc.lib.util.PeriodicSystem;
+
 import java.util.*;
 import java.util.function.Predicate;
 import org.littletonrobotics.junction.LogTable;
@@ -21,7 +23,7 @@ import org.littletonrobotics.junction.networktables.LoggedNetworkInput;
  * <p>NOTE: foram adicionados métodos públicos para permitir atualizações em cascata por quem
  * coordena múltiplos choosers (ex: AutoTrajectories).
  */
-public class LoggedSequentialDashboardChooser<V> extends LoggedNetworkInput {
+public class LoggedSequentialDashboardChooser<V> extends PeriodicSystem {
   private final String keyPrefix;
   private final int numSlots;
   private final SendableChooser<String>[] choosers;
@@ -63,8 +65,6 @@ public class LoggedSequentialDashboardChooser<V> extends LoggedNetworkInput {
       // publica cada chooser UMA vez; atualizações subsequentes ocorrem somente se o conjunto mudar
       SmartDashboard.putData(keyPrefix + "_" + i, choosers[i]);
     }
-
-    Logger.registerDashboardInput(this);
   }
 
   public void addOption(String optionKey, V value) {
@@ -123,6 +123,7 @@ public class LoggedSequentialDashboardChooser<V> extends LoggedNetworkInput {
    * choosers (cascade), usar os métodos públicos {@link #readSelectionsFromDashboard()}, {@link
    * #refreshSlot(int)}, {@link #refreshAllSlots()} e {@link #processInputs()}.
    */
+  @Override
   public void periodic() {
     // 1) lê seleções atuais do dashboard
     if (!Logger.hasReplaySource()) {
