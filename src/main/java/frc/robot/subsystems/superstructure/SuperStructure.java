@@ -12,7 +12,6 @@ import frc.robot.power.RobotPowerDistribution;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.game.AllianceManager;
 import frc.game.FieldConstants.Poses;
-import frc.lib.calculus.LinearInterpolation.Point;
 import frc.lib.calculus.LoggedTunableMap;
 import frc.lib.calculus.ShotOnTheMoveCalculator;
 import frc.lib.calculus.ShotParameters;
@@ -29,6 +28,7 @@ import frc.robot.subsystems.drivetrain.DrivetrainConstants;
 import frc.robot.subsystems.intake.Intake;
 import frc.robot.subsystems.intake.IntakeConstants.IntakeRequest;
 import frc.robot.subsystems.shooter.Shooter;
+import frc.robot.subsystems.shooter.ShooterConstants;
 import frc.robot.subsystems.shooter.ShooterConstants.ShooterRequest;
 import org.littletonrobotics.junction.Logger;
 
@@ -51,17 +51,7 @@ public class SuperStructure extends SubsystemBase {
 
   private final LoggedTunableMap flywheelMap =
       new LoggedTunableMap(
-          "FlywheelCalibrate/Flywheel",
-          true,
-          new Point(SuperStructureConstants.X_1, SuperStructureConstants.Y_1),
-          new Point(SuperStructureConstants.X_2, SuperStructureConstants.Y_2),
-          new Point(SuperStructureConstants.X_3, SuperStructureConstants.Y_3),
-          new Point(SuperStructureConstants.X_4, SuperStructureConstants.Y_4),
-          new Point(SuperStructureConstants.X_5, SuperStructureConstants.Y_5),
-          new Point(SuperStructureConstants.X_6, SuperStructureConstants.Y_6),
-          new Point(SuperStructureConstants.X_7, SuperStructureConstants.Y_7),
-          new Point(SuperStructureConstants.X_8, SuperStructureConstants.Y_8),
-          new Point(SuperStructureConstants.X_9, SuperStructureConstants.Y_9));
+          "FlywheelCalibrate/Flywheel", true, ShooterConstants.FLYWHEEL_CALIBRATION_MAP);
 
   private final AllianceManager allianceManager = AllianceManager.getInstance();
   private final StateMachine<RobotState> generalFsm;

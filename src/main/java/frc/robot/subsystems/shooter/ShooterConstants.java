@@ -4,9 +4,23 @@ import static edu.wpi.first.units.Units.Amps;
 import static edu.wpi.first.units.Units.RPM;
 import static edu.wpi.first.units.Units.Volts;
 
+import frc.lib.calculus.LinearInterpolation.Point;
 import frc.lib.interfaces.motor.MotorConfig;
 
 public class ShooterConstants {
+
+  public static final Point[] FLYWHEEL_CALIBRATION_MAP =
+      new Point[] {
+        new Point(1.5, 1500),
+        new Point(2.0, 1560),
+        new Point(2.5, 1650),
+        new Point(3.0, 1780),
+        new Point(3.5, 1940),
+        new Point(4.0, 2000),
+        new Point(4.5, 2170),
+        new Point(5.0, 2300),
+        new Point(5.5, 2550)
+      };
 
   public static final double KICKER_POWER = 0.7;
   public static final double KICKER_REVERSE_POWER = -0.7;
