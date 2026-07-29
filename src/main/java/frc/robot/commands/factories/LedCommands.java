@@ -1,4 +1,4 @@
-package frc.robot.factories;
+package frc.robot.commands.factories;
 
 import edu.wpi.first.wpilibj.util.Color;
 import edu.wpi.first.wpilibj2.command.Command;
