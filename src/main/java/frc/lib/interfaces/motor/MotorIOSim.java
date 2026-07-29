@@ -13,24 +13,25 @@ public class MotorIOSim extends MotorBase {
   // Simulação física
   private final DCMotorSim sim;
   private final MotorIOInputs inputs = new MotorIOInputs();
-  
+
   // Controladores para simular o comportamento interno do Spark
   private final PIDController[] pids = new PIDController[4];
   private final SimpleMotorFeedforward[] ffs = new SimpleMotorFeedforward[4];
-  
+
   private double appliedVolts = 0.0;
 
   /**
-   * Construtor para simulação do motor.
-   * * @param name Nome para log
+   * Construtor para simulação do motor. * @param name Nome para log
+   *
    * @param config Configurações iniciais
    * @param motor Modelo do motor (ex: DCMotor.getNeoVortex(1))
    * @param gearing Redução (ex: 10.0 para 10:1)
    * @param jInertia Momento de inércia em Kg*m^2 (ex: 0.005 para um Intake leve)
    */
-  public MotorIOSim(String name, MotorConfig config, DCMotor motor, double gearing, double jInertia) {
+  public MotorIOSim(
+      String name, MotorConfig config, DCMotor motor, double gearing, double jInertia) {
     super(name, config);
-    
+
     // CORREÇÃO AQUI: Cria o sistema linear primeiro usando a API moderna da WPILib
     var plant = LinearSystemId.createDCMotorSystem(motor, jInertia, gearing);
     this.sim = new DCMotorSim(plant, motor);
@@ -56,16 +57,17 @@ public class MotorIOSim extends MotorBase {
     inputs.temperature = Celsius.of(40.0); // Simulação estática de temperatura
     inputs.isConnected = true;
     inputs.activeFaults = new String[] {};
-    
+
     // Lógica simples de "atSetpoint" para a FSM não travar
-    if (currentMode == MotorControlMode.POSITION || currentMode == MotorControlMode.SMART_POSITION) {
-        if (targetPosition != null) {
-            inputs.atSetpoint = Math.abs(inputs.position.minus(targetPosition).in(Rotations)) < 0.05;
-        }
+    if (currentMode == MotorControlMode.POSITION
+        || currentMode == MotorControlMode.SMART_POSITION) {
+      if (targetPosition != null) {
+        inputs.atSetpoint = Math.abs(inputs.position.minus(targetPosition).in(Rotations)) < 0.05;
+      }
     } else if (currentMode == MotorControlMode.VELOCITY) {
-        if (targetVelocity != null) {
-            inputs.atSetpoint = Math.abs(inputs.velocity.minus(targetVelocity).in(RPM)) < 10;
-        }
+      if (targetVelocity != null) {
+        inputs.atSetpoint = Math.abs(inputs.velocity.minus(targetVelocity).in(RPM)) < 10;
+      }
     }
   }
 
@@ -86,10 +88,11 @@ public class MotorIOSim extends MotorBase {
   public void runVelocity(AngularVelocity velocity, int slot) {
     currentMode = MotorControlMode.VELOCITY;
     targetVelocity = velocity;
-    
+
     double ffEffort = ffs[slot].calculate(velocity.in(RadiansPerSecond));
-    double pidEffort = pids[slot].calculate(sim.getAngularVelocityRadPerSec(), velocity.in(RadiansPerSecond));
-    
+    double pidEffort =
+        pids[slot].calculate(sim.getAngularVelocityRadPerSec(), velocity.in(RadiansPerSecond));
+
     // Atualiza a voltagem considerando limites e aplica à simulação
     runVoltage(Volts.of(ffEffort + pidEffort));
   }
@@ -98,9 +101,10 @@ public class MotorIOSim extends MotorBase {
   public void runPosition(Angle position, int slot) {
     currentMode = MotorControlMode.POSITION;
     targetPosition = position;
-    
-    double pidEffort = pids[slot].calculate(sim.getAngularPositionRotations(), position.in(Rotations));
-    runVoltage(Volts.of(pidEffort)); 
+
+    double pidEffort =
+        pids[slot].calculate(sim.getAngularPositionRotations(), position.in(Rotations));
+    runVoltage(Volts.of(pidEffort));
   }
 
   @Override
@@ -142,39 +146,40 @@ public class MotorIOSim extends MotorBase {
   public MotorIOInputs getMotorIOInputs() {
     return inputs;
   }
-  
+
   // Implementações obrigatórias de métodos sem slot da interface (delegam para o slot 0)
-  @Override 
-  public void runVelocity(AngularVelocity v) { 
-      runVelocity(v, 0); 
-  }
-  
-  @Override 
-  public void runPosition(Angle p) { 
-      runPosition(p, 0); 
-  }
-  
-  @Override 
-  public void runSmartPosition(Angle p) { 
-      runSmartPosition(p, 0); 
-  }
-  
   @Override
-  public void applyHardwareSmartMotion(int slot, double maxVel, double maxAccel, double allowedErr) {
-     // Na simulação simples, ignoramos o profile de velocidade (apenas para testes rápidos)
+  public void runVelocity(AngularVelocity v) {
+    runVelocity(v, 0);
+  }
+
+  @Override
+  public void runPosition(Angle p) {
+    runPosition(p, 0);
+  }
+
+  @Override
+  public void runSmartPosition(Angle p) {
+    runSmartPosition(p, 0);
+  }
+
+  @Override
+  public void applyHardwareSmartMotion(
+      int slot, double maxVel, double maxAccel, double allowedErr) {
+    // Na simulação simples, ignoramos o profile de velocidade (apenas para testes rápidos)
   }
 
   @Override
   public void applyHardwareOutputRange(int slot, double min, double max) {
-     // Limitador simples (não estritamente necessário para testes de lógica básica)
+    // Limitador simples (não estritamente necessário para testes de lógica básica)
   }
 
   @Override
   public void setCurrentLimit(Current current) {
     // Não simula limite de corrente
   }
-  
-@Override
+
+  @Override
   public MotorController getMotorController() {
     return new MotorController() {
       @Override

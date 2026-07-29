@@ -3,13 +3,11 @@ package frc.lib.logger;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.lib.util.PeriodicSystem;
-
 import java.util.*;
 import java.util.function.Predicate;
 import org.littletonrobotics.junction.LogTable;
 import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.inputs.LoggableInputs;
-import org.littletonrobotics.junction.networktables.LoggedNetworkInput;
 
 /**
  * Chooser sequencial com N slots e suporte a filtros dinâmicos por slot.

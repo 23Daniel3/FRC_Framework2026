@@ -72,20 +72,16 @@ public class StateMachine<S extends Enum<S>> {
   }
 
   public void update() {
-    // 1. Limite de segurança para evitar loops infinitos (máximo 3 transições por ciclo)
-    for (int i = 0; i < 3; i++) {
-        S next = checkTransitions();
-        if (next != null && next != current) {
-            transitionTo(next);
-        } else {
-            break; 
-        }
+    // 1. No máximo UMA transição por ciclo (cadeias A → B → C custam um ciclo por salto)
+    S next = checkTransitions();
+    if (next != null && next != current) {
+      transitionTo(next);
     }
 
     // 2. Executa a lógica do estado atual (garante que o hardware seja atualizado)
     State<S> state = states.get(current);
     if (state != null) {
-        state.onUpdate();
+      state.onUpdate();
     }
 
     // Logs
@@ -94,16 +90,16 @@ public class StateMachine<S extends Enum<S>> {
   }
 
   private S checkTransitions() {
-      // Prioridade 1: Transições Globais (Interrupções externas)
-      for (Transition t : globalTransitions) {
-          if (t.target != current && t.condition.getAsBoolean()) {
-              return t.target;
-          }
+    // Prioridade 1: Transições Globais (Interrupções externas)
+    for (Transition t : globalTransitions) {
+      if (t.target != current && t.condition.getAsBoolean()) {
+        return t.target;
       }
+    }
 
-      // Prioridade 2: Transições Locais (Fluxo lógico do estado)
-      State<S> state = states.get(current);
-      return (state != null) ? state.nextState() : null;
+    // Prioridade 2: Transições Locais (Fluxo lógico do estado)
+    State<S> state = states.get(current);
+    return (state != null) ? state.nextState() : null;
   }
 
   public StateMachine<S> addGlobalTransition(S target, BooleanSupplier condition) {
@@ -130,8 +126,9 @@ public class StateMachine<S extends Enum<S>> {
       BooleanSupplier requestActive, S entryState, S... satisfyingStates) {
     final Set<S> satisfied =
         satisfyingStates.length == 0
-            ? EnumSet.noneOf(enumClass)
+            ? EnumSet.of(entryState)
             : EnumSet.of(satisfyingStates[0], satisfyingStates);
+    satisfied.add(entryState); // o entryState nunca deve re-disparar a propria transicao
     return addGlobalTransition(
         entryState, () -> requestActive.getAsBoolean() && !satisfied.contains(current));
   }
