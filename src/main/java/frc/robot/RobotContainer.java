@@ -152,9 +152,10 @@ public class RobotContainer {
             driverController.getLeftXSupplier(),
             driverController.getRightXSupplier()));
 
-    // Modelo A: a SuperStructure escreve os requests diretamente nos subsistemas dentro
-    // dos onEnter da FSM geral — nao ha mais default commands de relay (que reescreviam o
-    // request a cada ciclo e tornavam qualquer setRequest externo inutil).
+    // Subsystem Default Commands (Relay targets computed by SuperStructure)
+    intake.setDefaultCommand(IntakeCommands.defaultCommand(superStructure, intake));
+    shooter.setDefaultCommand(ShooterCommands.defaultCommand(superStructure, shooter));
+    conveyor.setDefaultCommand(ConveyorCommands.defaultCommand(superStructure, conveyor));
 
     // A "cara" do robo e um observador do estado, definido em LedCommands.STATE_EFFECTS.
     led.setDefaultCommand(LedCommands.followRobotState(led, superStructure::getRobotState));
@@ -229,7 +230,19 @@ public class RobotContainer {
                 driverController.getLeftXSupplier(),
                 driverController.getRightXSupplier()));
 
-    // Operator Controller
+    // Operator Controller (Piloto 2) - Manual Overrides
+    // Interrompem apenas o subsistema especifico sem afetar o restante da SuperStructure.
+    operatorController.a().whileTrue(IntakeCommands.in(intake));
+    operatorController
+        .b()
+        .and(operatorController.start().negate())
+        .whileTrue(IntakeCommands.out(intake));
+    operatorController
+        .x()
+        .and(operatorController.start().negate())
+        .whileTrue(ShooterCommands.reverse(shooter));
+    operatorController.y().whileTrue(ConveyorCommands.reverse(conveyor));
+
     Trigger invertButton = operatorController.leftStick();
 
     invertButton.whileTrue(new VibrateXboxController(operatorController).continuous(0, 1, 3, true));

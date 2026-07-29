@@ -10,31 +10,45 @@ public final class ConveyorCommands {
 
   private ConveyorCommands() {}
 
+  /** Default Command: Relays the target request calculated by the SuperStructure. */
   public static Command defaultCommand(SuperStructure superStructure, Conveyor conveyor) {
-    return Commands.run(() -> conveyor.setRequest(superStructure.getConveyorRequest()), conveyor);
+    return Commands.run(() -> conveyor.setRequest(superStructure.getConveyorRequest()), conveyor)
+        .withName("Conveyor Default (Superstructure Relay)");
   }
 
+  /** Manual Override: Run conveyor. */
   public static Command run(Conveyor conveyor) {
-    return Commands.runOnce(() -> conveyor.setRequest(ConveyorRequest.RUN), conveyor);
+    return Commands.run(() -> conveyor.setRequest(ConveyorRequest.RUN), conveyor)
+        .withName("Conveyor Override RUN");
   }
 
+  /** Manual Override: Run conveyor slow. */
   public static Command runSlow(Conveyor conveyor) {
-    return Commands.runOnce(() -> conveyor.setRequest(ConveyorRequest.RUN_SLOW), conveyor);
+    return Commands.run(() -> conveyor.setRequest(ConveyorRequest.RUN_SLOW), conveyor)
+        .withName("Conveyor Override RUN_SLOW");
   }
 
+  /** Manual Override: Reverse conveyor. */
   public static Command reverse(Conveyor conveyor) {
-    return Commands.runOnce(() -> conveyor.setRequest(ConveyorRequest.REVERSE), conveyor);
+    return Commands.run(() -> conveyor.setRequest(ConveyorRequest.REVERSE), conveyor)
+        .withName("Conveyor Override REVERSE");
   }
 
+  /** Manual Override: Slow reverse conveyor. */
   public static Command slowReverse(Conveyor conveyor) {
-    return Commands.runOnce(() -> conveyor.setRequest(ConveyorRequest.SLOW_REVERSE), conveyor);
+    return Commands.run(() -> conveyor.setRequest(ConveyorRequest.SLOW_REVERSE), conveyor)
+        .withName("Conveyor Override SLOW_REVERSE");
   }
 
+  /** Manual Override: Stop conveyor. */
   public static Command stop(Conveyor conveyor) {
-    return Commands.runOnce(() -> conveyor.setRequest(ConveyorRequest.STOP), conveyor);
+    return Commands.run(() -> conveyor.setRequest(ConveyorRequest.STOP), conveyor)
+        .withName("Conveyor Override STOP");
   }
 
+  /** Manual Override: Wiggle conveyor. */
   public static Command wiggle(Conveyor conveyor) {
-    return Commands.runOnce(() -> conveyor.setRequest(ConveyorRequest.WIGGLE), conveyor);
+    return Commands.run(() -> conveyor.setRequest(ConveyorRequest.WIGGLE), conveyor)
+        .withName("Conveyor Override WIGGLE");
   }
 }
