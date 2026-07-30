@@ -6,7 +6,8 @@ import org.littletonrobotics.junction.Logger;
 
 public class LogPolygon2d {
 
-  public static void logPolygon(String name, Polygon2d polygon) {
+  public static void logPolygon(String nameOrPath, Polygon2d polygon) {
+    if (polygon == null) return;
     var vertices = polygon.getVertices();
     Pose2d[] poses = new Pose2d[vertices.length];
 
@@ -14,6 +15,7 @@ public class LogPolygon2d {
       poses[i] = new Pose2d(vertices[i], new Rotation2d());
     }
 
-    Logger.recordOutput("Zones/" + name, poses);
+    String path = nameOrPath.contains("/") ? nameOrPath : "Zones/" + nameOrPath;
+    Logger.recordOutput(path, poses);
   }
 }

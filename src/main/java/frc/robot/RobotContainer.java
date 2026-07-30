@@ -1,8 +1,5 @@
 package frc.robot;
 
-import static edu.wpi.first.units.Units.MetersPerSecond;
-import static edu.wpi.first.units.Units.RadiansPerSecond;
-
 import com.ctre.phoenix6.swerve.SwerveRequest;
 import edu.wpi.first.wpilibj.*;
 import edu.wpi.first.wpilibj2.command.*;
@@ -14,10 +11,9 @@ import frc.game.FieldConstants.Zones;
 import frc.lib.controller.NaturalXboxController;
 import frc.lib.controller.VibrateXboxController;
 import frc.lib.util.AllianceSelector;
-import frc.lib.zones.LogPolygon2d;
+import frc.lib.util.ConstantsLogger;
 import frc.robot.commands.auto.AutoTrajectories;
 import frc.robot.commands.drivetrain.*;
-import frc.robot.commands.drivetrain.align.IntakeBallController;
 import frc.robot.commands.factories.DrivetrainCommands;
 import frc.robot.commands.factories.LedCommands;
 import frc.robot.commands.factories.SuperStructureCommands;
@@ -124,19 +120,7 @@ public class RobotContainer {
     configureButtonBindings();
     triggersActions();
 
-    LogPolygon2d.logPolygon("Trench_left_blue", Zones.TRENCH_LEFT_BLUE);
-    LogPolygon2d.logPolygon("Trench_left_red", Zones.TRENCH_LEFT_RED);
-    LogPolygon2d.logPolygon("Trench_right_blue", Zones.TRENCH_RIGHT_BLUE);
-    LogPolygon2d.logPolygon("Trench_right_red", Zones.TRENCH_RIGHT_RED);
-
-    LogPolygon2d.logPolygon("Bump_left_blue", Zones.BUMP_LEFT_BLUE);
-    LogPolygon2d.logPolygon("Bump_left_red", Zones.BUMP_LEFT_RED);
-    LogPolygon2d.logPolygon("Bump_right_blue", Zones.BUMP_RIGHT_BLUE);
-    LogPolygon2d.logPolygon("Bump_right_red", Zones.BUMP_RIGHT_RED);
-
-    LogPolygon2d.logPolygon("Alliance_blue", Zones.ALLIANCE_BLUE_ZONE);
-    LogPolygon2d.logPolygon("Alliance_red", Zones.ALLIANCE_RED_ZONE);
-    LogPolygon2d.logPolygon("Neutral", Zones.NEUTRAL_ZONE);
+    ConstantsLogger.logConstants(Zones.class, "Zones");
   }
 
   /**
