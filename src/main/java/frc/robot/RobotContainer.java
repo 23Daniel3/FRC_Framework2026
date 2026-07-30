@@ -114,7 +114,7 @@ public class RobotContainer {
 
     driveLogger = new Telemetry(DrivetrainConstants.MAX_SPEED);
 
-    isAtBump = new Trigger(() -> drivetrain.isAtBump());
+    isAtBump = new Trigger(() -> Zones.isAtBump(drivetrain.getPose().getTranslation()));
 
     // Configure the button bindings
     configureButtonBindings();

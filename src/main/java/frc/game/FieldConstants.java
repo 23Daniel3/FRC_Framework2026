@@ -6,6 +6,7 @@ import edu.wpi.first.math.geometry.Translation2d;
 import frc.lib.util.AllianceFlipUtil;
 import frc.lib.util.GeomUtil;
 import frc.lib.zones.Polygon2d;
+import frc.robot.subsystems.drivetrain.DrivetrainConstants;
 
 public class FieldConstants {
   public static final double fieldLength = 16.54;
@@ -184,5 +185,30 @@ public class FieldConstants {
     public static final Polygon2d NEUTRAL_LEFT_ZONE_RED = NEUTRAL_RIGHT_ZONE_BLUE;
 
     public static final Polygon2d NEUTRAL_RIGHT_ZONE_RED = NEUTRAL_LEFT_ZONE_BLUE;
+
+    public static boolean isAtBump(Translation2d robot) {
+      return BUMP_LEFT_BLUE.contains(robot)
+          || BUMP_LEFT_RED.contains(robot)
+          || BUMP_RIGHT_BLUE.contains(robot)
+          || BUMP_RIGHT_RED.contains(robot);
+    }
+
+    public static boolean isAtTrench(Translation2d robot) {
+      return TRENCH_LEFT_BLUE.contains(robot)
+          || TRENCH_LEFT_RED.contains(robot)
+          || TRENCH_RIGHT_BLUE.contains(robot)
+          || TRENCH_RIGHT_RED.contains(robot);
+    }
+
+    public static DrivetrainConstants.Zones getGeneralZone(Translation2d robot) {
+      if (ALLIANCE_BLUE_ZONE.contains(robot)) {
+        return DrivetrainConstants.Zones.ALLIANCE_BLUE_ZONE;
+      } else if (ALLIANCE_RED_ZONE.contains(robot)) {
+        return DrivetrainConstants.Zones.ALLIANCE_RED_ZONE;
+      } else if (NEUTRAL_ZONE.contains(robot)) {
+        return DrivetrainConstants.Zones.NEUTRAL_ZONE;
+      }
+      return DrivetrainConstants.Zones.NOT_ZONE;
+    }
   }
 }

@@ -56,7 +56,7 @@ public class IntakeBallController extends Command {
   public void execute() {
     if (Constants.tuningMode) {
       rotationController.updateParams();
-      // Logs extras para tuning
+      // Extra logs for tuning
       Logger.recordOutput("IntakeBallController/Setpoint", rotationSetpoint);
       Logger.recordOutput("IntakeBallController/CurrentTX", vision.getTx(VisionCamera.FRONT));
     }
@@ -64,7 +64,7 @@ public class IntakeBallController extends Command {
     double tx = vision.getTx(VisionCamera.FRONT);
     double pidOutput = rotationController.calculate(tx, rotationSetpoint);
 
-    // COMPENSAÇÃO PREDITIVA: Subtraímos a velocidade angular atual para amortecer o movimento
+    // PREDICTIVE COMPENSATION: Subtract current angular velocity to damp motion
     double currentAngularVel = drivetrain.getRobotVelocity().omegaRadiansPerSecond;
     double omega = pidOutput - (currentAngularVel * kDamping.get());
 

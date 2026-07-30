@@ -10,55 +10,55 @@ import edu.wpi.first.units.measure.*;
 import edu.wpi.first.wpilibj.simulation.DCMotorSim;
 
 public class MotorIOSim extends MotorBase {
-  // Simulação física
+  // Physical simulation
   private final DCMotorSim sim;
   private final MotorIOInputs inputs = new MotorIOInputs();
 
-  // Controladores para simular o comportamento interno do Spark
+  // Controllers to simulate the internal behavior of the Spark
   private final PIDController[] pids = new PIDController[4];
   private final SimpleMotorFeedforward[] ffs = new SimpleMotorFeedforward[4];
 
   private double appliedVolts = 0.0;
 
   /**
-   * Construtor para simulação do motor. * @param name Nome para log
+   * Motor simulation constructor.
    *
-   * @param config Configurações iniciais
-   * @param motor Modelo do motor (ex: DCMotor.getNeoVortex(1))
-   * @param gearing Redução (ex: 10.0 para 10:1)
-   * @param jInertia Momento de inércia em Kg*m^2 (ex: 0.005 para um Intake leve)
+   * @param name Name for logging
+   * @param config Initial configuration
+   * @param motor Motor model (e.g., DCMotor.getNeoVortex(1))
+   * @param gearing Gear reduction (e.g., 10.0 for 10:1)
+   * @param jInertia Moment of inertia in kg*m^2 (e.g., 0.005 for a light intake)
    */
   public MotorIOSim(
       String name, MotorConfig config, DCMotor motor, double gearing, double jInertia) {
     super(name, config);
 
-    // CORREÇÃO AQUI: Cria o sistema linear primeiro usando a API moderna da WPILib
     var plant = LinearSystemId.createDCMotorSystem(motor, jInertia, gearing);
     this.sim = new DCMotorSim(plant, motor);
 
-    // Inicializa PIDs e FFs para os 4 slots
+    // Initialize PIDs and FFs for 4 slots
     for (int i = 0; i < 4; i++) {
       pids[i] = new PIDController(config.kP[i], config.kI[i], config.kD[i]);
-      // Na simulação o feedforward simples usa apenas kV
+      // Simple feedforward in simulation uses only kV
       ffs[i] = new SimpleMotorFeedforward(0, config.kV[i]);
     }
   }
 
   @Override
   protected void updateHardwareInputs(MotorIOInputs inputs) {
-    // Atualiza a simulação (considerando ciclo padrão de 20ms)
+    // Update the simulation (standard 20ms cycle)
     sim.update(0.020);
 
-    // Preenche os inputs com dados da simulação
+    // Populate inputs with simulation data
     inputs.position = Rotations.of(sim.getAngularPositionRotations());
     inputs.velocity = RadiansPerSecond.of(sim.getAngularVelocityRadPerSec());
     inputs.appliedVolts = Volts.of(appliedVolts);
     inputs.current = Amps.of(sim.getCurrentDrawAmps());
-    inputs.temperature = Celsius.of(40.0); // Simulação estática de temperatura
+    inputs.temperature = Celsius.of(40.0); // Static temperature simulation
     inputs.isConnected = true;
     inputs.activeFaults = new String[] {};
 
-    // Lógica simples de "atSetpoint" para a FSM não travar
+    // Simple "atSetpoint" logic to avoid FSM stalls
     if (currentMode == MotorControlMode.POSITION
         || currentMode == MotorControlMode.SMART_POSITION) {
       if (targetPosition != null) {
@@ -74,7 +74,7 @@ public class MotorIOSim extends MotorBase {
   @Override
   public void runVoltage(Voltage volts) {
     currentMode = MotorControlMode.VOLTAGE;
-    // Limita a voltagem para +/- 12V
+    // Clamp voltage to +/- 12V
     appliedVolts = Math.max(-12.0, Math.min(12.0, volts.in(Volts)));
     sim.setInputVoltage(appliedVolts);
   }
@@ -93,7 +93,7 @@ public class MotorIOSim extends MotorBase {
     double pidEffort =
         pids[slot].calculate(sim.getAngularVelocityRadPerSec(), velocity.in(RadiansPerSecond));
 
-    // Atualiza a voltagem considerando limites e aplica à simulação
+    // Compute and apply voltage, clamped to motor limits
     runVoltage(Volts.of(ffEffort + pidEffort));
   }
 
@@ -109,8 +109,8 @@ public class MotorIOSim extends MotorBase {
 
   @Override
   public void runSmartPosition(Angle position, int slot) {
-    // Para uma simulação simples e rápida, tratamos SmartPosition como Position comum
-    // Para melhorar isso no futuro, você precisaria implementar um TrapezoidProfile
+    // SmartPosition treated as Position for fast simulation; implement TrapezoidProfile for full
+    // motion profiling.
     runPosition(position, slot);
     currentMode = MotorControlMode.SMART_POSITION;
   }
@@ -133,8 +133,7 @@ public class MotorIOSim extends MotorBase {
 
   @Override
   public void setBrakeMode(boolean enabled) {
-    // DCMotorSim não simula perfeitamente coast mode (ele sempre assume um decaimento resistivo).
-    // Para fins de teste rápido, deixamos vazio.
+    // DCMotorSim does not perfectly simulate coast mode; no-op for simulation purposes.
   }
 
   @Override
@@ -147,7 +146,7 @@ public class MotorIOSim extends MotorBase {
     return inputs;
   }
 
-  // Implementações obrigatórias de métodos sem slot da interface (delegam para o slot 0)
+  // Mandatory single-slot interface method implementations (delegates to slot 0)
   @Override
   public void runVelocity(AngularVelocity v) {
     runVelocity(v, 0);
@@ -166,17 +165,17 @@ public class MotorIOSim extends MotorBase {
   @Override
   public void applyHardwareSmartMotion(
       int slot, double maxVel, double maxAccel, double allowedErr) {
-    // Na simulação simples, ignoramos o profile de velocidade (apenas para testes rápidos)
+    // Velocity profile ignored in simulation; implemented for interface compliance.
   }
 
   @Override
   public void applyHardwareOutputRange(int slot, double min, double max) {
-    // Limitador simples (não estritamente necessário para testes de lógica básica)
+    // Output clamping is not enforced in simulation.
   }
 
   @Override
   public void setCurrentLimit(Current current) {
-    // Não simula limite de corrente
+    // Current limiting is not simulated.
   }
 
   @Override

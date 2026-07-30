@@ -12,27 +12,27 @@ import java.util.function.BooleanSupplier;
 import org.littletonrobotics.junction.Logger;
 
 /**
- * Maquina de estados generica com logging automatico via AdvantageKit.
+ * Generic state machine with automatic logging via AdvantageKit.
  *
- * <p><b>Ordem de avaliacao por ciclo ({@link #update()}):</b>
+ * <p><b>Evaluation order per cycle ({@link #update()}):</b>
  *
  * <ol>
- *   <li>{@code onUpdate()} do estado atual;
- *   <li>Transicoes <b>globais</b>, na ordem de registro (a primeira verdadeira vence);
- *   <li>Transicoes <b>locais</b> do estado atual, na ordem de registro.
+ *   <li>{@code onUpdate()} of the current state;
+ *   <li><b>Global</b> transitions, in registration order (first true wins);
+ *   <li><b>Local</b> transitions of the current state, in registration order.
  * </ol>
  *
- * <p>Transicoes globais tem prioridade sobre as locais. No maximo <b>uma</b> transicao ocorre por
- * ciclo (evita loops infinitos, mas significa que cadeias A → B → C levam um ciclo por salto).
+ * <p>Global transitions take priority over local ones. At most <b>one</b> transition occurs per
+ * cycle (prevents infinite loops, but means chains A → B → C cost one cycle per hop).
  *
- * <p><b>Convencao de callbacks:</b> use {@code onEnter} para efeitos discretos (parar motor, mudar
- * modo, resetar controlador) e {@code onUpdate} para setpoints que seguem um alvo dinamico (ex.:
- * RPM de shot-on-the-move) — um setpoint aplicado apenas no {@code onEnter} fica congelado no valor
- * do momento da transicao.
+ * <p><b>Callback convention:</b> use {@code onEnter} for discrete effects (stop motor, change mode,
+ * reset controller) and {@code onUpdate} for setpoints that track a dynamic target (e.g.,
+ * shot-on-the-move RPM) — a setpoint applied only in {@code onEnter} is frozen at the value from
+ * the moment of the transition.
  *
- * <p><b>Observacao importante:</b> o {@code onEnter} do estado inicial <b>nao</b> e executado no
- * construtor nem no primeiro {@link #update()}; ele roda apenas quando ha transicao para esse
- * estado (ou via {@link #forceState(Enum)}).
+ * <p><b>Important note:</b> the {@code onEnter} of the initial state is <b>not</b> executed in the
+ * constructor or on the first {@link #update()}; it only runs when transitioning into that state
+ * (or via {@link #forceState(Enum)}).
  */
 public class StateMachine<S extends Enum<S>> {
 
@@ -51,7 +51,7 @@ public class StateMachine<S extends Enum<S>> {
     this.stateEnterTimestampSec = nowSeconds();
   }
 
-  /** Timestamp atual em segundos da FPGA (compatível com SimHooks.stepTiming nos testes). */
+  /** Current FPGA timestamp in seconds (compatible with SimHooks.stepTiming in tests). */
   private static double nowSeconds() {
     return Timer.getFPGATimestamp();
   }
@@ -59,8 +59,7 @@ public class StateMachine<S extends Enum<S>> {
   public StateConfig state(S stateEnum) {
     if (states.containsKey(stateEnum)) {
       DriverStation.reportError(
-          "FSM '" + name + "': estado " + stateEnum + " configurado duas vezes (sobrescrevendo).",
-          true);
+          "FSM '" + name + "': state " + stateEnum + " configured twice (overwriting).", true);
     }
     StateConfig config = new StateConfig();
     states.put(stateEnum, config);
@@ -72,13 +71,13 @@ public class StateMachine<S extends Enum<S>> {
   }
 
   public void update() {
-    // 1. No máximo UMA transição por ciclo (cadeias A → B → C custam um ciclo por salto)
+    // 1. At most ONE transition per cycle (chains A → B → C cost one cycle per hop)
     S next = checkTransitions();
     if (next != null && next != current) {
       transitionTo(next);
     }
 
-    // 2. Executa a lógica do estado atual (garante que o hardware seja atualizado)
+    // 2. Runs the current state logic (ensures hardware is updated)
     State<S> state = states.get(current);
     if (state != null) {
       state.onUpdate();
@@ -90,14 +89,14 @@ public class StateMachine<S extends Enum<S>> {
   }
 
   private S checkTransitions() {
-    // Prioridade 1: Transições Globais (Interrupções externas)
+    // Priority 1: Global transitions (external interrupts)
     for (Transition t : globalTransitions) {
       if (t.target != current && t.condition.getAsBoolean()) {
         return t.target;
       }
     }
 
-    // Prioridade 2: Transições Locais (Fluxo lógico do estado)
+    // Priority 2: Local transitions (state logical flow)
     State<S> state = states.get(current);
     return (state != null) ? state.nextState() : null;
   }
@@ -108,18 +107,18 @@ public class StateMachine<S extends Enum<S>> {
   }
 
   /**
-   * Registra uma transicao global do tipo "request": enquanto {@code requestActive} for verdadeiro
-   * e a maquina NAO estiver no estado de entrada nem em nenhum dos estados que ja satisfazem o
-   * request, transiciona para {@code entryState}.
+   * Registers a global "request" transition: while {@code requestActive} is true and the machine is
+   * NOT in the entry state or any of the states that already satisfy the request, it transitions to
+   * {@code entryState}.
    *
-   * <p>Substitui o padrao manual e fragil de {@code addGlobalTransition(ENTRY, () -> request == X
-   * && state != A && state != B ...)}, no qual esquecer um estado da lista causa re-entrada
-   * indevida no {@code onEnter}.
+   * <p>Replaces the manual and fragile pattern of {@code addGlobalTransition(ENTRY, () -> request
+   * == X && state != A && state != B ...)}, where forgetting a state in the list causes unintended
+   * re-entry into {@code onEnter}.
    *
-   * @param requestActive condicao que indica que o request esta ativo
-   * @param entryState estado pelo qual a maquina entra para atender o request
-   * @param satisfyingStates estados que ja atendem (ou estao a caminho de atender) o request; o
-   *     proprio {@code entryState} e excluido automaticamente
+   * @param requestActive condition indicating that the request is active
+   * @param entryState the state the machine enters to serve the request
+   * @param satisfyingStates states that already satisfy (or are on the way to satisfying) the
+   *     request; {@code entryState} itself is excluded automatically
    */
   @SafeVarargs
   public final StateMachine<S> addRequestTransition(
@@ -128,7 +127,7 @@ public class StateMachine<S extends Enum<S>> {
         satisfyingStates.length == 0
             ? EnumSet.of(entryState)
             : EnumSet.of(satisfyingStates[0], satisfyingStates);
-    satisfied.add(entryState); // o entryState nunca deve re-disparar a propria transicao
+    satisfied.add(entryState); // entryState must never re-trigger its own transition
     return addGlobalTransition(
         entryState, () -> requestActive.getAsBoolean() && !satisfied.contains(current));
   }
@@ -141,24 +140,24 @@ public class StateMachine<S extends Enum<S>> {
     return current;
   }
 
-  /** Tempo no estado atual, em segundos. */
+  /** Time spent in the current state, in seconds. */
   public double getTimeInState() {
     return nowSeconds() - stateEnterTimestampSec;
   }
 
   /**
-   * Verifica se todos os valores do enum possuem um estado registrado, reportando um warning no
-   * DriverStation para cada estado ausente. Chame ao final do construtor do subsistema para pegar
-   * "esqueci de configurar o estado X" em bancada em vez de em competicao.
+   * Verifies that all enum values have a registered state, reporting a DriverStation warning for
+   * each missing state. Call at the end of the subsystem constructor to catch "forgot to configure
+   * state X" on the bench rather than at competition.
    *
-   * @return true se todos os estados estao registrados
+   * @return true if all states are registered
    */
   public boolean validateComplete() {
     boolean complete = true;
     for (S s : enumClass.getEnumConstants()) {
       if (!states.containsKey(s)) {
         DriverStation.reportWarning(
-            "FSM '" + name + "': estado " + s + " do enum nao foi configurado.", false);
+            "FSM '" + name + "': state " + s + " of the enum was not configured.", false);
         complete = false;
       }
     }
@@ -204,7 +203,7 @@ public class StateMachine<S extends Enum<S>> {
       return this;
     }
 
-    /** Transiciona apos {@code seconds} segundos no estado. */
+    /** Transitions after {@code seconds} seconds in the current state. */
     public StateConfig transitionAfter(double seconds, S targetState) {
       return transitionTo(targetState, () -> getTimeInState() >= seconds);
     }

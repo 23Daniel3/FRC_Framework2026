@@ -23,7 +23,7 @@ public class MoveFieldRelative extends Command {
   private final Pose2d targetPose;
   private final PathConstraints constraints;
 
-  // Tunáveis em tempo real
+  // Real-time tunables
   private final LoggedNetworkNumber kXP =
       new LoggedNetworkNumber("/Tuning/X/KP", MoveXConstants.k_P);
   private final LoggedNetworkNumber kXI =
@@ -45,7 +45,7 @@ public class MoveFieldRelative extends Command {
   private final LoggedNetworkNumber kHD =
       new LoggedNetworkNumber("/Tuning/H/KD", MoveHConstants.k_D);
 
-  // Controllers profilados
+  // Profiled controllers
   private final ProfiledPIDController xController;
   private final ProfiledPIDController yController;
   private final ProfiledPIDController thetaController;
@@ -55,13 +55,13 @@ public class MoveFieldRelative extends Command {
     this.targetPose = targetPose;
     this.constraints = constraints;
 
-    // Extrai scalars das measures
+    // Extract scalars from measures
     double maxTransVel = constraints.maxVelocity().abs(MetersPerSecond);
     double maxTransAccel = constraints.maxAcceleration().abs(MetersPerSecondPerSecond);
     double maxAngVel = constraints.maxAngularVelocity().abs(RadiansPerSecond);
     double maxAngAccel = constraints.maxAngularAcceleration().abs(RadiansPerSecondPerSecond);
 
-    // Controllers com perfil trapezoidal
+    // Controllers with trapezoidal profile
     xController =
         new ProfiledPIDController(
             kXP.get(),
@@ -82,7 +82,7 @@ public class MoveFieldRelative extends Command {
             new TrapezoidProfile.Constraints(maxAngVel, maxAngAccel));
     thetaController.enableContinuousInput(-Math.PI, Math.PI);
 
-    // Tolerâncias
+    // Tolerances
     xController.setTolerance(0.01, 0.0);
     yController.setTolerance(0.01, 0.0);
     thetaController.setTolerance(Math.toRadians(1), Math.toRadians(1.0));
@@ -97,7 +97,7 @@ public class MoveFieldRelative extends Command {
     yController.reset(odo.getY(), 0.0);
     thetaController.reset(odo.getRotation().getRadians(), 0.0);
 
-    // Log Inicial de Constraints e Setpoints
+    // Initial Log of Constraints and Setpoints
     Logger.recordOutput(
         "/GoToFieldPose/TransMaxVel", constraints.maxVelocity().abs(MetersPerSecond));
     Logger.recordOutput(
@@ -118,12 +118,12 @@ public class MoveFieldRelative extends Command {
   public void execute() {
     Pose2d cur = drivetrain.getPose();
 
-    // Atualiza ganhos dinamicamente
+    // Dynamically update gains
     xController.setPID(kXP.get(), kXI.get(), kXD.get());
     yController.setPID(kYP.get(), kYI.get(), kYD.get());
     thetaController.setPID(kHP.get(), kHI.get(), kHD.get());
 
-    // Saídas perfiladas
+    // Profiled outputs
     double vx = xController.calculate(cur.getX(), targetPose.getX());
     double vy = yController.calculate(cur.getY(), targetPose.getY());
     double omega =
@@ -135,7 +135,7 @@ public class MoveFieldRelative extends Command {
 
     drivetrain.driveFieldRelative(speeds);
 
-    // Logging completo para tuning
+    // Full logging for tuning
     Logger.recordOutput("/GoToFieldPose/Cur/X", cur.getX());
     Logger.recordOutput("/GoToFieldPose/Cur/Y", cur.getY());
     Logger.recordOutput("/GoToFieldPose/Cur/H", cur.getRotation().getDegrees());

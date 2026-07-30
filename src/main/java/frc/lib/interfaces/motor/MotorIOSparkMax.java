@@ -43,8 +43,8 @@ public class MotorIOSparkMax extends MotorBase {
   private final MotorConfig.FeedbackSensorType sensorType;
 
   public MotorIOSparkMax(String name, int id, MotorType type, MotorConfig config) {
-    // Inicializa o MotorBase (os métodos apply... chamados no super irão retornar silenciosamente
-    // pois motor == null)
+    // Initialize MotorBase (apply... methods called in super will return silently
+    // since motor == null at that point)
     super(name, config);
 
     this.motor = new SparkMax(id, type);
@@ -57,7 +57,7 @@ public class MotorIOSparkMax extends MotorBase {
       motorConfig.follow(config.leaderMotorID, config.followerInverted);
     }
 
-    // --- Configuração Básica ---
+    // --- Basic Configuration ---
     motorConfig
         .inverted(config.inverted)
         .smartCurrentLimit((int) config.currentLimit.in(Amps))
@@ -66,7 +66,7 @@ public class MotorIOSparkMax extends MotorBase {
         .closedLoop
         .outputRange(config.minOutput, config.maxOutput);
 
-    // --- Seleção de Encoder ---
+    // --- Encoder Selection ---
     switch (config.feedbackType) {
       case ALTERNATE -> {
         motorConfig
@@ -96,7 +96,7 @@ public class MotorIOSparkMax extends MotorBase {
       }
     }
 
-    // --- Injeção Inicial de PID/SVAG/SmartMotion (Todos os Slots) ---
+    // --- Initial PID/SVAG/SmartMotion Injection (All Slots) ---
     for (int i = 0; i < 4; i++) {
       ClosedLoopSlot slot = resolveSlot(i);
       motorConfig
@@ -107,7 +107,7 @@ public class MotorIOSparkMax extends MotorBase {
           .outputRange(config.minOutput, config.maxOutput, slot)
           .apply(new FeedForwardConfig().kV(config.kV[i], slot));
 
-      // Configuração do MAXMotion
+      // MAXMotion Configuration
       if (config.maxMotionMaxVelocity[i].in(RadiansPerSecond) > 0) {
         double rpm = config.maxMotionMaxVelocity[i].in(RotationsPerSecond) * 60.0;
         double rpmPerSec =
@@ -139,7 +139,7 @@ public class MotorIOSparkMax extends MotorBase {
               config.minPosition.in(Rotations), config.maxPosition.in(Rotations));
     }
 
-    // --- Push final das configurações para o Hardware ---
+    // --- Final push of configuration to Hardware ---
     applyConfig(true);
 
     if (internalEncoder != null) internalEncoder.setPosition(0);
@@ -247,7 +247,7 @@ public class MotorIOSparkMax extends MotorBase {
         position.in(Rotations), ControlType.kMAXMotionPositionControl, resolvedSlot);
   }
 
-  // --- Controles de Baixo Nível ---
+  // --- Low-Level Controls ---
 
   @Override
   public void runVoltage(Voltage volts) {
@@ -273,7 +273,7 @@ public class MotorIOSparkMax extends MotorBase {
     if (externalEncoder != null) externalEncoder.setPosition(offset.in(Rotations));
   }
 
-  // --- Atualização de Hardware via Dashboard (Tuning) ---
+  // --- Hardware Update via Dashboard (Tuning) ---
 
   @Override
   public void setBrakeMode(boolean enabled) {

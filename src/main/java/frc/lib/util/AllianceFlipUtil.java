@@ -287,8 +287,7 @@ public class AllianceFlipUtil {
    * @return {@code true} if the robot is on the Red Alliance; {@code false} otherwise
    */
   public static boolean shouldFlip() {
-    // Delega para a fonte canônica (DS -> seletor do dashboard). Antes, sem FMS o flip
-    // nunca acontecia aqui, divergindo do resto do código que usava o fallback.
+    // Delegates to the canonical source (DriverStation -> dashboard selector).
     return AllianceSelector.getInstance().shouldFlip();
   }
 

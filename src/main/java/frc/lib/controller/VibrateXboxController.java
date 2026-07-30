@@ -7,8 +7,8 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 
 /**
- * Fábrica de comandos para vibração do Xbox Controller. Centraliza padrões de Rumble para feedback
- * tátil ao piloto.
+ * Command factory for Xbox Controller vibration. Centralizes Rumble patterns for tactile feedback
+ * to the driver.
  */
 public class VibrateXboxController {
 
@@ -18,24 +18,24 @@ public class VibrateXboxController {
     this.controller = controller;
   }
 
-  /** Define a vibração bruta nos motores. */
+  /** Sets raw vibration to the motors. */
   private void setRumble(double heavy, double light) {
     controller.getHID().setRumble(RumbleType.kLeftRumble, heavy);
     controller.getHID().setRumble(RumbleType.kRightRumble, light);
   }
 
-  /** Para toda a vibração do controle. */
+  /** Stops all controller vibration. */
   private void stopRumble() {
     setRumble(0, 0);
   }
 
   /**
-   * Vibração contínua básica. *
+   * Basic continuous vibration.
    *
-   * @param heavy Nível de vibração pesada (0.0 a 1.0)
-   * @param light Nível de vibração leve (0.0 a 1.0)
-   * @param seconds Duração (se <= 0 e keepAlive for true, roda indefinidamente)
-   * @param keepAlive Se false, o comando termina após o tempo. Se true, ignora o tempo.
+   * @param heavy Heavy vibration level (0.0 to 1.0)
+   * @param light Light vibration level (0.0 to 1.0)
+   * @param seconds Duration (if <= 0 and keepAlive is true, runs indefinitely)
+   * @param keepAlive If false, the command finishes after the duration. If true, ignores duration.
    */
   public Command continuous(double heavy, double light, double seconds, boolean keepAlive) {
     Command cmd = Commands.startEnd(() -> setRumble(heavy, light), this::stopRumble);
@@ -44,10 +44,11 @@ public class VibrateXboxController {
   }
 
   /**
-   * Vibração em pulsos (Liga/Desliga). * @param intensity Força da vibração (0.0 a 1.0)
+   * Pulsed vibration (On/Off).
    *
-   * @param pulseCount Quantidade de pulsos dentro do tempo total
-   * @param totalDuration Duração total do comando
+   * @param intensity Vibration strength (0.0 to 1.0)
+   * @param pulseCount Number of pulses within the total duration
+   * @param totalDuration Total command duration
    */
   public Command pulses(double intensity, int pulseCount, double totalDuration) {
     Timer timer = new Timer();
@@ -56,7 +57,8 @@ public class VibrateXboxController {
             Commands.run(
                 () -> {
                   double time = timer.get();
-                  // Lógica: divide o tempo total em fatias e verifica se está na fatia de "ligado"
+                  // Logic: divides the total duration into segments and checks if currently in an
+                  // "on" segment
                   boolean isOn = ((int) (time * (pulseCount * 2) / totalDuration) % 2 == 0);
                   setRumble(isOn ? intensity : 0, isOn ? intensity : 0);
                 }))
@@ -65,8 +67,8 @@ public class VibrateXboxController {
   }
 
   /**
-   * Vibração "Zig-Zag" que alterna rapidamente entre o motor pesado e o leve. Dá uma sensação de
-   * instabilidade ou movimento lateral.
+   * "Zig-Zag" vibration that quickly alternates between the heavy and light motors. Gives a
+   * sensation of instability or lateral movement.
    */
   public Command zigZag(double intensity, double seconds) {
     Timer timer = new Timer();
@@ -74,7 +76,7 @@ public class VibrateXboxController {
         .andThen(
             Commands.run(
                 () -> {
-                  if ((int) (timer.get() * 15) % 2 == 0) { // Alterna a cada ~0.06s
+                  if ((int) (timer.get() * 15) % 2 == 0) { // Alternates every ~0.06s
                     setRumble(intensity, 0);
                   } else {
                     setRumble(0, intensity);
@@ -84,7 +86,7 @@ public class VibrateXboxController {
         .finallyDo(this::stopRumble);
   }
 
-  /** Vibração que aumenta de intensidade gradualmente (Rampa). */
+  /** Vibration that gradually increases in intensity (Ramp). */
   public Command rampUp(double targetIntensity, double seconds) {
     Timer timer = new Timer();
     return Commands.runOnce(timer::restart)
@@ -98,14 +100,14 @@ public class VibrateXboxController {
         .finallyDo(this::stopRumble);
   }
 
-  // --- MÉTODOS DE ATALHO CONVENIENTES ---
+  // --- CONVENIENT SHORTCUT METHODS ---
 
-  /** Alerta rápido (0.2s) de alta intensidade leve para confirmação de ação. */
+  /** Quick alert (0.2s) of high light intensity for action confirmation. */
   public Command lightConfirm() {
     return continuous(0, 0.8, 0.2, false);
   }
 
-  /** Alerta pesado para avisar de colisões ou fim de jogo. */
+  /** Heavy alert to warn of collisions or end of match. */
   public Command heavyWarning() {
     return pulses(1.0, 3, 1.0);
   }

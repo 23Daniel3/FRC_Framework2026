@@ -82,7 +82,7 @@ public class MoveWithAutopilotAimHub extends Command {
       vy = output.vy().in(MetersPerSecond);
     }
 
-    Rotation2d targetHeading = superStructure.getPredictiveAimAngle();
+    Rotation2d targetHeading = superStructure.getActiveShotParameters().aimAngle();
 
     double omega =
         thetaController.calculate(

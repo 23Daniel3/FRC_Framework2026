@@ -8,13 +8,13 @@ public class IntakeIOSim implements IntakeIO {
   private final MotorIOSim rollerMotor;
   private final MotorIOSim intakeMotor;
 
-  // Variável para simular o botão físico/sensor no ambiente de software
+  // Variable to simulate the physical button/sensor in the software environment
   private boolean simulatedCoastButton = false;
 
   public IntakeIOSim() {
     /**
-     * Simulação do Motor do Rolo (Roller) - Motor: Kraken X60 (ou o que estiver usando) - Redução:
-     * 2:1 (exemplo) - Inércia: 0.001 (muito leve, apenas um rolo)
+     * Roller Motor Simulation - Motor: Kraken X60 (or whichever is being used) - Reduction: 2:1
+     * (example) - Inertia: 0.001 (very light, just a roller)
      */
     rollerMotor =
         new MotorIOSim(
@@ -25,8 +25,8 @@ public class IntakeIOSim implements IntakeIO {
             0.001);
 
     /**
-     * Simulação do Motor do Pivot (Intake) - Motor: Neo Vortex / SparkFlex - Redução: 50:1 (Pivot
-     * costuma ter redução alta) - Inércia: 0.02 (Carga moderada para simular o peso do braço)
+     * Pivot Motor Simulation (Intake) - Motor: Neo Vortex / SparkFlex - Reduction: 50:1 (Pivot
+     * usually has high reduction) - Inertia: 0.02 (Moderate load to simulate arm weight)
      */
     intakeMotor =
         new MotorIOSim(
@@ -39,12 +39,12 @@ public class IntakeIOSim implements IntakeIO {
 
   @Override
   public void updateInputs(IntakeIOInputsAutoLogged inputs) {
-    // Atualiza a física e os logs dos motores simulados
+    // Updates physics and logs for the simulated motors
     rollerMotor.updateInputs(inputs.rollerMotorInputs);
     intakeMotor.updateInputs(inputs.intakeMotorInputs);
 
-    // No simulador, o botão de coast geralmente fica falso,
-    // a menos que você queira simular um clique via GUI
+    // In simulation, the coast button is usually false,
+    // unless you want to simulate a click via GUI
     inputs.coastButtonPressed = simulatedCoastButton;
   }
 
@@ -59,8 +59,8 @@ public class IntakeIOSim implements IntakeIO {
   }
 
   /**
-   * Método utilitário para testes: permite que você force o estado do sensor durante a simulação
-   * para ver como a sua FSM reage.
+   * Utility method for testing: allows forcing the sensor state during simulation to see how your
+   * FSM reacts.
    */
   public void setSimulatedCoastButton(boolean pressed) {
     this.simulatedCoastButton = pressed;
