@@ -188,50 +188,6 @@ public class RobotContainer {
                 driverController.getLeftYSupplier(),
                 driverController.getLeftXSupplier()));
 
-    driverController
-        .leftTrigger(0.5)
-        .whileTrue(
-            new IntakeBallController(drivetrain, vision, driverController.getLeftYSupplier()));
-
-    // Modo lento do piloto: escreve apenas no limite do PILOTO. A SuperStructure escreve
-    // no limite de ESTADO (setMaxSpeed). O drivetrain usa o minimo dos dois, entao uma
-    // transicao de estado nao desfaz mais o modo lento (e vice-versa).
-    driverController
-        .rightTrigger(0.7)
-        .onTrue(
-            new InstantCommand(
-                () -> {
-                  drivetrain.setPilotMaxSpeed(
-                      MetersPerSecond.of(DrivetrainConstants.MAX_SPEED_LIMITED));
-                  drivetrain.setPilotMaxAngularSpeed(
-                      RadiansPerSecond.of(DrivetrainConstants.MAX_ANGULAR_SPEED_LIMITED));
-                }))
-        .onFalse(
-            new InstantCommand(
-                () -> {
-                  drivetrain.setPilotMaxSpeed(MetersPerSecond.of(DrivetrainConstants.MAX_SPEED));
-                  drivetrain.setPilotMaxAngularSpeed(
-                      RadiansPerSecond.of(DrivetrainConstants.MAX_ANGULAR_SPEED));
-                }));
-
-    driverController
-        .povUp()
-        .whileTrue(
-            new DriveToNextZone(
-                drivetrain,
-                driverController.getLeftYSupplier(),
-                driverController.getLeftXSupplier(),
-                driverController.getRightXSupplier()));
-
-    driverController
-        .povDown()
-        .whileTrue(
-            new DriveToPreviousZone(
-                drivetrain,
-                driverController.getLeftYSupplier(),
-                driverController.getLeftXSupplier(),
-                driverController.getRightXSupplier()));
-
     // Operator Controller (Piloto 2) - Manual Overrides
     // Interrompem apenas o subsistema especifico sem afetar o restante da SuperStructure.
     operatorController.a().whileTrue(IntakeCommands.in(intake));
