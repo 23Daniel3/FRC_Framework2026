@@ -20,7 +20,7 @@ public abstract class PeriodicSystem extends SubsystemBase {
   @Override
   @Deprecated
   public final void setDefaultCommand(Command defaultCommand) {
-    throw new UnsupportedOperationException("PeriodicSystem não suporta Comandos Padrão.");
+    throw new UnsupportedOperationException("PeriodicSystem does not support Default Commands.");
   }
 
   @Override

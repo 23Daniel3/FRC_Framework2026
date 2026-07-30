@@ -49,12 +49,12 @@ public class DriveToPreviousZone extends Command {
   }
 
   private void configureStateMachine() {
-    // 1. Decide o alvo
+    // 1. Decides the target
     fsm.state(State.CALCULATE)
         .transitionTo(State.DRIVE_TO_TRENCH, () -> targetTrenchZone != null)
         .transitionTo(State.FINISHED, () -> targetTrenchZone == null);
 
-    // 2. Dirige até o centro da trincheira alvo
+    // 2. Drives to the center of the target trench
     fsm.state(State.DRIVE_TO_TRENCH)
         .onEnter(
             () -> {
@@ -69,16 +69,16 @@ public class DriveToPreviousZone extends Command {
             () -> {
               if (activeCommand != null) activeCommand.end(true);
             })
-        // Se entrar na zona da trincheira, muda para sucção
+        // If entering the trench zone, switches to suction
         .transitionTo(
             State.CROSSING_TRENCH,
             () -> targetTrenchZone.contains(drivetrain.getPose().getTranslation()))
-        // Se chegou no ponto intermediário mas não entrou no poligono (caso raro), tenta forçar a
-        // sucção ou finaliza
+        // If intermediate point is reached but robot did not enter polygon (rare case), force
+        // suction or finish
         .transitionTo(
             State.CROSSING_TRENCH, () -> activeCommand != null && activeCommand.isFinished());
 
-    // 3. Atravessa usando Joystick + Zone Suction
+    // 3. Crosses using Joystick + Zone Suction
     fsm.state(State.CROSSING_TRENCH)
         .onEnter(
             () -> {
@@ -95,7 +95,7 @@ public class DriveToPreviousZone extends Command {
             () -> {
               if (activeCommand != null) activeCommand.end(true);
             })
-        // Se o comando de sucção terminar ou o robô sair da zona -> FIM
+        // If suction command finishes or robot leaves zone -> FINISH
         .transitionTo(State.FINISHED, () -> activeCommand != null && activeCommand.isFinished())
         .transitionTo(
             State.FINISHED,

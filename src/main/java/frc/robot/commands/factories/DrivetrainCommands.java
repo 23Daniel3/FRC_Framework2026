@@ -54,10 +54,9 @@ public class DrivetrainCommands {
 
               double omega = rotationStrategy.calculate(drivetrain);
 
-              // Sticks sao intencao FIELD-relative do piloto. Na alianca Vermelha o "campo do
-              // piloto" esta girado 180 graus, o que equivale a negar X e Y. Uma unica conversao
-              // field -> robot acontece dentro de driveFieldRelative. (Substitui a antiga cadeia
-              // de tres conversoes de frame, que produzia o mesmo resultado de forma opaca.)
+              // Sticks represent the driver's FIELD-relative intent. In the Red alliance, the
+              // "driver's field" is rotated 180 degrees, which is equivalent to negating X and Y.
+              // A single field -> robot conversion happens inside driveFieldRelative.
               double flip = AllianceFlipUtil.shouldFlip() ? -1.0 : 1.0;
               double maxSpeed = drivetrain.getMaxSpeed().in(MetersPerSecond);
 
@@ -157,7 +156,7 @@ public class DrivetrainCommands {
               double minDistance =
                   Math.abs(MathUtil.inputModulus(targets[0] - currentDegrees, -180, 180));
 
-              // 3. Loop para encontrar o ângulo com a menor distância circular
+              // Loop to find the angle with the smallest circular distance
               for (double target : targets) {
                 double distance =
                     Math.abs(MathUtil.inputModulus(target - currentDegrees, -180, 180));

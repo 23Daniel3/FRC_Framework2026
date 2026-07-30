@@ -18,7 +18,7 @@ public class DualZoneSuctionBumpModifier implements TranslationModifier {
   public Translation2d apply(Drivetrain drivetrain, Translation2d input) {
     Translation2d robotLoc = drivetrain.getPose().getTranslation();
 
-    // Prioridade: primeira zona que contém o robô
+    // Priority: first zone containing the robot
     if (zoneA.zone.contains(robotLoc)) {
       return zoneA.apply(robotLoc);
     }
@@ -27,14 +27,14 @@ public class DualZoneSuctionBumpModifier implements TranslationModifier {
       return zoneB.apply(robotLoc);
     }
 
-    // Saiu de todas as zonas → reseta estado
+    // Exited all zones -> reset state
     zoneA.reset();
     zoneB.reset();
 
     return input;
   }
 
-  /** Classe interna que encapsula o comportamento original por zona */
+  /** Inner class encapsulating per-zone behavior */
   private static class ZoneData {
     private final Polygon2d zone;
     private final double strength;
@@ -54,7 +54,7 @@ public class DualZoneSuctionBumpModifier implements TranslationModifier {
 
       Translation2d pullVec = new Translation2d(forwardDirectionX * strength, 0);
 
-      // Clamp de segurança (mesmo da versão original)
+      // Safety clamp
       if (pullVec.getNorm() > strength) {
         pullVec = pullVec.div(pullVec.getNorm()).times(strength);
       }

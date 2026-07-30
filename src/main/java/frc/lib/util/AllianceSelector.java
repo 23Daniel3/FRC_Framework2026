@@ -5,7 +5,7 @@ import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import frc.robot.Constants;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 
-/** Gerenciador de Aliança com suporte a logs e determinismo. */
+/** Alliance manager with logging support and determinism. */
 public class AllianceSelector {
   private static AllianceSelector instance;
   private final LoggedDashboardChooser<Alliance> chooser;
@@ -22,7 +22,7 @@ public class AllianceSelector {
     }
   }
 
-  /** Retorna a instância única do seletor. */
+  /** Returns the singleton instance of the selector. */
   public static AllianceSelector getInstance() {
     if (instance == null) {
       instance = new AllianceSelector();
@@ -30,33 +30,33 @@ public class AllianceSelector {
     return instance;
   }
 
-  /** Retorna a aliança selecionada no dashboard (Garante um valor não nulo). */
+  /** Returns the selected alliance from the dashboard (guarantees a non-null value). */
   public Alliance getAlliance() {
     return chooser.get();
   }
 
   /**
-   * Fonte canônica da aliança do robô: usa o DriverStation/FMS quando conectado e cai para o
-   * seletor do dashboard (cujo default vem de {@code Constants.alliance}) caso contrário.
+   * Canonical source of the robot's alliance: uses DriverStation/FMS when connected and falls back
+   * to the dashboard selector (whose default comes from {@code Constants.alliance}) otherwise.
    *
-   * <p>Todo código que precisa da aliança deve passar por aqui (diretamente na lib, ou via {@code
-   * AllianceManager} no código de robô/jogo) — nunca reimplementar o fallback.
+   * <p>All code requiring alliance information must go through here (directly in lib, or via {@code
+   * AllianceManager} in robot/game code) — never reimplement the fallback.
    */
   public Alliance getResolvedAlliance() {
     return DriverStation.getAlliance().orElseGet(this::getAlliance);
   }
 
-  /** true se a aliança resolvida é a Vermelha (convenção de flip do campo). */
+  /** Returns true if the resolved alliance is Red (field flip convention). */
   public boolean shouldFlip() {
     return getResolvedAlliance() == Alliance.Red;
   }
 
-  /** Atalho para verificar se o robô está no lado Vermelho. */
+  /** Shortcut to check if the robot is on the Red alliance. */
   public boolean isRed() {
     return getAlliance() == Alliance.Red;
   }
 
-  /** Atalho para verificar se o robô está no lado Azul. */
+  /** Shortcut to check if the robot is on the Blue alliance. */
   public boolean isBlue() {
     return getAlliance() == Alliance.Blue;
   }

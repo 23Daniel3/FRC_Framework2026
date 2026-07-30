@@ -17,7 +17,7 @@ public class IntakeBall extends Command {
   private final Drivetrain drivetrain;
   private final Vision vision;
 
-  // Ajuste este valor: quanto maior, mais ele "freia" a oscilação
+  // Adjust this value: the higher it is, the more it damps the oscillation
   private static final double K_DAMPING = 1.4;
 
   private static final ControlConstants kRotationConstants =
@@ -55,7 +55,7 @@ public class IntakeBall extends Command {
     double tx = vision.getTx(VisionCamera.FRONT);
     double pidOutput = rotationController.calculate(tx, rotationSetpoint);
 
-    // COMPENSAÇÃO PREDITIVA: Usa a velocidade real do drivetrain para "prever" o overshoot
+    // PREDICTIVE COMPENSATION: Uses actual drivetrain velocity to "predict" overshoot
     double currentAngularVel = drivetrain.getRobotVelocity().omegaRadiansPerSecond;
     double omega = pidOutput - (currentAngularVel * K_DAMPING);
 

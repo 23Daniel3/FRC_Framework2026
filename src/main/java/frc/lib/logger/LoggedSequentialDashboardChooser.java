@@ -10,23 +10,23 @@ import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.inputs.LoggableInputs;
 
 /**
- * Chooser sequencial com N slots e suporte a filtros dinâmicos por slot.
+ * Sequential chooser with N slots and support for dynamic per-slot filters.
  *
- * <p>- Mantém-se genérico (V pode ser Supplier<Command>, etc). - Publica cada SendableChooser e só
- * o substitui quando o conjunto de opções visíveis muda, para evitar spam de publishers no
+ * <p>- Remains generic (V can be Supplier&lt;Command&gt;, etc). - Publishes each SendableChooser
+ * and only replaces it when the set of visible options changes, to avoid publisher spam on
  * NetworkTables.
  *
- * <p>Observação: chame periodicamente {@link #periodic()} (ex.: robotPeriodic()).
+ * <p>Note: call {@link #periodic()} periodically (e.g., robotPeriodic()).
  *
- * <p>NOTE: foram adicionados métodos públicos para permitir atualizações em cascata por quem
- * coordena múltiplos choosers (ex: AutoTrajectories).
+ * <p>NOTE: public methods were added to allow cascading updates by whoever coordinates multiple
+ * choosers (e.g., AutoTrajectories).
  */
 public class LoggedSequentialDashboardChooser<V> extends PeriodicSystem {
   private final String keyPrefix;
   private final int numSlots;
   private final SendableChooser<String>[] choosers;
   private final String[] selectedValues;
-  private final Map<String, V> options = new LinkedHashMap<>(); // mantém ordem de inserção
+  private final Map<String, V> options = new LinkedHashMap<>(); // preserves insertion order
   private String defaultOptionKey = null;
 
   private final Map<Integer, Predicate<String>> slotFilters = new HashMap<>();
@@ -60,7 +60,7 @@ public class LoggedSequentialDashboardChooser<V> extends PeriodicSystem {
     for (int i = 0; i < numSlots; i++) {
       choosers[i] = new SendableChooser<>();
       visibleOptionsBySlot.add(new LinkedHashSet<>());
-      // publica cada chooser UMA vez; atualizações subsequentes ocorrem somente se o conjunto mudar
+      // publish each chooser ONCE; subsequent updates happen only if the option set changes
       SmartDashboard.putData(keyPrefix + "_" + i, choosers[i]);
     }
   }
@@ -68,7 +68,7 @@ public class LoggedSequentialDashboardChooser<V> extends PeriodicSystem {
   public void addOption(String optionKey, V value) {
     if (optionKey == null) throw new IllegalArgumentException("optionKey cannot be null");
     options.put(optionKey, value);
-    // periodic() vai recalcular e publicar se necessário
+    // periodic() will recalculate and publish if necessary
   }
 
   public void addDefaultOption(String optionKey, V value) {
@@ -80,7 +80,7 @@ public class LoggedSequentialDashboardChooser<V> extends PeriodicSystem {
     checkSlot(slot);
     if (filter == null) slotFilters.remove(slot);
     else slotFilters.put(slot, filter);
-    // periodic() aplicará o filtro e publicará se necessário
+    // periodic() will apply the filter and publish if necessary
   }
 
   public void clearFilter(int slot) {
@@ -113,28 +113,28 @@ public class LoggedSequentialDashboardChooser<V> extends PeriodicSystem {
   }
 
   /**
-   * Deve ser chamado periodicamente (ex.: robotPeriodic()). Ordem: 1) lê as seleções atuais
-   * (chooser.getSelected()) 2) recalcula visíveis e substitui o SendableChooser do slot apenas se o
-   * conjunto visível mudou 3) processa logger
+   * Must be called periodically (e.g., robotPeriodic()). Order: 1) reads the current selections
+   * (chooser.getSelected()) 2) recomputes visible options and replaces the slot's SendableChooser
+   * only if the visible set changed 3) processes logger
    *
-   * <p>Observação: este método mantém o comportamento histórico. Para coordenação entre vários
-   * choosers (cascade), usar os métodos públicos {@link #readSelectionsFromDashboard()}, {@link
-   * #refreshSlot(int)}, {@link #refreshAllSlots()} e {@link #processInputs()}.
+   * <p>Note: this method preserves historical behavior. For coordination across multiple choosers
+   * (cascade), use the public methods {@link #readSelectionsFromDashboard()}, {@link
+   * #refreshSlot(int)}, {@link #refreshAllSlots()} and {@link #processInputs()}.
    */
   @Override
   public void periodic() {
-    // 1) lê seleções atuais do dashboard
+    // 1) read current selections from dashboard
     if (!Logger.hasReplaySource()) {
       for (int i = 0; i < numSlots; i++) {
         try {
           selectedValues[i] = choosers[i].getSelected();
         } catch (Exception e) {
-          // mantém valor anterior em caso de erro
+          // keep previous value on error
         }
       }
     }
 
-    // 2) atualiza visíveis/publicações SOMENTE se mudou
+    // 2) update visible options/publications ONLY if changed
     for (int i = 0; i < numSlots; i++) {
       refreshSlotIfNeeded(i);
     }
@@ -146,8 +146,8 @@ public class LoggedSequentialDashboardChooser<V> extends PeriodicSystem {
   /* ---------- novos helpers públicos para coordenação entre choosers ---------- */
 
   /**
-   * Lê as seleções atuais do Dashboard em selectedValues[] sem mudar visíveis/publicações. Útil
-   * para coletar o estado antes de executar refreshes em cadeia.
+   * Reads the current Dashboard selections into selectedValues[] without changing visible options
+   * or publications. Useful for collecting state before executing cascading refreshes.
    */
   public void readSelectionsFromDashboard() {
     if (!Logger.hasReplaySource()) {
@@ -155,31 +155,31 @@ public class LoggedSequentialDashboardChooser<V> extends PeriodicSystem {
         try {
           selectedValues[i] = choosers[i].getSelected();
         } catch (Exception e) {
-          // mantém valor anterior em caso de erro
+          // keep previous value on error
         }
       }
     }
   }
 
-  /** Atualiza somente o slot especificado (republica se o conjunto visível mudou). */
+  /** Updates only the specified slot (re-publishes if the visible set changed). */
   public void refreshSlot(int slot) {
     checkSlot(slot);
     refreshSlotIfNeeded(slot);
   }
 
-  /** Atualiza todos os slots (equivalente ao passo 2 da periodic). */
+  /** Updates all slots (equivalent to step 2 of periodic). */
   public void refreshAllSlots() {
     for (int i = 0; i < numSlots; i++) {
       refreshSlotIfNeeded(i);
     }
   }
 
-  /** Executa o processamento do logger (equivalente ao passo 3 da periodic). */
+  /** Executes logger processing (equivalent to step 3 of periodic). */
   public void processInputs() {
     Logger.processInputs(keyPrefix, inputs);
   }
 
-  /* ---------- helpers privados ---------- */
+  /* ---------- private helpers ---------- */
 
   private void refreshSlotIfNeeded(int slot) {
     checkSlot(slot);
@@ -187,10 +187,10 @@ public class LoggedSequentialDashboardChooser<V> extends PeriodicSystem {
     Set<String> oldVisible = visibleOptionsBySlot.get(slot);
 
     if (Objects.equals(oldVisible, newVisible)) {
-      return; // sem mudança -> evita re-publicação
+      return; // no change -> avoids re-publication
     }
 
-    // constrói um novo chooser contendo somente as opções visíveis
+    // build a new chooser containing only the visible options
     SendableChooser<String> newChooser = new SendableChooser<>();
     boolean defaultSet = false;
 
@@ -210,16 +210,16 @@ public class LoggedSequentialDashboardChooser<V> extends PeriodicSystem {
       }
     }
 
-    // substitui o chooser publicado (publicação só acontece quando houve mudança)
+    // replace the published chooser (publication only happens when there was a change)
     choosers[slot] = newChooser;
     SmartDashboard.putData(keyPrefix + "_" + slot, newChooser);
 
-    // tenta preservar a seleção anterior se ainda for válida (atualiza selectedValues)
+    // tries to preserve the previous selection if still valid (updates selectedValues)
     String prev = selectedValues[slot];
     if (prev != null && newVisible.contains(prev)) {
-      // mantem prev
+      // keep prev
     } else {
-      // se prev não for válido, coloca defaultOptionKey (se houver) ou null
+      // if prev is no longer valid, fall back to defaultOptionKey (if present) or null
       if (defaultOptionKey != null && newVisible.contains(defaultOptionKey)) {
         selectedValues[slot] = defaultOptionKey;
       } else {

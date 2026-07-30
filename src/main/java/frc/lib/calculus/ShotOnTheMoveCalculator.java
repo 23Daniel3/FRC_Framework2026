@@ -9,19 +9,19 @@ import java.util.function.Function;
 import org.littletonrobotics.junction.Logger;
 
 /**
- * Calcula ângulo de mira e RPM ideal para um tiro em movimento (SOTM).
+ * Calculates the aim angle and ideal RPM for a shot on the move (SOTM).
  *
- * <p>Totalmente genérico: o target é fornecido via {@code Function<Pose2d, Translation2d>},
- * permitindo múltiplas instâncias com targets diferentes (hub, feed, etc).
+ * <p>Fully generic: the target is provided via {@code Function<Pose2d, Translation2d>}, allowing
+ * multiple instances with different targets (hub, feed, etc).
  *
- * <p>Exemplo de uso com dois targets distintos:
+ * <p>Example usage with two distinct targets:
  *
  * <pre>
- *   // Hub shot: target fixo baseado na aliança
+ *   // Hub shot: fixed target based on alliance
  *   hubCalc = new ShotOnTheMoveCalculator("SOTM/Hub",
  *       pose -> allianceManager.isBlue() ? HUB_BLUE : HUB_RED, ...);
  *
- *   // Feed shot: target dinâmico — a pose de intake mais próxima
+ *   // Feed shot: dynamic target — the nearest intake pose
  *   feedCalc = new ShotOnTheMoveCalculator("SOTM/Feed",
  *       pose -> nearestOf(pose, LEFT_BLUE, RIGHT_BLUE), ...);
  * </pre>
@@ -29,12 +29,12 @@ import org.littletonrobotics.junction.Logger;
 public class ShotOnTheMoveCalculator {
 
   /**
-   * Parâmetros físicos imutáveis da mecânica de tiro.
+   * Immutable physical parameters of the shot mechanics.
    *
-   * @param avgWheelDiameterMeters Diâmetro médio dos flywheels (m)
-   * @param ballExitAngleDeg Ângulo de saída da bola (graus, relativo ao horizontal)
-   * @param shooterOffsetMeters Offset lateral do shooter em relação ao centro do robô (m)
-   * @param rpmSmootherAlpha Alpha do EMA para suavização do RPM (1.0 = sem suavização)
+   * @param avgWheelDiameterMeters Average flywheel diameter (m)
+   * @param ballExitAngleDeg Ball exit angle (degrees, relative to horizontal)
+   * @param shooterOffsetMeters Lateral offset of the shooter relative to the robot center (m)
+   * @param rpmSmootherAlpha Alpha of the EMA for RPM smoothing (1.0 = no smoothing)
    */
   public record Config(
       double avgWheelDiameterMeters,
@@ -73,12 +73,12 @@ public class ShotOnTheMoveCalculator {
   }
 
   /**
-   * Executa o cálculo completo de SOTM para o ciclo atual.
+   * Performs the complete SOTM calculation for the current cycle.
    *
-   * <p>Deve ser chamado uma vez por ciclo (no periodic da SuperStructure) independente de estar
-   * atirando, para manter os logs sempre atualizados.
+   * <p>Should be called once per cycle (in the SuperStructure periodic) regardless of whether
+   * shooting, to keep the logs always updated.
    *
-   * @return {@link ShotParameters} com ângulo e RPM calculados
+   * @return {@link ShotParameters} with calculated angle and RPM
    */
   public ShotParameters calculate(Pose2d robotPose, ChassisSpeeds robotSpeeds) {
     Translation2d target = targetResolver.apply(robotPose);
@@ -126,7 +126,7 @@ public class ShotOnTheMoveCalculator {
     return lastResult;
   }
 
-  /** Retorna o último resultado calculado sem reprocessar. */
+  /** Returns the last calculated result without reprocessing. */
   public ShotParameters getLastResult() {
     return lastResult;
   }

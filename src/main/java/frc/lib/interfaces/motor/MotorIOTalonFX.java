@@ -18,8 +18,8 @@ import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.units.measure.*;
 
 /**
- * Implementação de MotorIO para CTRE TalonFX (Kraken/Falcon). Otimizado para rodar toda a física de
- * controle (SVAG + PID + Motion Magic) nativamente no hardware.
+ * MotorIO implementation for CTRE TalonFX (Kraken/Falcon). Optimized to run all control physics
+ * (SVAG + PID + Motion Magic) natively on hardware.
  */
 public class MotorIOTalonFX extends MotorBase {
 
@@ -27,14 +27,14 @@ public class MotorIOTalonFX extends MotorBase {
   private final TalonFXConfiguration driveConfig = new TalonFXConfiguration();
   private final MotorIOInputs inputs = new MotorIOInputs();
 
-  // Controle de Requisições (Reutilizados para evitar alocação de memória no loop)
+  // Control Requests (reused to avoid memory allocation in the loop)
   private final VoltageOut voltageRequest = new VoltageOut(0);
   private final VelocityVoltage velocityRequest = new VelocityVoltage(0);
   private final PositionVoltage positionRequest = new PositionVoltage(0);
   private final MotionMagicVoltage motionMagicRequest = new MotionMagicVoltage(0);
   private final DutyCycleOut dutyCycleRequest = new DutyCycleOut(0);
 
-  // Status Signals para telemetria (Phoenix 6 usa sinais otimizados)
+  // Status Signals for telemetry (Phoenix 6 uses optimized signals)
   private final StatusSignal<Angle> posSignal;
   private final StatusSignal<AngularVelocity> velSignal;
   private final StatusSignal<Voltage> voltSignal;
@@ -46,7 +46,7 @@ public class MotorIOTalonFX extends MotorBase {
 
     this.motor = new TalonFX(id, canBus);
 
-    // --- Configuração de Saída e Neutro ---
+    // --- Output and Neutral Configuration ---
     driveConfig.MotorOutput.Inverted =
         config.inverted
             ? InvertedValue.Clockwise_Positive
@@ -57,11 +57,11 @@ public class MotorIOTalonFX extends MotorBase {
             ? NeutralModeValue.Brake
             : NeutralModeValue.Coast;
 
-    // --- Limites de Corrente ---
+    // --- Current Limits ---
     driveConfig.CurrentLimits.StatorCurrentLimit = config.currentLimit.in(Amps);
     driveConfig.CurrentLimits.StatorCurrentLimitEnable = true;
     driveConfig.CurrentLimits.SupplyCurrentLimit =
-        config.currentLimit.in(Amps); // Proteção da bateria
+        config.currentLimit.in(Amps); // Battery protection
     driveConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
 
     // --- Soft Limits ---
@@ -83,14 +83,13 @@ public class MotorIOTalonFX extends MotorBase {
     driveConfig.Voltage.PeakForwardVoltage = config.maxOutput * config.nominalVoltage.in(Volts);
     driveConfig.Voltage.PeakReverseVoltage = config.minOutput * config.nominalVoltage.in(Volts);
 
-    // --- Relação de Transmissão (Sensor to Mechanism) ---
-    // No Phoenix 6, você define a redução direto aqui e ele escala Posição e Velocidade
-    // automaticamente
+    // --- Gear Ratio (Sensor to Mechanism) ---
+    // In Phoenix 6, the reduction is set here and it automatically scales Position and Velocity.
     driveConfig.Feedback.SensorToMechanismRatio =
         (config.positionConversionFactor != 0.0) ? 1.0 / config.positionConversionFactor : 1.0;
 
-    // --- Slots de Controle (0 a 3) ---
-    // Aplicamos PID e SVAG completo nativo para cada slot definido no MotorConfig
+    // --- Control Slots (0 to 3) ---
+    // Apply full native PID and SVAG for each slot defined in MotorConfig
     applySlotConfig(
         0,
         config.kP[0],
@@ -119,28 +118,28 @@ public class MotorIOTalonFX extends MotorBase {
         config.kA[2],
         config.kG[2]);
 
-    // --- Motion Magic (Nativo no Hardware) ---
-    // Usamos o Slot 0 como padrão para Motion Magic
+    // --- Motion Magic (Native on Hardware) ---
+    // Slot 0 is used as the default for Motion Magic
     driveConfig.MotionMagic.MotionMagicCruiseVelocity =
         config.maxMotionMaxVelocity[0].in(RotationsPerSecond);
     driveConfig.MotionMagic.MotionMagicAcceleration =
         config.maxMotionMaxAcceleration[0].in(RotationsPerSecondPerSecond);
 
-    // Aplicação inicial da configuração
+    // Initial configuration application
     tryUntilOk(5, () -> motor.getConfigurator().apply(driveConfig));
 
-    // --- Configuração de Sinais ---
+    // --- Signal Configuration ---
     posSignal = motor.getPosition();
     velSignal = motor.getVelocity();
     voltSignal = motor.getMotorVoltage();
     currentSignal = motor.getStatorCurrent();
     temperatureSignal = motor.getDeviceTemp();
 
-    // Frequências otimizadas para controle e log
+    // Optimized frequencies for control and logging
     BaseStatusSignal.setUpdateFrequencyForAll(100.0, posSignal, velSignal);
     BaseStatusSignal.setUpdateFrequencyForAll(20.0, voltSignal, currentSignal, temperatureSignal);
 
-    // Otimiza o uso de banda do CAN
+    // Optimize CAN bus bandwidth utilization
     motor.optimizeBusUtilization();
 
     motor.setPosition(0);
@@ -164,7 +163,7 @@ public class MotorIOTalonFX extends MotorBase {
     }
   }
 
-  // --- Implementação de Controle Nativo ---
+  // --- Native Control Implementation ---
 
   @Override
   public void runVelocity(AngularVelocity velocity) {
@@ -220,7 +219,7 @@ public class MotorIOTalonFX extends MotorBase {
   @Override
   public void applyHardwareSmartMotion(
       int slot, double maxVel, double maxAccel, double allowedErr) {
-    // O Phoenix 6 prefere atualizar MotionMagic via TalonFXConfiguration por ser mais estável
+    // Phoenix 6 prefers updating MotionMagic via TalonFXConfiguration for greater stability
     driveConfig.MotionMagic.MotionMagicCruiseVelocity = maxVel;
     driveConfig.MotionMagic.MotionMagicAcceleration = maxAccel;
     motor.getConfigurator().apply(driveConfig.MotionMagic);
@@ -349,7 +348,7 @@ public class MotorIOTalonFX extends MotorBase {
         motor.getConfigurator().apply(s2);
         break;
       }
-      default -> System.err.println("[MotorIOTalonFX] Slot " + slot + " não suportado.");
+      default -> System.err.println("[MotorIOTalonFX] Slot " + slot + " not supported.");
     }
   }
 }

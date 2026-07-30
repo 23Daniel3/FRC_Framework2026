@@ -6,8 +6,8 @@ import edu.wpi.first.units.measure.Current;
 import edu.wpi.first.units.measure.Voltage;
 
 /**
- * Implementação No-Op (Null Object Pattern) da interface MotorController. Utilizada para evitar
- * NullPointerExceptions quando o hardware não está presente.
+ * No-Op implementation (Null Object Pattern) of the MotorController interface. Used to avoid
+ * NullPointerExceptions when hardware is not present.
  */
 public class MotorControllerNone implements MotorController {
 

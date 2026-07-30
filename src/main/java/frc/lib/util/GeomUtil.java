@@ -150,18 +150,18 @@ public class GeomUtil {
   }
 
   /**
-   * Calcula o ângulo necessário para alinhar a uma pose final.
+   * Calculates the angle required to align to a target pose.
    *
-   * @param currentPose A pose atual do robô.
-   * @param targetPose A pose alvo para o robô se alinhar.
-   * @return O ângulo (em radianos) necessário para alinhar o robô com a pose alvo.
+   * @param currentPose The current pose of the robot.
+   * @param targetPose The target pose for the robot to align with.
+   * @return The angle (in radians) required to align the robot with the target pose.
    */
   public static double thetaToTarget(Pose2d currentPose, Pose2d targetPose) {
-    // Obtém as coordenadas X e Y da pose atual e da pose alvo
+    // Gets the X and Y coordinates of the current pose and target pose
     double deltaX = targetPose.getX() - currentPose.getX();
     double deltaY = targetPose.getY() - currentPose.getY();
 
-    // Calcula o ângulo (em radianos) necessário para alinhar
+    // Calculates the angle (in radians) required to align
     return Math.atan2(deltaY, deltaX);
   }
 

@@ -50,7 +50,7 @@ public class AllianceManager {
     return myAlliance() == Alliance.Red;
   }
 
-  /** true se as poses/velocidades de campo devem ser espelhadas (aliança Vermelha). */
+  /** True if field poses/velocities should be mirrored (Red Alliance). */
   public boolean shouldFlip() {
     return isRed();
   }

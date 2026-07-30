@@ -49,12 +49,12 @@ public class DriveToNextZone extends Command {
   }
 
   private void configureStateMachine() {
-    // 1. Decide o alvo
+    // 1. Decides the target
     fsm.state(State.CALCULATE)
         .transitionTo(State.DRIVE_TO_TRENCH, () -> targetTrenchZone != null)
         .transitionTo(State.FINISHED, () -> targetTrenchZone == null);
 
-    // 2. Dirige até a trincheira
+    // 2. Drives to the trench
     fsm.state(State.DRIVE_TO_TRENCH)
         .onEnter(
             () -> {
@@ -75,7 +75,7 @@ public class DriveToNextZone extends Command {
         .transitionTo(
             State.CROSSING_TRENCH, () -> activeCommand != null && activeCommand.isFinished());
 
-    // 3. Atravessa usando Joystick + Zone Suction
+    // 3. Crosses using Joystick + Zone Suction
     fsm.state(State.CROSSING_TRENCH)
         .onEnter(
             () -> {
@@ -92,7 +92,7 @@ public class DriveToNextZone extends Command {
             () -> {
               if (activeCommand != null) activeCommand.end(true);
             })
-        // Assim que acabar a travessia ou o comando, finaliza
+        // Finishes as soon as crossing or command completes
         .transitionTo(State.FINISHED, () -> activeCommand != null && activeCommand.isFinished())
         .transitionTo(
             State.FINISHED,

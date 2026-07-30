@@ -16,7 +16,7 @@ public class PIDRotation implements RotationStrategy {
   private final Supplier<Rotation2d> targetSupplier;
   private final DoubleSupplier manualControl;
 
-  // Ganhos Tunáveis via NetworkTables/AdvantageKit
+  // Tunable gains via NetworkTables/AdvantageKit
   private final LoggedTunableNumber kp =
       new LoggedTunableNumber("Drive/RotationPID/kP", DrivetrainConstants.ANGLE_KP);
   private final LoggedTunableNumber ki =
@@ -32,10 +32,10 @@ public class PIDRotation implements RotationStrategy {
     this.targetSupplier = targetSupplier;
     this.manualControl = manualControl;
 
-    // Inicializa o PID comum
+    // Initialize standard PID controller
     this.controller = new PIDController(kp.get(), ki.get(), kd.get());
 
-    // Essencial para rotação: faz o robô entender que -179° e 179° estão perto um do outro
+    // Essential for rotation: enables continuous input so -179° and 179° are treated as adjacent
     this.controller.enableContinuousInput(-Math.PI, Math.PI);
   }
 
@@ -46,24 +46,24 @@ public class PIDRotation implements RotationStrategy {
 
   @Override
   public double calculate(Drivetrain drivetrain) {
-    // Atualiza os ganhos caso tenham sido alterados na Dashboard
+    // Update gains if they have been changed on the Dashboard
     updatePIDConstants();
 
     if (manualControl != null) {
       double stick = manualControl.getAsDouble();
       if (Math.abs(stick) > Constants.CONTROLLER_DEADBAND) {
-        // Controle manual com curva exponencial para sensibilidade
+        // Manual control with exponential curve for sensitivity
         return Math.copySign(stick * stick, stick)
             * drivetrain.getMaxAngularSpeed().in(RadiansPerSecond);
       }
     }
 
-    // Cálculo do PID Simples (Target vs Current)
+    // Simple PID calculation (Target vs Current)
     return controller.calculate(
         drivetrain.getRotation().getRadians(), targetSupplier.get().getRadians());
   }
 
-  /** Verifica se houve mudança nos números tunáveis e atualiza o controlador. */
+  /** Checks if tunable numbers have changed and updates the controller. */
   private void updatePIDConstants() {
     if (kp.hasChanged(this.hashCode())
         || ki.hasChanged(this.hashCode())
