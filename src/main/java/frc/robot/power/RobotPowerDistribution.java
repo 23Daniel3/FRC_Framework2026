@@ -4,8 +4,8 @@ import edu.wpi.first.wpilibj.PowerDistribution;
 import org.littletonrobotics.junction.Logger;
 
 /**
- * Singleton component extending {@link PowerDistribution} to centralize
- * PDH/PDP telemetry readings and enable future power management.
+ * Singleton component extending {@link PowerDistribution} to centralize PDH/PDP telemetry readings
+ * and enable future power management.
  */
 public class RobotPowerDistribution extends PowerDistribution {
 
