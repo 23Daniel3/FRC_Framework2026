@@ -5,18 +5,12 @@ import static edu.wpi.first.units.Units.RPM;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.game.AllianceManager;
-import frc.game.FieldConstants.Poses;
-import frc.lib.calculus.LinearInterpolation.Point;
-import frc.lib.calculus.LoggedTunableMap;
-import frc.lib.calculus.ShotOnTheMoveCalculator;
 import frc.lib.calculus.ShotParameters;
 import frc.lib.interfaces.fsm.StateMachine;
-import frc.lib.logger.LoggedTunableNumber;
 import frc.lib.util.ConstantsLogger;
 import frc.lib.util.PeriodicTimer;
 import frc.robot.Constants.RobotRequest;
@@ -39,29 +33,9 @@ public class SuperStructure extends SubsystemBase {
   private final Intake intake;
   private final Shooter shooter;
 
+  private final ShooterTargetCalculator shooterCalculator;
+
   private RobotRequest robotRequest = RobotRequest.IDLE;
-
-  private final ShotOnTheMoveCalculator hubCalculator;
-  private final ShotOnTheMoveCalculator feedCalculator;
-
-  private final LoggedTunableNumber aimScalar = new LoggedTunableNumber("SOTM/AimScalar", -0.8);
-  private final LoggedTunableNumber rpmScalar = new LoggedTunableNumber("SOTM/RPMScalar", 0.13);
-  private final LoggedTunableNumber shooterEfficiency =
-      new LoggedTunableNumber("SOTM/ShooterEfficiency", 1.2);
-
-  private final LoggedTunableMap flywheelMap =
-      new LoggedTunableMap(
-          "FlywheelCalibrate/Flywheel",
-          true,
-          new Point(SuperStructureConstants.X_1, SuperStructureConstants.Y_1),
-          new Point(SuperStructureConstants.X_2, SuperStructureConstants.Y_2),
-          new Point(SuperStructureConstants.X_3, SuperStructureConstants.Y_3),
-          new Point(SuperStructureConstants.X_4, SuperStructureConstants.Y_4),
-          new Point(SuperStructureConstants.X_5, SuperStructureConstants.Y_5),
-          new Point(SuperStructureConstants.X_6, SuperStructureConstants.Y_6),
-          new Point(SuperStructureConstants.X_7, SuperStructureConstants.Y_7),
-          new Point(SuperStructureConstants.X_8, SuperStructureConstants.Y_8),
-          new Point(SuperStructureConstants.X_9, SuperStructureConstants.Y_9));
 
   private final AllianceManager allianceManager = AllianceManager.getInstance();
   private final StateMachine<RobotState> generalFsm;
@@ -73,28 +47,7 @@ public class SuperStructure extends SubsystemBase {
     this.intake = intake;
     this.shooter = shooter;
 
-    ShotOnTheMoveCalculator.Config shotConfig = buildShotConfig(1.0);
-    ShotOnTheMoveCalculator.Config feedConfig = buildShotConfig(0.05);
-
-    this.hubCalculator =
-        new ShotOnTheMoveCalculator(
-            "SOTM/Hub",
-            this::resolveHubTarget,
-            flywheelMap,
-            aimScalar,
-            rpmScalar,
-            shooterEfficiency,
-            shotConfig);
-
-    this.feedCalculator =
-        new ShotOnTheMoveCalculator(
-            "SOTM/Feed",
-            this::resolveFeedTarget,
-            flywheelMap,
-            aimScalar,
-            rpmScalar,
-            shooterEfficiency,
-            feedConfig);
+    this.shooterCalculator = new ShooterTargetCalculator(allianceManager);
 
     generalFsm =
         new StateMachine<>(
@@ -112,16 +65,11 @@ public class SuperStructure extends SubsystemBase {
 
     allianceManager.showAllianceMessageOnDashboard();
 
-    flywheelMap.calculate();
-
     Pose2d pose = drivetrain.getPose();
     ChassisSpeeds speeds = drivetrain.getRobotVelocity();
-    hubCalculator.calculate(pose, speeds);
-    feedCalculator.calculate(pose, speeds);
+    shooterCalculator.update(pose, speeds);
 
-    // Alimenta o shooter continuamente com o RPM calculado pelo SOTM. Sem isto o
-    // flywheel roda eternamente no setpoint inicial (0 RPM) — o ciclo completo e:
-    // calculadores → setVelocity aqui → estados do Shooter aplicam no onUpdate.
+    // Alimenta o shooter continuamente com o RPM calculado pelo SOTM.
     shooter.setVelocity(RPM.of(getActiveShotParameters().rpm()));
 
     generalFsm.update();
@@ -157,7 +105,7 @@ public class SuperStructure extends SubsystemBase {
   }
 
   public ShotParameters getActiveShotParameters() {
-    return isInAllianceZone() ? hubCalculator.getLastResult() : feedCalculator.getLastResult();
+    return shooterCalculator.getActiveShotParameters(isInAllianceZone());
   }
 
   public boolean isAtSetpointAngle() {
@@ -324,53 +272,8 @@ public class SuperStructure extends SubsystemBase {
     generalFsm.validateComplete();
   }
 
-  private Translation2d resolveHubTarget(Pose2d robotPose) {
-    return allianceManager.isBlue()
-        ? Poses.HUB_CENTER_BLUE.getTranslation()
-        : Poses.HUB_CENTER_RED.getTranslation();
-  }
-
-  private Translation2d resolveFeedTarget(Pose2d robotPose) {
-    Alliance alliance = allianceManager.myAlliance();
-
-    Pose2d left =
-        alliance == Alliance.Blue ? Poses.SHOOT_INTAKING_LEFT_BLUE : Poses.SHOOT_INTAKING_LEFT_RED;
-    Pose2d right =
-        alliance == Alliance.Blue
-            ? Poses.SHOOT_INTAKING_RIGHT_BLUE
-            : Poses.SHOOT_INTAKING_RIGHT_RED;
-
-    double dLeft = robotPose.getTranslation().getDistance(left.getTranslation());
-    double dRight = robotPose.getTranslation().getDistance(right.getTranslation());
-
-    return (dLeft < dRight ? left : right).getTranslation();
-  }
-
   private boolean isInAllianceZone() {
     return allianceManager.isInAllianceZone(drivetrain.getCurrentGeneralZone());
-  }
-
-  private static ShotOnTheMoveCalculator.Config buildShotConfig(double rpmSmootherAlpha) {
-    double avgDiameter =
-        (SuperStructureConstants.DIAMETER_WHEEL_UP_METERS
-                + SuperStructureConstants.DIAMETER_WHEEL_DOWN_METERS)
-            / 2.0;
-
-    return new ShotOnTheMoveCalculator.Config(
-        avgDiameter,
-        SuperStructureConstants.BALL_EXITING_ANGLE_DEG,
-        SuperStructureConstants.SHOOTER_OFFSET_METERS,
-        rpmSmootherAlpha);
-  }
-
-  private double distanceFromRobotToHub() {
-    return drivetrain
-        .getPose()
-        .getTranslation()
-        .getDistance(
-            allianceManager.isBlue()
-                ? Poses.HUB_CENTER_BLUE.getTranslation()
-                : Poses.HUB_CENTER_RED.getTranslation());
   }
 
   private void log() {
@@ -378,15 +281,13 @@ public class SuperStructure extends SubsystemBase {
       Logger.recordOutput("SuperStructure/Command", getCurrentCommand().getName());
     }
 
-    ShotParameters active = getActiveShotParameters();
     Logger.recordOutput("SuperStructure/GeneralFSM/State", generalFsm.getCurrentState());
     Logger.recordOutput("SuperStructure/GeneralFSM/Request", robotRequest);
     Logger.recordOutput("SuperStructure/GeneralFSM/TimeInState", generalFsm.getTimeInState());
-    Logger.recordOutput("SuperStructure/Shooting/DistanceToHub", distanceFromRobotToHub());
-    Logger.recordOutput("SuperStructure/Shooting/ActiveAimAngle", active.aimAngle().getDegrees());
-    Logger.recordOutput("SuperStructure/Shooting/ActiveRPM", RPM.of(active.rpm()));
     Logger.recordOutput("SuperStructure/Flags/DrivetrainAligned", isAtSetpointAngle());
     Logger.recordOutput("SuperStructure/Flags/InAllianceZone", isInAllianceZone());
+
+    shooterCalculator.log(drivetrain.getPose(), isInAllianceZone());
 
     RobotPowerDistribution.getInstance().log();
   }
