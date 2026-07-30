@@ -2,10 +2,13 @@ package frc.lib.util;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.geometry.Translation3d;
 import frc.lib.calculus.ThrottleMap;
 import frc.lib.interfaces.motor.MotorConfig;
+import frc.lib.zones.LogPolygon2d;
+import frc.lib.zones.Polygon2d;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import org.littletonrobotics.junction.Logger;
@@ -75,14 +78,36 @@ public final class ConstantsLogger {
     } else if (value instanceof ThrottleMap) {
       logThrottleMap(path, (ThrottleMap) value);
 
+    } else if (value instanceof Polygon2d) {
+      LogPolygon2d.logPolygon(path, (Polygon2d) value);
+
+    } else if (value instanceof Polygon2d[]) {
+      Polygon2d[] polygons = (Polygon2d[]) value;
+      for (int i = 0; i < polygons.length; i++) {
+        if (polygons[i] != null) {
+          LogPolygon2d.logPolygon(path + "/" + i, polygons[i]);
+        }
+      }
+
     } else if (value instanceof Pose2d) {
       Logger.recordOutput(path, (Pose2d) value);
+
+    } else if (value instanceof Pose2d[]) {
+      Logger.recordOutput(path, (Pose2d[]) value);
 
     } else if (value instanceof Pose3d) {
       Logger.recordOutput(path, (Pose3d) value);
 
     } else if (value instanceof Translation2d) {
       Logger.recordOutput(path, (Translation2d) value);
+
+    } else if (value instanceof Translation2d[]) {
+      Translation2d[] points = (Translation2d[]) value;
+      Pose2d[] poses = new Pose2d[points.length];
+      for (int i = 0; i < points.length; i++) {
+        poses[i] = new Pose2d(points[i], new Rotation2d());
+      }
+      Logger.recordOutput(path, poses);
 
     } else if (value instanceof Translation3d) {
       Logger.recordOutput(path, (Translation3d) value);

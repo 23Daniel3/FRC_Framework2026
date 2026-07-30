@@ -9,7 +9,7 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import frc.game.FieldConstants;
 import frc.lib.util.AutoEngine;
 import frc.robot.commands.drivetrain.align.AimHub;
-import frc.robot.factories.SuperStructureCommands;
+import frc.robot.commands.factories.SuperStructureCommands;
 import frc.robot.subsystems.drivetrain.Drivetrain;
 import frc.robot.subsystems.superstructure.SuperStructure;
 
