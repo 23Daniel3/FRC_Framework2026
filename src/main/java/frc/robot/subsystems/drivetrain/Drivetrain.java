@@ -16,7 +16,6 @@ import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
@@ -42,7 +41,6 @@ import frc.lib.util.security.DynamicSlewRateLimiter;
 import frc.lib.util.security.antitipping.AntiTipping;
 import frc.robot.Constants;
 import frc.robot.generated.TunerConstants.TunerSwerveDrivetrain;
-import frc.robot.subsystems.drivetrain.DrivetrainConstants.Zones;
 import java.util.function.Supplier;
 import org.littletonrobotics.junction.AutoLogOutput;
 
@@ -665,39 +663,6 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem {
     // Deadband em vez de comparacao exata com zero: com ruido de odometria a velocidade
     // raramente e exatamente 0.0, o que tornava este predicado quase sempre verdadeiro.
     return getLinearVelocity().in(MetersPerSecond) > DrivetrainConstants.MOVING_DEADBAND_MPS;
-  }
-
-  public boolean isAtTrench() {
-    Translation2d robot = getPose().getTranslation();
-    return frc.game.FieldConstants.Zones.TRENCH_LEFT_BLUE.contains(robot)
-        || frc.game.FieldConstants.Zones.TRENCH_LEFT_RED.contains(robot)
-        || frc.game.FieldConstants.Zones.TRENCH_RIGHT_BLUE.contains(robot)
-        || frc.game.FieldConstants.Zones.TRENCH_RIGHT_RED.contains(robot);
-  }
-
-  public boolean isAtBump() {
-    Translation2d robot = getPose().getTranslation();
-    return frc.game.FieldConstants.Zones.BUMP_LEFT_BLUE.contains(robot)
-        || frc.game.FieldConstants.Zones.BUMP_LEFT_RED.contains(robot)
-        || frc.game.FieldConstants.Zones.BUMP_RIGHT_BLUE.contains(robot)
-        || frc.game.FieldConstants.Zones.BUMP_RIGHT_RED.contains(robot);
-  }
-
-  @AutoLogOutput(key = "Subsystems/Drivetrain/Odometry/Current Field General Zones")
-  public Zones getCurrentGeneralZone() {
-    Translation2d robot = getPose().getTranslation();
-    if (frc.game.FieldConstants.Zones.ALLIANCE_BLUE_ZONE.contains(robot)) {
-      return Zones.ALLIANCE_BLUE_ZONE;
-    } else if (frc.game.FieldConstants.Zones.ALLIANCE_RED_ZONE.contains(robot)) {
-      return Zones.ALLIANCE_RED_ZONE;
-    } else if (frc.game.FieldConstants.Zones.NEUTRAL_ZONE.contains(robot)) {
-      return Zones.NEUTRAL_ZONE;
-    }
-    return Zones.NOT_ZONE;
-  }
-
-  public boolean isNeutralMidZone() {
-    return frc.game.FieldConstants.Zones.NEUTRAL_MID_ZONE.contains(getPose().getTranslation());
   }
 
   public boolean isBlue() {

@@ -8,6 +8,7 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.game.AllianceManager;
+import frc.game.FieldConstants;
 import frc.lib.calculus.ShotParameters;
 import frc.lib.interfaces.fsm.StateMachine;
 import frc.lib.util.ConstantsLogger;
@@ -272,7 +273,8 @@ public class SuperStructure extends SubsystemBase {
   }
 
   private boolean isInAllianceZone() {
-    return allianceManager.isInAllianceZone(drivetrain.getCurrentGeneralZone());
+    return allianceManager.isInAllianceZone(
+        FieldConstants.Zones.getGeneralZone(drivetrain.getPose().getTranslation()));
   }
 
   private void log() {
