@@ -20,8 +20,8 @@ import com.revrobotics.spark.SparkClosedLoopController;
 import com.revrobotics.spark.SparkFlex;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.config.FeedForwardConfig;
+import com.revrobotics.spark.config.SparkFlexConfig;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
-import com.revrobotics.spark.config.SparkMaxConfig;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
@@ -33,7 +33,7 @@ public class MotorIOSparkFlex extends MotorBase {
 
   private final SparkFlex motor;
   private final SparkClosedLoopController closedLoopController;
-  private final SparkMaxConfig motorConfig;
+  private final SparkFlexConfig motorConfig;
   private final MotorIOInputs inputs = new MotorIOInputs();
 
   // Sensores
@@ -49,7 +49,7 @@ public class MotorIOSparkFlex extends MotorBase {
 
     this.motor = new SparkFlex(id, type);
     this.closedLoopController = motor.getClosedLoopController();
-    this.motorConfig = new SparkMaxConfig();
+    this.motorConfig = new SparkFlexConfig();
     this.sensorType = config.feedbackType;
 
     // --- Configure Follower Motor
@@ -68,15 +68,6 @@ public class MotorIOSparkFlex extends MotorBase {
 
     // --- Encoder Selection ---
     switch (config.feedbackType) {
-      case ALTERNATE -> {
-        motorConfig
-            .alternateEncoder
-            .countsPerRevolution(config.countsPerRevolution)
-            .positionConversionFactor(config.positionConversionFactor)
-            .velocityConversionFactor(config.velocityConversionFactor);
-        motorConfig.closedLoop.feedbackSensor(FeedbackSensor.kAlternateOrExternalEncoder);
-        externalEncoder = motor.getExternalEncoder();
-      }
       case ABSOLUTE_DATAPORT -> {
         motorConfig
             .absoluteEncoder
