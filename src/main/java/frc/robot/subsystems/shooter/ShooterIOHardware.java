@@ -36,9 +36,9 @@ public class ShooterIOHardware implements ShooterIO {
 
   @Override
   public void updateInputs(ShooterIOInputsAutoLogged inputs) {
-    inputs.leaderInputs = leader.getMotorIOInputs();
-    inputs.followerInputs = follower.getMotorIOInputs();
-    inputs.kickerInputs = kickerMotor.getMotorIOInputs();
+    leader.updateInputs(inputs.leaderInputs);
+    follower.updateInputs(inputs.followerInputs);
+    kickerMotor.updateInputs(inputs.kickerInputs);
   }
 
   @Override

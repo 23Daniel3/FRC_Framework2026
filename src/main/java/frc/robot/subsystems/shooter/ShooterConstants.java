@@ -41,7 +41,8 @@ public class ShooterConstants {
           .currentLimit(Amps.of(40))
           .coastMode()
           .nominalVoltage(Volts.of(10.0))
-          .svag(0, 0.17, 0.01727, 0, 0);
+          .svag(0, 0.17, 0.01727, 0, 0)
+          .withVelocityTolerance(RPM.of(300));
 
   public static final MotorConfig MOTOR_LEADER_CONFIG =
       new MotorConfig()

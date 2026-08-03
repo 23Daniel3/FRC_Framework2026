@@ -20,7 +20,7 @@ public class ConveyorIOHardware implements ConveyorIO {
 
   @Override
   public void updateInputs(ConveyorIOInputsAutoLogged inputs) {
-    inputs.motorInputs = motor.getMotorIOInputs();
+    motor.updateInputs(inputs.motorInputs);
   }
 
   @Override

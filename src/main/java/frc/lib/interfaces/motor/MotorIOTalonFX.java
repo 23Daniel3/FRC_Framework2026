@@ -167,47 +167,62 @@ public class MotorIOTalonFX extends MotorBase {
 
   @Override
   public void runVelocity(AngularVelocity velocity) {
+    this.currentMode = MotorControlMode.VELOCITY;
+    this.targetVelocity = velocity;
     motor.setControl(velocityRequest.withVelocity(velocity).withSlot(0));
   }
 
   @Override
   public void runPosition(Angle position) {
+    this.currentMode = MotorControlMode.POSITION;
+    this.targetPosition = position;
     motor.setControl(positionRequest.withPosition(position).withSlot(0));
   }
 
   @Override
   public void runSmartPosition(Angle position) {
+    this.currentMode = MotorControlMode.SMART_POSITION;
+    this.targetPosition = position;
     // Motion Magic nativo
     motor.setControl(motionMagicRequest.withPosition(position).withSlot(0));
   }
 
   @Override
   public void runVelocity(AngularVelocity velocity, int slot) {
+    this.currentMode = MotorControlMode.VELOCITY;
+    this.targetVelocity = velocity;
     motor.setControl(velocityRequest.withVelocity(velocity).withSlot(slot));
   }
 
   @Override
   public void runPosition(Angle position, int slot) {
+    this.currentMode = MotorControlMode.POSITION;
+    this.targetPosition = position;
     motor.setControl(positionRequest.withPosition(position).withSlot(slot));
   }
 
   @Override
   public void runSmartPosition(Angle position, int slot) {
+    this.currentMode = MotorControlMode.SMART_POSITION;
+    this.targetPosition = position;
     motor.setControl(motionMagicRequest.withPosition(position).withSlot(slot));
   }
 
   @Override
   public void runVoltage(Voltage volts) {
+    this.currentMode = MotorControlMode.IDLE;
     motor.setControl(voltageRequest.withOutput(volts.in(Volts)));
   }
 
   @Override
   public void runPercentOutput(double percent) {
+    this.currentMode = MotorControlMode.IDLE;
     motor.setControl(dutyCycleRequest.withOutput(percent));
   }
 
   @Override
   public void stop() {
+    this.currentMode = MotorControlMode.IDLE;
     motor.stopMotor();
   }
 
