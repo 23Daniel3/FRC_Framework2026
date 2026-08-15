@@ -1,13 +1,6 @@
-package frc.lib.interfaces.motor;
+package frc.lib.interfaces.motor.impl;
 
-import static edu.wpi.first.units.Units.Amps;
-import static edu.wpi.first.units.Units.Celsius;
-import static edu.wpi.first.units.Units.RPM;
-import static edu.wpi.first.units.Units.RadiansPerSecond;
-import static edu.wpi.first.units.Units.Rotations;
-import static edu.wpi.first.units.Units.RotationsPerSecond;
-import static edu.wpi.first.units.Units.RotationsPerSecondPerSecond;
-import static edu.wpi.first.units.Units.Volts;
+import static edu.wpi.first.units.Units.*;
 
 import com.revrobotics.AbsoluteEncoder;
 import com.revrobotics.PersistMode;
@@ -27,10 +20,13 @@ import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Current;
 import edu.wpi.first.units.measure.Voltage;
+import frc.lib.interfaces.motor.MotorControlMode;
+import frc.lib.interfaces.motor.MotorFaults;
 import frc.lib.interfaces.motor.advanced.MotorBase;
 import frc.lib.interfaces.motor.advanced.MotorConfig;
 import frc.lib.util.security.SparkUtil;
 
+/** Closed-loop IO for a REV SparkFlex (brushless: NEO Vortex, etc). */
 public class MotorIOSparkFlex extends MotorBase {
 
   private final SparkFlex motor;
@@ -38,15 +34,12 @@ public class MotorIOSparkFlex extends MotorBase {
   private final SparkFlexConfig motorConfig;
   private final MotorIOInputs inputs = new MotorIOInputs();
 
-  // Sensores
   private RelativeEncoder internalEncoder;
   private RelativeEncoder externalEncoder;
   private AbsoluteEncoder absoluteEncoder;
   private final MotorConfig.FeedbackSensorType sensorType;
 
   public MotorIOSparkFlex(String name, int id, MotorType type, MotorConfig config) {
-    // Initialize MotorBase (apply... methods called in super will return silently
-    // since motor == null at that point)
     super(name, config);
 
     this.motor = new SparkFlex(id, type);
@@ -54,12 +47,10 @@ public class MotorIOSparkFlex extends MotorBase {
     this.motorConfig = new SparkFlexConfig();
     this.sensorType = config.feedbackType;
 
-    // --- Configure Follower Motor
     if (config.leaderMotorID != 0) {
       motorConfig.follow(config.leaderMotorID, config.followerInverted);
     }
 
-    // --- Basic Configuration ---
     motorConfig
         .inverted(config.inverted)
         .smartCurrentLimit((int) config.currentLimit.in(Amps))
@@ -68,7 +59,6 @@ public class MotorIOSparkFlex extends MotorBase {
         .closedLoop
         .outputRange(config.minOutput, config.maxOutput);
 
-    // --- Encoder Selection ---
     switch (config.feedbackType) {
       case ABSOLUTE_DATAPORT -> {
         motorConfig
@@ -89,7 +79,6 @@ public class MotorIOSparkFlex extends MotorBase {
       }
     }
 
-    // --- Initial PID/SVAG/SmartMotion Injection (All Slots) ---
     for (int i = 0; i < 4; i++) {
       ClosedLoopSlot slot = resolveSlot(i);
       motorConfig
@@ -100,7 +89,6 @@ public class MotorIOSparkFlex extends MotorBase {
           .outputRange(config.minOutput, config.maxOutput, slot)
           .apply(new FeedForwardConfig().kV(config.kV[i], slot));
 
-      // MAXMotion Configuration
       if (config.maxMotionMaxVelocity[i].in(RadiansPerSecond) > 0) {
         double rpm = config.maxMotionMaxVelocity[i].in(RotationsPerSecond) * 60.0;
         double rpmPerSec =
@@ -114,7 +102,6 @@ public class MotorIOSparkFlex extends MotorBase {
       }
     }
 
-    // --- Soft Limits e Wrapping ---
     if (config.softLimitEnabled) {
       motorConfig
           .softLimit
@@ -132,29 +119,28 @@ public class MotorIOSparkFlex extends MotorBase {
               config.minPosition.in(Rotations), config.maxPosition.in(Rotations));
     }
 
-    // --- Final push of configuration to Hardware ---
     applyConfig(true);
 
     if (internalEncoder != null) internalEncoder.setPosition(0);
     if (externalEncoder != null) externalEncoder.setPosition(0);
   }
 
+  // --- Telemetry: written once, reused for both the Basic and Advanced input views ---
+
   @Override
-  protected void updateHardwareInputs(
-      frc.lib.interfaces.motor.basic.BasicMotorIO.BasicMotorIOInputs inputs) {
+  protected void updateHardwareInputs(BasicMotorIOInputs inputs) {
+    inputs.percentOutput = motor.getAppliedOutput();
     inputs.appliedVolts = Volts.of(motor.getAppliedOutput() * motor.getBusVoltage());
     inputs.current = Amps.of(motor.getOutputCurrent());
     inputs.temperature = Celsius.of(motor.getMotorTemperature());
     inputs.isConnected = !motor.hasActiveFault();
     inputs.activeFaults =
-        motor.hasActiveFault()
-            ? frc.lib.interfaces.motor.MotorFaults.getSparkFaults(motor)
-            : new String[] {};
+        motor.hasActiveFault() ? MotorFaults.getSparkFaults(motor) : new String[] {};
   }
 
   @Override
   protected void updateHardwareInputs(MotorIOInputs inputs) {
-    updateHardwareInputs((frc.lib.interfaces.motor.basic.BasicMotorIO.BasicMotorIOInputs) inputs);
+    updateHardwareInputs((BasicMotorIOInputs) inputs); // reuse common telemetry
 
     switch (sensorType) {
       case ALTERNATE -> {
@@ -184,23 +170,20 @@ public class MotorIOSparkFlex extends MotorBase {
     }
   }
 
-  // --- Controle de Movimento com Arbitrary FF Injetado ---
+  // --- Closed-loop motion, with Arbitrary FF injected by the hardware config ---
 
   @Override
   public void runVelocity(AngularVelocity velocity) {
     currentMode = MotorControlMode.VELOCITY;
     targetVelocity = velocity;
-
-    double velocityRPM = velocity.in(RPM);
-
-    closedLoopController.setSetpoint(velocityRPM, ControlType.kVelocity, ClosedLoopSlot.kSlot0);
+    closedLoopController.setSetpoint(
+        velocity.in(RPM), ControlType.kVelocity, ClosedLoopSlot.kSlot0);
   }
 
   @Override
   public void runPosition(Angle position) {
     currentMode = MotorControlMode.POSITION;
     targetPosition = position;
-
     closedLoopController.setSetpoint(
         position.in(Rotations), ControlType.kPosition, ClosedLoopSlot.kSlot0);
   }
@@ -209,7 +192,6 @@ public class MotorIOSparkFlex extends MotorBase {
   public void runSmartPosition(Angle position) {
     currentMode = MotorControlMode.SMART_POSITION;
     targetPosition = position;
-
     closedLoopController.setSetpoint(
         position.in(Rotations), ControlType.kMAXMotionPositionControl, ClosedLoopSlot.kSlot0);
   }
@@ -218,35 +200,26 @@ public class MotorIOSparkFlex extends MotorBase {
   public void runVelocity(AngularVelocity velocity, int slot) {
     currentMode = MotorControlMode.VELOCITY;
     targetVelocity = velocity;
-
-    ClosedLoopSlot resolvedSlot = resolveSlot(slot);
-    double velocityRPM = velocity.in(RPM);
-
-    closedLoopController.setSetpoint(velocityRPM, ControlType.kVelocity, resolvedSlot);
+    closedLoopController.setSetpoint(velocity.in(RPM), ControlType.kVelocity, resolveSlot(slot));
   }
 
   @Override
   public void runPosition(Angle position, int slot) {
     currentMode = MotorControlMode.POSITION;
     targetPosition = position;
-
-    ClosedLoopSlot resolvedSlot = resolveSlot(slot);
-
-    closedLoopController.setSetpoint(position.in(Rotations), ControlType.kPosition, resolvedSlot);
+    closedLoopController.setSetpoint(
+        position.in(Rotations), ControlType.kPosition, resolveSlot(slot));
   }
 
   @Override
   public void runSmartPosition(Angle position, int slot) {
     currentMode = MotorControlMode.SMART_POSITION;
     targetPosition = position;
-
-    ClosedLoopSlot resolvedSlot = resolveSlot(slot);
-
     closedLoopController.setSetpoint(
-        position.in(Rotations), ControlType.kMAXMotionPositionControl, resolvedSlot);
+        position.in(Rotations), ControlType.kMAXMotionPositionControl, resolveSlot(slot));
   }
 
-  // --- Low-Level Controls ---
+  // --- Low-level controls ---
 
   @Override
   public void runVoltage(Voltage volts) {
@@ -257,7 +230,7 @@ public class MotorIOSparkFlex extends MotorBase {
   @Override
   public void runPercentOutput(double percent) {
     currentMode = MotorControlMode.PERCENT;
-    motor.set(percent);
+    motor.set(clampOutput(percent));
   }
 
   @Override
@@ -272,11 +245,11 @@ public class MotorIOSparkFlex extends MotorBase {
     if (externalEncoder != null) externalEncoder.setPosition(offset.in(Rotations));
   }
 
-  // --- Hardware Update via Dashboard (Tuning) ---
+  // --- Hardware update via dashboard (tuning) ---
 
   @Override
   public void setBrakeMode(boolean enabled) {
-    if (motor == null) return; // Previne NullPointer no Super
+    if (motor == null) return;
     motorConfig.idleMode(enabled ? IdleMode.kBrake : IdleMode.kCoast);
     applyConfig(false);
   }
@@ -299,14 +272,12 @@ public class MotorIOSparkFlex extends MotorBase {
   public void applyHardwareSVAG(int slot, double s, double v, double a, double g) {
     if (motor == null) return;
     ClosedLoopSlot resolvedSlot = resolveSlot(slot);
-
     motorConfig.closedLoop.apply(
         new FeedForwardConfig()
             .kS(s, resolvedSlot)
             .kV(v, resolvedSlot)
             .kA(a, resolvedSlot)
             .kG(g, resolvedSlot));
-
     applyConfig(false);
   }
 
@@ -336,7 +307,7 @@ public class MotorIOSparkFlex extends MotorBase {
     return inputs;
   }
 
-  // --- Utilidades ---
+  // --- Utilities ---
 
   private void applyConfig(boolean isInit) {
     ResetMode resetMode =

@@ -16,6 +16,8 @@ import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.MotorAlignmentValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.units.measure.*;
+import frc.lib.interfaces.motor.advanced.MotorBase;
+import frc.lib.interfaces.motor.advanced.MotorConfig;
 
 /**
  * MotorIO implementation for CTRE TalonFX (Kraken/Falcon). Optimized to run all control physics
@@ -53,9 +55,7 @@ public class MotorIOTalonFX extends MotorBase {
             : InvertedValue.CounterClockwise_Positive;
 
     driveConfig.MotorOutput.NeutralMode =
-        (config.idleMode == com.revrobotics.spark.config.SparkBaseConfig.IdleMode.kBrake)
-            ? NeutralModeValue.Brake
-            : NeutralModeValue.Coast;
+        config.brakeMode ? NeutralModeValue.Brake : NeutralModeValue.Coast;
 
     // --- Current Limits ---
     driveConfig.CurrentLimits.StatorCurrentLimit = config.currentLimit.in(Amps);
@@ -146,21 +146,28 @@ public class MotorIOTalonFX extends MotorBase {
   }
 
   @Override
-  protected void updateHardwareInputs(MotorIOInputs inputs) {
-    BaseStatusSignal.refreshAll(posSignal, velSignal, voltSignal, currentSignal, temperatureSignal);
-
-    inputs.position = posSignal.getValue();
-    inputs.velocity = velSignal.getValue();
+  protected void updateHardwareInputs(
+      frc.lib.interfaces.motor.basic.BasicMotorIO.BasicMotorIOInputs inputs) {
+    BaseStatusSignal.refreshAll(voltSignal, currentSignal, temperatureSignal);
     inputs.appliedVolts = voltSignal.getValue();
     inputs.current = currentSignal.getValue();
     inputs.temperature = temperatureSignal.getValue();
-    inputs.isConnected = BaseStatusSignal.isAllGood(posSignal, velSignal);
+    inputs.isConnected = BaseStatusSignal.isAllGood(voltSignal);
 
     if (!inputs.isConnected) {
       inputs.activeFaults = frc.lib.interfaces.motor.MotorFaults.getTalonFaults(motor);
     } else {
       inputs.activeFaults = new String[] {};
     }
+  }
+
+  @Override
+  protected void updateHardwareInputs(MotorIOInputs inputs) {
+    updateHardwareInputs((frc.lib.interfaces.motor.basic.BasicMotorIO.BasicMotorIOInputs) inputs);
+    BaseStatusSignal.refreshAll(posSignal, velSignal);
+    inputs.position = posSignal.getValue();
+    inputs.velocity = velSignal.getValue();
+    inputs.isConnected = inputs.isConnected && BaseStatusSignal.isAllGood(posSignal, velSignal);
   }
 
   // --- Native Control Implementation ---

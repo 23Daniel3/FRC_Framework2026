@@ -5,7 +5,7 @@ import static edu.wpi.first.units.Units.RPM;
 import static edu.wpi.first.units.Units.Volts;
 
 import frc.lib.calculus.LinearInterpolation.Point;
-import frc.lib.interfaces.motor.MotorConfig;
+import frc.lib.interfaces.motor.advanced.MotorConfig;
 
 public class ShooterConstants {
 

@@ -27,6 +27,8 @@ import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Current;
 import edu.wpi.first.units.measure.Voltage;
+import frc.lib.interfaces.motor.advanced.MotorBase;
+import frc.lib.interfaces.motor.advanced.MotorConfig;
 import frc.lib.util.security.SparkUtil;
 
 public class MotorIOSparkMax extends MotorBase {
@@ -61,7 +63,7 @@ public class MotorIOSparkMax extends MotorBase {
     motorConfig
         .inverted(config.inverted)
         .smartCurrentLimit((int) config.currentLimit.in(Amps))
-        .idleMode(config.idleMode)
+        .idleMode(config.brakeMode ? IdleMode.kBrake : IdleMode.kCoast)
         .voltageCompensation(config.nominalVoltage.in(Volts))
         .closedLoop
         .outputRange(config.minOutput, config.maxOutput);
@@ -147,7 +149,22 @@ public class MotorIOSparkMax extends MotorBase {
   }
 
   @Override
+  protected void updateHardwareInputs(
+      frc.lib.interfaces.motor.basic.BasicMotorIO.BasicMotorIOInputs inputs) {
+    inputs.appliedVolts = Volts.of(motor.getAppliedOutput() * motor.getBusVoltage());
+    inputs.current = Amps.of(motor.getOutputCurrent());
+    inputs.temperature = Celsius.of(motor.getMotorTemperature());
+    inputs.isConnected = !motor.hasActiveFault();
+    inputs.activeFaults =
+        motor.hasActiveFault()
+            ? frc.lib.interfaces.motor.MotorFaults.getSparkFaults(motor)
+            : new String[] {};
+  }
+
+  @Override
   protected void updateHardwareInputs(MotorIOInputs inputs) {
+    updateHardwareInputs((frc.lib.interfaces.motor.basic.BasicMotorIO.BasicMotorIOInputs) inputs);
+
     switch (sensorType) {
       case ALTERNATE -> {
         if (externalEncoder != null) {
@@ -174,15 +191,6 @@ public class MotorIOSparkMax extends MotorBase {
         }
       }
     }
-
-    inputs.appliedVolts = Volts.of(motor.getAppliedOutput() * motor.getBusVoltage());
-    inputs.current = Amps.of(motor.getOutputCurrent());
-    inputs.temperature = Celsius.of(motor.getMotorTemperature());
-    inputs.isConnected = !motor.hasActiveFault();
-    inputs.activeFaults =
-        motor.hasActiveFault()
-            ? frc.lib.interfaces.motor.MotorFaults.getSparkFaults(motor)
-            : new String[] {};
   }
 
   // --- Controle de Movimento com Arbitrary FF Injetado ---

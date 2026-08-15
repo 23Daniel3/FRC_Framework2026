@@ -3,10 +3,10 @@ package frc.robot.subsystems.intake;
 import com.ctre.phoenix6.CANBus;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 import edu.wpi.first.wpilibj.DigitalInput;
-import frc.lib.interfaces.motor.MotorController;
-import frc.lib.interfaces.motor.MotorIO;
 import frc.lib.interfaces.motor.MotorIOSparkMax;
 import frc.lib.interfaces.motor.MotorIOTalonFX;
+import frc.lib.interfaces.motor.advanced.MotorController;
+import frc.lib.interfaces.motor.advanced.MotorIO;
 
 public class IntakeIOHardware implements IntakeIO {
 
