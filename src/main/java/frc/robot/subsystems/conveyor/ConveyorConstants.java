@@ -3,7 +3,7 @@ package frc.robot.subsystems.conveyor;
 import static edu.wpi.first.units.Units.Amps;
 import static edu.wpi.first.units.Units.Volts;
 
-import frc.lib.interfaces.motor.MotorConfig;
+import frc.lib.interfaces.motor.advanced.MotorConfig;
 
 public class ConveyorConstants {
   public static final int MOTOR_ID = 20;

@@ -1,22 +1,20 @@
-package frc.lib.interfaces.motor;
+package frc.lib.interfaces.motor.advanced;
 
 import static edu.wpi.first.units.Units.*;
 
-import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import edu.wpi.first.units.measure.*;
+import frc.lib.interfaces.motor.basic.BasicMotorConfig;
 import org.littletonrobotics.junction.Logger;
 
-public class MotorConfig {
-
-  public Current currentLimit = Amps.of(40);
-  public boolean inverted = false;
-  public IdleMode idleMode = IdleMode.kCoast;
-  public Voltage nominalVoltage = Volts.of(12.0);
-  public double minOutput = -1.0;
-  public double maxOutput = 1.0;
-
-  public int leaderMotorID = 0;
-  public boolean followerInverted = false;
+/**
+ * Configuration for closed-loop-capable motors (SparkFlex, TalonFX, ...). Extends {@link
+ * BasicMotorConfig} with encoder settings, soft limits, and PID/FF/MAXMotion gains across up to 4
+ * slots.
+ *
+ * <p>The basic fluent setters are re-declared here with a covariant return type so calls chain
+ * naturally regardless of order, e.g. {@code new MotorConfig().brakeMode().pid(0, 1, 0, 0)}.
+ */
+public class MotorConfig extends BasicMotorConfig {
 
   public double positionConversionFactor = 1.0;
   public double velocityConversionFactor = 1.0;
@@ -59,36 +57,80 @@ public class MotorConfig {
     }
   }
 
+  public static MotorConfig fromBasic(BasicMotorConfig basic) {
+    if (basic instanceof MotorConfig) {
+      return (MotorConfig) basic;
+    }
+    MotorConfig config = new MotorConfig();
+    config.currentLimit = basic.currentLimit;
+    config.inverted = basic.inverted;
+    config.brakeMode = basic.brakeMode;
+    config.nominalVoltage = basic.nominalVoltage;
+    config.minOutput = basic.minOutput;
+    config.maxOutput = basic.maxOutput;
+    config.openLoopRampSeconds = basic.openLoopRampSeconds;
+    config.leaderMotorID = basic.leaderMotorID;
+    config.followerInverted = basic.followerInverted;
+    return config;
+  }
+
+  // --- Covariant re-declarations of the basic fluent setters (keeps chaining working) ---
+
+  @Override
   public MotorConfig currentLimit(Current amps) {
-    this.currentLimit = amps;
+    super.currentLimit(amps);
     return this;
   }
 
+  @Override
   public MotorConfig inverted(boolean set) {
-    this.inverted = set;
+    super.inverted(set);
     return this;
   }
 
+  @Override
   public MotorConfig brakeMode() {
-    this.idleMode = IdleMode.kBrake;
+    super.brakeMode();
     return this;
   }
 
+  @Override
   public MotorConfig coastMode() {
-    this.idleMode = IdleMode.kCoast;
+    super.coastMode();
     return this;
   }
 
+  @Override
   public MotorConfig outputRange(double min, double max) {
-    this.minOutput = min;
-    this.maxOutput = max;
+    super.outputRange(min, max);
     return this;
   }
 
+  @Override
   public MotorConfig nominalVoltage(Voltage v) {
-    this.nominalVoltage = v;
+    super.nominalVoltage(v);
     return this;
   }
+
+  @Override
+  public MotorConfig openLoopRamp(double seconds) {
+    super.openLoopRamp(seconds);
+    return this;
+  }
+
+  @Override
+  public MotorConfig withMotorLeader(int leaderID) {
+    super.withMotorLeader(leaderID);
+    return this;
+  }
+
+  @Override
+  public MotorConfig withFollowerInverted(boolean inverted) {
+    super.withFollowerInverted(inverted);
+    return this;
+  }
+
+  // --- Advanced-only fluent setters ---
 
   public MotorConfig softLimits(Angle min, Angle max) {
     this.softLimitEnabled = true;
@@ -137,16 +179,6 @@ public class MotorConfig {
     return this;
   }
 
-  public MotorConfig withMotorLeader(int leaderID) {
-    this.leaderMotorID = leaderID;
-    return this;
-  }
-
-  public MotorConfig withFollowerInverted(boolean inverted) {
-    this.followerInverted = inverted;
-    return this;
-  }
-
   public MotorConfig withPositionTolerance(Angle position) {
     this.positionTolerance = position;
     return this;
@@ -157,13 +189,10 @@ public class MotorConfig {
     return this;
   }
 
+  @Override
   public void toLog(String path) {
-    Logger.recordOutput(path + "/currentLimitAmps", currentLimit.in(Amps));
-    Logger.recordOutput(path + "/inverted", inverted);
-    Logger.recordOutput(path + "/idleMode", idleMode.toString());
-    Logger.recordOutput(path + "/nominalVoltage", nominalVoltage.in(Volts));
-    Logger.recordOutput(path + "/outputRange/min", minOutput);
-    Logger.recordOutput(path + "/outputRange/max", maxOutput);
+    super.toLog(path);
+
     Logger.recordOutput(path + "/positionConversionFactor", positionConversionFactor);
     Logger.recordOutput(path + "/velocityConversionFactor", velocityConversionFactor);
     Logger.recordOutput(path + "/positionToleranceRot", positionTolerance.in(Rotations));
@@ -178,11 +207,6 @@ public class MotorConfig {
     Logger.recordOutput(path + "/positionWrap", positionWrap);
     Logger.recordOutput(path + "/feedbackType", feedbackType.toString());
     Logger.recordOutput(path + "/countsPerRevolution", countsPerRevolution);
-
-    if (leaderMotorID != 0) {
-      Logger.recordOutput(path + "/follower/leaderID", leaderMotorID);
-      Logger.recordOutput(path + "/follower/inverted", followerInverted);
-    }
 
     for (int i = 0; i < 4; i++) {
       boolean hasGains =

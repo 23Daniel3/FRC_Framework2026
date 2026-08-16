@@ -8,6 +8,10 @@ import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.system.plant.LinearSystemId;
 import edu.wpi.first.units.measure.*;
 import edu.wpi.first.wpilibj.simulation.DCMotorSim;
+import frc.lib.interfaces.motor.advanced.MotorBase;
+import frc.lib.interfaces.motor.advanced.MotorConfig;
+import frc.lib.interfaces.motor.advanced.MotorController;
+import frc.lib.interfaces.motor.basic.BasicMotorConfig;
 
 public class MotorIOSim extends MotorBase {
   // Physical simulation
@@ -30,6 +34,11 @@ public class MotorIOSim extends MotorBase {
    * @param jInertia Moment of inertia in kg*m^2 (e.g., 0.005 for a light intake)
    */
   public MotorIOSim(
+      String name, BasicMotorConfig config, DCMotor motor, double gearing, double jInertia) {
+    this(name, MotorConfig.fromBasic(config), motor, gearing, jInertia);
+  }
+
+  public MotorIOSim(
       String name, MotorConfig config, DCMotor motor, double gearing, double jInertia) {
     super(name, config);
 
@@ -45,18 +54,21 @@ public class MotorIOSim extends MotorBase {
   }
 
   @Override
-  protected void updateHardwareInputs(MotorIOInputs inputs) {
-    // Update the simulation (standard 20ms cycle)
+  protected void updateHardwareInputs(
+      frc.lib.interfaces.motor.basic.BasicMotorIO.BasicMotorIOInputs inputs) {
     sim.update(0.020);
-
-    // Populate inputs with simulation data
-    inputs.position = Rotations.of(sim.getAngularPositionRotations());
-    inputs.velocity = RadiansPerSecond.of(sim.getAngularVelocityRadPerSec());
     inputs.appliedVolts = Volts.of(appliedVolts);
     inputs.current = Amps.of(sim.getCurrentDrawAmps());
-    inputs.temperature = Celsius.of(40.0); // Static temperature simulation
+    inputs.temperature = Celsius.of(40.0);
     inputs.isConnected = true;
     inputs.activeFaults = new String[] {};
+  }
+
+  @Override
+  protected void updateHardwareInputs(MotorIOInputs inputs) {
+    updateHardwareInputs((frc.lib.interfaces.motor.basic.BasicMotorIO.BasicMotorIOInputs) inputs);
+    inputs.position = Rotations.of(sim.getAngularPositionRotations());
+    inputs.velocity = RadiansPerSecond.of(sim.getAngularVelocityRadPerSec());
 
     // Simple "atSetpoint" logic to avoid FSM stalls
     if (currentMode == MotorControlMode.POSITION

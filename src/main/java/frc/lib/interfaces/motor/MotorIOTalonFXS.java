@@ -9,9 +9,9 @@ import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.Slot1Configs;
 import com.ctre.phoenix6.configs.Slot2Configs;
-import com.ctre.phoenix6.configs.TalonFXConfiguration;
+import com.ctre.phoenix6.configs.TalonFXSConfiguration;
 import com.ctre.phoenix6.controls.*;
-import com.ctre.phoenix6.hardware.TalonFX;
+import com.ctre.phoenix6.hardware.TalonFXS;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.MotorAlignmentValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
@@ -24,10 +24,10 @@ import frc.lib.interfaces.motor.basic.BasicMotorConfig;
  * MotorIO implementation for CTRE TalonFX (Kraken/Falcon). Optimized to run all control physics
  * (SVAG + PID + Motion Magic) natively on hardware.
  */
-public class MotorIOTalonFX extends MotorBase {
+public class MotorIOTalonFXS extends MotorBase {
 
-  private final TalonFX motor;
-  private final TalonFXConfiguration driveConfig = new TalonFXConfiguration();
+  private final TalonFXS motor;
+  private final TalonFXSConfiguration driveConfig = new TalonFXSConfiguration();
   private final MotorIOInputs inputs = new MotorIOInputs();
 
   // Control Requests (reused to avoid memory allocation in the loop)
@@ -44,14 +44,14 @@ public class MotorIOTalonFX extends MotorBase {
   private final StatusSignal<Current> currentSignal;
   private final StatusSignal<Temperature> temperatureSignal;
 
-  public MotorIOTalonFX(String name, int id, CANBus canBus, BasicMotorConfig config) {
+  public MotorIOTalonFXS(String name, int id, CANBus canBus, BasicMotorConfig config) {
     this(name, id, canBus, MotorConfig.fromBasic(config));
   }
 
-  public MotorIOTalonFX(String name, int id, CANBus canBus, MotorConfig config) {
+  public MotorIOTalonFXS(String name, int id, CANBus canBus, MotorConfig config) {
     super(name, config);
 
-    this.motor = new TalonFX(id, canBus);
+    this.motor = new TalonFXS(id, canBus);
 
     // --- Output and Neutral Configuration ---
     driveConfig.MotorOutput.Inverted =
@@ -88,10 +88,9 @@ public class MotorIOTalonFX extends MotorBase {
     driveConfig.Voltage.PeakForwardVoltage = config.maxOutput * config.nominalVoltage.in(Volts);
     driveConfig.Voltage.PeakReverseVoltage = config.minOutput * config.nominalVoltage.in(Volts);
 
-    // --- Gear Ratio (Sensor to Mechanism) ---
-    // In Phoenix 6, the reduction is set here and it automatically scales Position and Velocity.
-    driveConfig.Feedback.SensorToMechanismRatio =
-        (config.positionConversionFactor != 0.0) ? 1.0 / config.positionConversionFactor : 1.0;
+    // Talon FXS typically relies on external sensors configured differently, or no internal rotor
+    // sensor.
+    // driveConfig.Feedback.SensorToMechanismRatio is not applicable in the same way as TalonFX.
 
     // --- Control Slots (0 to 3) ---
     // Apply full native PID and SVAG for each slot defined in MotorConfig
@@ -160,7 +159,7 @@ public class MotorIOTalonFX extends MotorBase {
     inputs.isConnected = BaseStatusSignal.isAllGood(voltSignal);
 
     if (!inputs.isConnected) {
-      inputs.activeFaults = frc.lib.interfaces.motor.MotorFaults.getTalonFaults(motor);
+      inputs.activeFaults = frc.lib.interfaces.motor.MotorFaults.getTalonFXSFaults(motor);
     } else {
       inputs.activeFaults = new String[] {};
     }
@@ -375,7 +374,7 @@ public class MotorIOTalonFX extends MotorBase {
         motor.getConfigurator().apply(s2);
         break;
       }
-      default -> System.err.println("[MotorIOTalonFX] Slot " + slot + " not supported.");
+      default -> System.err.println("[MotorIOTalonFXS] Slot " + slot + " not supported.");
     }
   }
 }

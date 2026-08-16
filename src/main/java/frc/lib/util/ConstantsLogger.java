@@ -6,7 +6,7 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.geometry.Translation3d;
 import frc.lib.calculus.ThrottleMap;
-import frc.lib.interfaces.motor.MotorConfig;
+import frc.lib.interfaces.motor.advanced.MotorConfig;
 import frc.lib.zones.LogPolygon2d;
 import frc.lib.zones.Polygon2d;
 import java.lang.reflect.Field;

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="frc.robot.processors.CommandFactoryProcessorTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-08-03T17:50:40" hostname="DESKTOP-AH07VT3" time="2.634">
+<testsuite name="frc.robot.processors.CommandFactoryProcessorTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-08-15T23:54:00" hostname="DANIELCIPRIANI" time="0.884">
   <properties/>
-  <testcase name="generatesFactoryCorrectly" classname="frc.robot.processors.CommandFactoryProcessorTest" time="2.634"/>
+  <testcase name="generatesFactoryCorrectly" classname="frc.robot.processors.CommandFactoryProcessorTest" time="0.884"/>
   <system-out><![CDATA[]]></system-out>
   <system-err><![CDATA[]]></system-err>
 </testsuite>

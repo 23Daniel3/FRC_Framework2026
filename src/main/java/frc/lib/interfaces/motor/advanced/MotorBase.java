@@ -1,98 +1,73 @@
-package frc.lib.interfaces.motor;
+package frc.lib.interfaces.motor.advanced;
 
 import static edu.wpi.first.units.Units.*;
 
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
-import edu.wpi.first.units.measure.Current;
-import edu.wpi.first.units.measure.Voltage;
+import frc.lib.interfaces.motor.basic.BasicMotorBase;
+import frc.lib.interfaces.motor.basic.BasicMotorConfig;
 import frc.lib.logger.LoggedTunableNumber;
-import frc.robot.Constants;
 
-public abstract class MotorBase implements MotorIO {
-  protected final String name;
-
-  protected MotorControlMode currentMode = MotorControlMode.IDLE;
+/**
+ * Base for closed-loop-capable motor IOs. Extends {@link BasicMotorBase}, reusing the control mode
+ * tracking, the tunable/clamped output range, and the {@code BasicControllerImpl} facade — only
+ * PID/FF/MAXMotion tunables and the position/velocity control methods are added here.
+ */
+public abstract class MotorBase extends BasicMotorBase implements MotorIO {
 
   protected Angle targetPosition = Rotations.of(0.0);
   protected AngularVelocity targetVelocity = RPM.of(0.0);
   protected final double positionTolerance;
   protected final double velocityTolerance;
 
-  private final boolean tuningMode = Constants.tuningMode;
   private final TunablePID[] pidSlots = new TunablePID[4];
   private final TunableSVAG[] svagSlots = new TunableSVAG[4];
   private final TunableSmart[] smartSlots = new TunableSmart[4];
-  private final TunableLimits limits;
 
-  private final MotorController controller =
-      new MotorController() {
+  /** Extends the basic controller facade instead of rebuilding it — pure reuse. */
+  protected class MotorControllerImpl extends BasicControllerImpl implements MotorController {
 
-        @Override
-        public void setBrakeMode(boolean enabled) {
-          MotorBase.this.setBrakeMode(enabled);
-        }
+    @Override
+    public void setOffset(Angle offset) {
+      MotorBase.this.setOffset(offset);
+    }
 
-        @Override
-        public void setOffset(Angle offset) {
-          MotorBase.this.setOffset(offset);
-        }
+    @Override
+    public void runVelocity(AngularVelocity velocity) {
+      MotorBase.this.runVelocity(velocity);
+    }
 
-        @Override
-        public void runVoltage(Voltage volts) {
-          MotorBase.this.runVoltage(volts);
-        }
+    @Override
+    public void runPosition(Angle position) {
+      MotorBase.this.runPosition(position);
+    }
 
-        @Override
-        public void runPercentOutput(double percent) {
-          MotorBase.this.runPercentOutput(percent);
-        }
+    @Override
+    public void runSmartPosition(Angle position) {
+      MotorBase.this.runSmartPosition(position);
+    }
 
-        @Override
-        public void runVelocity(AngularVelocity velocity) {
-          MotorBase.this.runVelocity(velocity);
-        }
+    @Override
+    public void runVelocity(AngularVelocity velocity, int slot) {
+      MotorBase.this.runVelocity(velocity, slot);
+    }
 
-        @Override
-        public void runPosition(Angle position) {
-          MotorBase.this.runPosition(position);
-        }
+    @Override
+    public void runPosition(Angle position, int slot) {
+      MotorBase.this.runPosition(position, slot);
+    }
 
-        @Override
-        public void runSmartPosition(Angle position) {
-          MotorBase.this.runSmartPosition(position);
-        }
+    @Override
+    public void runSmartPosition(Angle position, int slot) {
+      MotorBase.this.runSmartPosition(position, slot);
+    }
+  }
 
-        @Override
-        public void runVelocity(AngularVelocity velocity, int slot) {
-          MotorBase.this.runVelocity(velocity, slot);
-        }
-
-        @Override
-        public void runPosition(Angle position, int slot) {
-          MotorBase.this.runPosition(position, slot);
-        }
-
-        @Override
-        public void runSmartPosition(Angle position, int slot) {
-          MotorBase.this.runSmartPosition(position, slot);
-        }
-
-        @Override
-        public void stop() {
-          MotorBase.this.stop();
-        }
-
-        @Override
-        public void setCurrentLimit(Current current) {
-          MotorBase.this.setCurrentLimit(current);
-        }
-      };
+  private final MotorController controller = new MotorControllerImpl();
 
   public MotorBase(String name, MotorConfig config) {
-    this.name = name;
+    super(name, config);
 
-    this.limits = new TunableLimits(name, config.minOutput, config.maxOutput);
     this.positionTolerance = config.positionTolerance.in(Rotations);
     this.velocityTolerance = config.velocityTolerance.in(RPM);
 
@@ -110,10 +85,14 @@ public abstract class MotorBase implements MotorIO {
     }
   }
 
+  public MotorBase(String name, BasicMotorConfig config) {
+    this(name, MotorConfig.fromBasic(config));
+  }
+
   @Override
   public void updateInputs(MotorIOInputs inputs) {
+    checkOutputRangeTuning(); // reused from BasicMotorBase
     if (tuningMode) {
-      limits.check();
       for (int i = 0; i < 4; i++) {
         pidSlots[i].check();
         svagSlots[i].check();
@@ -122,6 +101,22 @@ public abstract class MotorBase implements MotorIO {
     }
     updateHardwareInputs(inputs);
     inputs.atSetpoint = calculateAtSetpoint(inputs);
+  }
+
+  // Note: updateHardwareInputs(BasicMotorIOInputs) is still abstract, inherited from
+  // BasicMotorBase. Concrete subclasses (e.g. MotorIOSparkFlex) implement it with the common
+  // telemetry read, AND implement the overload below, which should call the common one via a
+  // cast to reuse it — this keeps a caller holding only a BasicMotorIO reference getting valid
+  // telemetry too, since both overloads read the exact same hardware fields.
+  protected abstract void updateHardwareInputs(MotorIOInputs inputs);
+
+  /** Fans the single tunable output range out to every closed-loop slot on the hardware. */
+  @Override
+  protected void applyHardwareOutputRange(double min, double max) {
+    super.applyHardwareOutputRange(min, max); // keeps the software clamp (clampOutput) in sync
+    for (int i = 0; i < 4; i++) {
+      applyHardwareOutputRange(i, min, max);
+    }
   }
 
   private class TunablePID {
@@ -182,25 +177,6 @@ public abstract class MotorBase implements MotorIO {
     }
   }
 
-  private class TunableLimits {
-    private final LoggedTunableNumber min, max;
-
-    TunableLimits(String n, double vmin, double vmax) {
-      this.min = new LoggedTunableNumber(n + "/Config/MinOutput", vmin);
-      this.max = new LoggedTunableNumber(n + "/Config/MaxOutput", vmax);
-    }
-
-    void check() {
-      if (min.hasChanged(hashCode()) || max.hasChanged(hashCode())) {
-        for (int i = 0; i < 4; i++) {
-          applyHardwareOutputRange(i, min.get(), max.get());
-        }
-      }
-    }
-  }
-
-  protected abstract void updateHardwareInputs(MotorIOInputs inputs);
-
   @Override
   public MotorController getMotorController() {
     return controller;
@@ -211,23 +187,19 @@ public abstract class MotorBase implements MotorIO {
       case POSITION:
         {
           double error = Math.abs(inputs.position.in(Rotations) - targetPosition.in(Rotations));
-
           return error < positionTolerance;
         }
       case SMART_POSITION:
         {
           double error = Math.abs(inputs.position.in(Rotations) - targetPosition.in(Rotations));
           double velocity = Math.abs(inputs.velocity.in(RPM));
-
           return error < positionTolerance && velocity < velocityTolerance;
         }
-
       case VELOCITY:
         {
           double error = Math.abs(inputs.velocity.in(RPM) - targetVelocity.in(RPM));
           return error < velocityTolerance;
         }
-
       default:
         return false;
     }

@@ -1,12 +1,11 @@
 package frc.robot.subsystems.intake;
 
 import com.ctre.phoenix6.CANBus;
-import com.revrobotics.spark.SparkLowLevel.MotorType;
 import edu.wpi.first.wpilibj.DigitalInput;
-import frc.lib.interfaces.motor.MotorController;
-import frc.lib.interfaces.motor.MotorIO;
 import frc.lib.interfaces.motor.MotorIOSparkMax;
 import frc.lib.interfaces.motor.MotorIOTalonFX;
+import frc.lib.interfaces.motor.advanced.MotorController;
+import frc.lib.interfaces.motor.advanced.MotorIO;
 
 public class IntakeIOHardware implements IntakeIO {
 
@@ -24,10 +23,7 @@ public class IntakeIOHardware implements IntakeIO {
 
     intakeMotor =
         new MotorIOSparkMax(
-            "Intake/Intake",
-            IntakeConstants.INTAKE_MOTOR_ID,
-            MotorType.kBrushless,
-            IntakeConstants.CONFIG_INTAKE_MOTOR);
+            "Intake/Intake", IntakeConstants.INTAKE_MOTOR_ID, IntakeConstants.CONFIG_INTAKE_MOTOR);
   }
 
   @Override

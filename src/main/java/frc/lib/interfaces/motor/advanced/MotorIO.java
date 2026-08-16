@@ -1,57 +1,46 @@
-package frc.lib.interfaces.motor;
+package frc.lib.interfaces.motor.advanced;
 
-import static edu.wpi.first.units.Units.*;
+import static edu.wpi.first.units.Units.RadiansPerSecond;
+import static edu.wpi.first.units.Units.Rotations;
 
-import edu.wpi.first.units.measure.*;
+import edu.wpi.first.units.measure.Angle;
+import edu.wpi.first.units.measure.AngularVelocity;
+import frc.lib.interfaces.motor.basic.BasicMotorIO;
 import org.littletonrobotics.junction.LogTable;
-import org.littletonrobotics.junction.inputs.LoggableInputs;
 
-public interface MotorIO {
+/**
+ * Full IO for motors with closed-loop control (SparkFlex, TalonFX, ...). Extends {@link
+ * BasicMotorIO}: a concrete implementation like {@code MotorIOSparkFlex} can be handed to code that
+ * only asks for a {@link BasicMotorIO} — that code will only see percent/voltage control — or to
+ * code that asks for the full {@link MotorIO} — same object, two views, one implementation.
+ */
+public interface MotorIO extends BasicMotorIO {
 
-  public static class MotorIOInputs implements LoggableInputs {
+  class MotorIOInputs extends BasicMotorIOInputs {
     public Angle position = Rotations.of(0.0);
     public AngularVelocity velocity = RadiansPerSecond.of(0.0);
-    public Voltage appliedVolts = Volts.of(0.0);
-    public Current current = Amps.of(0.0);
-    public Temperature temperature = Celsius.of(0.0);
-    public boolean isConnected = false;
     public boolean atSetpoint = false;
-    public String[] activeFaults = new String[] {};
 
     @Override
     public void toLog(LogTable table) {
+      super.toLog(table);
       table.put("Position", position);
       table.put("Velocity", velocity);
-      table.put("AppliedVolts", appliedVolts);
-      table.put("Current", current);
-      table.put("Temperature", temperature);
-      table.put("IsConnected", isConnected);
       table.put("AtSetpoint", atSetpoint);
-      table.put("ActiveFaults", activeFaults);
     }
 
     @Override
     public void fromLog(LogTable table) {
+      super.fromLog(table);
       position = table.get("Position", position);
       velocity = table.get("Velocity", velocity);
-      appliedVolts = table.get("AppliedVolts", appliedVolts);
-      current = table.get("Current", current);
-      temperature = table.get("Temperature", temperature);
-      isConnected = table.get("IsConnected", isConnected);
       atSetpoint = table.get("AtSetpoint", atSetpoint);
-      activeFaults = table.get("ActiveFaults", activeFaults);
     }
   }
 
   void updateInputs(MotorIOInputs inputs);
 
-  void setBrakeMode(boolean enabled);
-
   void setOffset(Angle offset);
-
-  void runVoltage(Voltage volts);
-
-  void runPercentOutput(double percent);
 
   void runVelocity(AngularVelocity velocity);
 
@@ -65,8 +54,6 @@ public interface MotorIO {
 
   void runSmartPosition(Angle position, int slot);
 
-  void stop();
-
   void applyHardwarePID(int slot, double p, double i, double d);
 
   void applyHardwareSVAG(int slot, double s, double v, double a, double g);
@@ -75,9 +62,9 @@ public interface MotorIO {
 
   void applyHardwareOutputRange(int slot, double min, double max);
 
-  void setCurrentLimit(Current current);
-
+  @Override
   MotorIOInputs getMotorIOInputs();
 
+  @Override
   MotorController getMotorController();
 }
