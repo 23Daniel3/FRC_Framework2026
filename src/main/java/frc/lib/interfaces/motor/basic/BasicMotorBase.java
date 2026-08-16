@@ -1,6 +1,5 @@
 package frc.lib.interfaces.motor.basic;
 
-import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.units.measure.Current;
 import edu.wpi.first.units.measure.Voltage;
 import frc.lib.interfaces.motor.MotorControlMode;
@@ -25,8 +24,8 @@ public abstract class BasicMotorBase implements BasicMotorIO {
   protected MotorControlMode currentMode = MotorControlMode.IDLE;
   protected final boolean tuningMode = Constants.tuningMode;
 
-  private double minOutput;
-  private double maxOutput;
+  protected double minOutput;
+  protected double maxOutput;
   private final TunableLimits limits;
 
   /**
@@ -78,11 +77,34 @@ public abstract class BasicMotorBase implements BasicMotorIO {
   }
 
   /**
-   * Clamps a requested percent-output to the configured (and live-tunable) output range. All {@code
-   * runPercentOutput} implementations should route through this before touching hardware.
+   * Maps a requested percent-output [-1.0, 1.0] to the configured (and live-tunable) output range.
+   * This is a proportional mapping (scaling), allowing the user to utilize the full [-1.0, 1.0]
+   * input range (e.g. from a joystick) without hitting a hard flat ceiling.
+   *
+   * <p>All {@code runPercentOutput} implementations should route through this before touching
+   * hardware.
    */
-  protected double clampOutput(double percent) {
-    return MathUtil.clamp(percent, minOutput, maxOutput);
+  protected double mapOutput(double percent) {
+    if (percent > 0) {
+      return percent * maxOutput;
+    } else {
+      // minOutput is typically negative
+      return percent * Math.abs(minOutput);
+    }
+  }
+
+  /**
+   * Maps a requested voltage to the configured output range. This uses the same proportional
+   * scaling as percent output, so that if maxOutput is 0.5, a request for 12V will output 6V.
+   *
+   * <p>All {@code runVoltage} implementations should route through this before touching hardware.
+   */
+  protected double mapVoltage(double volts) {
+    if (volts > 0) {
+      return volts * maxOutput;
+    } else {
+      return volts * Math.abs(minOutput);
+    }
   }
 
   /** Re-checks the tunable output-range dashboard entries, applying them if changed. */

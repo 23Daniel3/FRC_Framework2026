@@ -274,13 +274,13 @@ public class MotorIOSparkMax extends MotorBase {
   @Override
   public void runVoltage(Voltage volts) {
     currentMode = MotorControlMode.VOLTAGE;
-    motor.setVoltage(volts.in(Volts));
+    motor.setVoltage(mapVoltage(volts.in(Volts)));
   }
 
   @Override
   public void runPercentOutput(double percent) {
     currentMode = MotorControlMode.PERCENT;
-    motor.set(percent);
+    motor.set(mapOutput(percent));
   }
 
   @Override

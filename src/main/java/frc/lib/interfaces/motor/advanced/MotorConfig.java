@@ -46,6 +46,15 @@ public class MotorConfig extends BasicMotorConfig {
     ABSOLUTE_DATAPORT
   }
 
+  public Current currentWarningThreshold = Amps.of(0);
+  public int currentAverageSamples = 25; // 0.5s at 50Hz
+
+  public boolean stallReversalEnabled = false;
+  public Current stallCurrentThreshold = Amps.of(40);
+  public double stallTimeSeconds = 0.5;
+  public double reversalTimeSeconds = 0.5;
+  public double reversalPercentOutput = 0.2;
+
   public FeedbackSensorType feedbackType = FeedbackSensorType.INTERNAL;
   public int countsPerRevolution = 8192;
 
@@ -189,6 +198,22 @@ public class MotorConfig extends BasicMotorConfig {
     return this;
   }
 
+  public MotorConfig withCurrentWarning(Current threshold, int samples) {
+    this.currentWarningThreshold = threshold;
+    this.currentAverageSamples = samples;
+    return this;
+  }
+
+  public MotorConfig withStallReversal(
+      Current stallCurrent, double stallTime, double reverseTime, double reverseOutput) {
+    this.stallReversalEnabled = true;
+    this.stallCurrentThreshold = stallCurrent;
+    this.stallTimeSeconds = stallTime;
+    this.reversalTimeSeconds = reverseTime;
+    this.reversalPercentOutput = reverseOutput;
+    return this;
+  }
+
   @Override
   public void toLog(String path) {
     super.toLog(path);
@@ -207,6 +232,19 @@ public class MotorConfig extends BasicMotorConfig {
     Logger.recordOutput(path + "/positionWrap", positionWrap);
     Logger.recordOutput(path + "/feedbackType", feedbackType.toString());
     Logger.recordOutput(path + "/countsPerRevolution", countsPerRevolution);
+
+    if (currentWarningThreshold.in(Amps) > 0) {
+      Logger.recordOutput(path + "/currentWarningThresholdAmps", currentWarningThreshold.in(Amps));
+    }
+
+    Logger.recordOutput(path + "/stallReversalEnabled", stallReversalEnabled);
+    if (stallReversalEnabled) {
+      Logger.recordOutput(
+          path + "/stallReversal/stallThresholdAmps", stallCurrentThreshold.in(Amps));
+      Logger.recordOutput(path + "/stallReversal/stallTimeSec", stallTimeSeconds);
+      Logger.recordOutput(path + "/stallReversal/reverseTimeSec", reversalTimeSeconds);
+      Logger.recordOutput(path + "/stallReversal/reverseOutput", reversalPercentOutput);
+    }
 
     for (int i = 0; i < 4; i++) {
       boolean hasGains =
