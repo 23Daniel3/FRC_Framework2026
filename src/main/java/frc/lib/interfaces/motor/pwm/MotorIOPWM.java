@@ -1,4 +1,4 @@
-package frc.lib.interfaces.motor.impl.pwm;
+package frc.lib.interfaces.motor.pwm;
 
 import static edu.wpi.first.units.Units.Volts;
 

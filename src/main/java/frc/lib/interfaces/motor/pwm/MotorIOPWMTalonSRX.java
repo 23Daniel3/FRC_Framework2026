@@ -1,4 +1,4 @@
-package frc.lib.interfaces.motor.impl.pwm;
+package frc.lib.interfaces.motor.pwm;
 
 import edu.wpi.first.wpilibj.motorcontrol.PWMTalonSRX;
 import frc.lib.interfaces.motor.basic.BasicMotorConfig;
