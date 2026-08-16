@@ -1,6 +1,8 @@
 package frc.lib.interfaces.motor;
 
+import com.ctre.phoenix.motorcontrol.Faults;
 import com.ctre.phoenix6.hardware.TalonFX;
+import com.ctre.phoenix6.hardware.TalonFXS;
 import com.revrobotics.REVLibError;
 import com.revrobotics.spark.SparkBase;
 import java.util.ArrayList;
@@ -110,5 +112,77 @@ public class MotorFaults {
     }
 
     return faults.toArray(new String[0]);
+  }
+
+  /**
+   * Retrieves active faults from a CTRE TalonFXS motor controller (Phoenix 6).
+   *
+   * <p>Note: Ensure status signals are refreshed before calling this.
+   *
+   * @param motor The TalonFXS instance to check.
+   * @return An array of strings describing the active faults.
+   */
+  public static String[] getTalonFXSFaults(TalonFXS motor) {
+    List<String> faults = new ArrayList<>();
+
+    if (Boolean.TRUE.equals(motor.getFault_Hardware().getValue())) faults.add("Hardware Failure");
+    if (Boolean.TRUE.equals(motor.getFault_BootDuringEnable().getValue()))
+      faults.add("Boot During Enable");
+
+    if (Boolean.TRUE.equals(motor.getFault_Undervoltage().getValue()))
+      faults.add("Under Voltage (< 4.5V)");
+    if (Boolean.TRUE.equals(motor.getFault_OverSupplyV().getValue()))
+      faults.add("Over Supply Voltage");
+    if (Boolean.TRUE.equals(motor.getFault_UnstableSupplyV().getValue()))
+      faults.add("Unstable Supply V");
+    if (Boolean.TRUE.equals(motor.getFault_BridgeBrownout().getValue()))
+      faults.add("Bridge Brownout");
+
+    if (Boolean.TRUE.equals(motor.getFault_ProcTemp().getValue()))
+      faults.add("Processor Over Temp");
+    if (Boolean.TRUE.equals(motor.getFault_DeviceTemp().getValue())) faults.add("Device Over Temp");
+
+    if (Boolean.TRUE.equals(motor.getFault_StatorCurrLimit().getValue()))
+      faults.add("Stator Current Limit");
+    if (Boolean.TRUE.equals(motor.getFault_SupplyCurrLimit().getValue()))
+      faults.add("Supply Current Limit");
+
+    if (Boolean.TRUE.equals(motor.getFault_UnlicensedFeatureInUse().getValue()))
+      faults.add("Unlicensed Feature");
+
+    if (!motor.isConnected()) {
+      faults.add("CRITICAL: CAN DISCONNECTED");
+    }
+
+    return faults.toArray(new String[0]);
+  }
+
+  /**
+   * Retrieves active faults from a CTRE Phoenix 5 device (Talon SRX, Victor SPX).
+   *
+   * @param motor The BaseTalon (or VictorSPX) instance to check.
+   * @return An array of strings describing the active faults.
+   */
+  public static String[] getTalonSRXFaults(
+      com.ctre.phoenix.motorcontrol.can.BaseMotorController motor) {
+    List<String> messages = new ArrayList<>();
+    Faults faults = new Faults();
+    motor.getFaults(faults);
+
+    if (faults.UnderVoltage) messages.add("Fault: Under Voltage");
+    if (faults.ForwardLimitSwitch) messages.add("Fault: Forward Limit Switch");
+    if (faults.ReverseLimitSwitch) messages.add("Fault: Reverse Limit Switch");
+    if (faults.ForwardSoftLimit) messages.add("Fault: Forward Soft Limit");
+    if (faults.ReverseSoftLimit) messages.add("Fault: Reverse Soft Limit");
+    if (faults.HardwareFailure) messages.add("Fault: Hardware Failure");
+    if (faults.ResetDuringEn) messages.add("Fault: Reset During Enable");
+    if (faults.SensorOutOfPhase) messages.add("Fault: Sensor Out of Phase");
+    if (faults.APIError) messages.add("Fault: API Error");
+
+    if (motor.getBusVoltage() < 1.0) {
+      messages.add("CRITICAL: DISCONNECTED / NO POWER");
+    }
+
+    return messages.toArray(new String[0]);
   }
 }

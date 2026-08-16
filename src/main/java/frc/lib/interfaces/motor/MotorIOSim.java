@@ -34,11 +34,7 @@ public class MotorIOSim extends MotorBase {
    * @param jInertia Moment of inertia in kg*m^2 (e.g., 0.005 for a light intake)
    */
   public MotorIOSim(
-      String name,
-      BasicMotorConfig config,
-      DCMotor motor,
-      double gearing,
-      double jInertia) {
+      String name, BasicMotorConfig config, DCMotor motor, double gearing, double jInertia) {
     this(name, MotorConfig.fromBasic(config), motor, gearing, jInertia);
   }
 

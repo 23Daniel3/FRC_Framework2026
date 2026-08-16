@@ -45,17 +45,25 @@ public class MotorIOSparkMax extends MotorBase {
   private AbsoluteEncoder absoluteEncoder;
   private final MotorConfig.FeedbackSensorType sensorType;
 
-  public MotorIOSparkMax(
-      String name, int id, BasicMotorConfig config) {
-    this(name, id, MotorConfig.fromBasic(config));
+  public MotorIOSparkMax(String name, int id, BasicMotorConfig config) {
+    this(name, id, MotorType.kBrushless, MotorConfig.fromBasic(config));
   }
 
   public MotorIOSparkMax(String name, int id, MotorConfig config) {
+    this(name, id, MotorType.kBrushless, config);
+  }
+
+  public MotorIOSparkMax(
+      String name, int id, MotorType type, frc.lib.interfaces.motor.basic.BasicMotorConfig config) {
+    this(name, id, type, MotorConfig.fromBasic(config));
+  }
+
+  public MotorIOSparkMax(String name, int id, MotorType type, MotorConfig config) {
     // Initialize MotorBase (apply... methods called in super will return silently
     // since motor == null at that point)
     super(name, config);
 
-    this.motor = new SparkMax(id, MotorType.kBrushless);
+    this.motor = new SparkMax(id, type);
     this.closedLoopController = motor.getClosedLoopController();
     this.motorConfig = new SparkMaxConfig();
     this.sensorType = config.feedbackType;
