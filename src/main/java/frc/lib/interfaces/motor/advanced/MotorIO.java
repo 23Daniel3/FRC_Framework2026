@@ -40,6 +40,12 @@ public interface MotorIO extends BasicMotorIO {
 
   void updateInputs(MotorIOInputs inputs);
 
+  /**
+   * Zeros the motor's feedback sensor by treating the current physical position as {@code offset}.
+   * Delegates to the underlying encoder's zeroing mechanism (software offset or hardware zero,
+   * depending on the sensor type). Equivalent to {@link
+   * frc.lib.interfaces.encoder.EncoderIO#setPosition} from the motor's perspective.
+   */
   void setOffset(Angle offset);
 
   void runVelocity(AngularVelocity velocity);

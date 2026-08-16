@@ -38,13 +38,27 @@ public interface EncoderIO {
     public String[] activeFaults = new String[] {};
   }
 
-  /** Updates the inputs. */
+  /**
+   * Refreshes {@code inputs} from the sensor hardware.
+   *
+   * <p>The default empty implementation exists because {@link EncoderIO} is optional: a motor
+   * without an external sensor can use {@link EncoderIONone}, which relies on this no-op. Every
+   * real sensor extends {@link EncoderBase} whose {@code updateInputs} is {@code final} and
+   * overrides this automatically — direct implementors of this interface must override explicitly.
+   */
   public default void updateInputs(EncoderIOInputs inputs) {}
 
   /**
-   * Sets the current position as a new offset (zeroing).
+   * Zeros the encoder by treating the current physical position as {@code position}.
    *
-   * @param position The current known position.
+   * <p>The base implementation in {@link EncoderBase} applies a software offset. Sensors that
+   * support a native hardware zero (e.g. CANcoder, Spark relative encoder) should override this to
+   * push the zero to the hardware instead — more precise and survives brownouts.
+   *
+   * <p>The default empty implementation exists for read-only sensors (e.g. duty-cycle absolute
+   * encoders) whose position cannot be programmatically zeroed.
+   *
+   * @param position The current known mechanism position to treat as the new zero reference.
    */
   public default void setPosition(Angle position) {}
 }

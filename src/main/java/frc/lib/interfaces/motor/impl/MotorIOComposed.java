@@ -12,6 +12,7 @@ import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Current;
 import edu.wpi.first.units.measure.Voltage;
+import edu.wpi.first.wpilibj.DriverStation;
 import frc.lib.interfaces.encoder.EncoderIO;
 import frc.lib.interfaces.encoder.EncoderIO.EncoderIOInputs;
 import frc.lib.interfaces.motor.MotorControlMode;
@@ -47,6 +48,13 @@ public class MotorIOComposed extends MotorBase {
 
   private TrapezoidProfile.State profileState = new TrapezoidProfile.State();
   private int activeSlot = 0;
+
+  /**
+   * Tracks the previous disabled state so PID controllers and the trapezoid profile are reset
+   * exactly once on the disabled frame before the robot re-enables. This prevents integral windup
+   * accumulated during the disabled period from causing an output spike on re-enable.
+   */
+  private boolean wasDisabled = true;
 
   // Background periodic control loop (registers with the WPILib scheduler automatically)
   @SuppressWarnings("unused")
@@ -109,6 +117,20 @@ public class MotorIOComposed extends MotorBase {
   // ---------------------------------------------------------------------------
 
   private void applyControlLoop() {
+    if (DriverStation.isDisabled()) {
+      if (!wasDisabled) {
+        // Transition into disabled: flush PID state so there is no windup on re-enable.
+        for (PIDController pid : pidControllers) pid.reset();
+        profileState =
+            new TrapezoidProfile.State(
+                feedbackInputs.position.in(Rotations),
+                feedbackInputs.velocity.in(RotationsPerSecond));
+      }
+      wasDisabled = true;
+      return;
+    }
+    wasDisabled = false;
+
     switch (currentMode) {
       case VELOCITY -> {
         double tgt = targetVelocity.in(RotationsPerSecond);
@@ -139,7 +161,7 @@ public class MotorIOComposed extends MotorBase {
         }
       }
       case VOLTAGE, PERCENT, IDLE -> {
-        // Handled directly by runVoltage / runPercentOutput / stop
+        // Handled directly by runVoltage / runPercentOutput / stop.
       }
     }
   }
