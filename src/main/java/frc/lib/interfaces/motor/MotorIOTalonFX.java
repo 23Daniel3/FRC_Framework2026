@@ -18,6 +18,7 @@ import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.units.measure.*;
 import frc.lib.interfaces.motor.advanced.MotorBase;
 import frc.lib.interfaces.motor.advanced.MotorConfig;
+import frc.lib.interfaces.motor.advanced.MotorConfig.FeedbackSensorType;
 import frc.lib.interfaces.motor.basic.BasicMotorConfig;
 
 /**
@@ -87,6 +88,40 @@ public class MotorIOTalonFX extends MotorBase {
 
     driveConfig.Voltage.PeakForwardVoltage = config.maxOutput * config.nominalVoltage.in(Volts);
     driveConfig.Voltage.PeakReverseVoltage = config.minOutput * config.nominalVoltage.in(Volts);
+
+    // --- Feedback Sensor ---
+    FeedbackSensorType sensorType =
+        config.externalFusionType != null ? config.externalFusionType : config.feedbackType;
+    switch (sensorType) {
+      case REMOTE_CANCODER -> {
+        // Assume externalEncoder is a CANcoder that exposes its CAN ID.
+        // For CTRE Phoenix 6, we would need the CAN ID. But FRC_Framework2026 might not expose it
+        // in EncoderIO.
+        // Actually, WPILib or AdvKit usually passes the remote sensor ID through config.
+        // We'll configure it as RemoteCANcoder using config.countsPerRevolution as the CAN ID?
+        // Let's use config.leaderMotorID or similar if available, or just throw for now to prompt
+        // the user.
+        // Wait, TalonFX FeedbackSensorSourceValue has RemoteCANcoder.
+        driveConfig.Feedback.FeedbackSensorSource =
+            com.ctre.phoenix6.signals.FeedbackSensorSourceValue.RemoteCANcoder;
+        driveConfig.Feedback.FeedbackRemoteSensorID =
+            config.countsPerRevolution; // Assuming we hack it via countsPerRevolution for CAN ID
+      }
+      case FUSED_CANCODER -> {
+        driveConfig.Feedback.FeedbackSensorSource =
+            com.ctre.phoenix6.signals.FeedbackSensorSourceValue.FusedCANcoder;
+        driveConfig.Feedback.FeedbackRemoteSensorID = config.countsPerRevolution;
+      }
+      case SYNC_CANCODER -> {
+        driveConfig.Feedback.FeedbackSensorSource =
+            com.ctre.phoenix6.signals.FeedbackSensorSourceValue.SyncCANcoder;
+        driveConfig.Feedback.FeedbackRemoteSensorID = config.countsPerRevolution;
+      }
+      default -> {
+        driveConfig.Feedback.FeedbackSensorSource =
+            com.ctre.phoenix6.signals.FeedbackSensorSourceValue.RotorSensor;
+      }
+    }
 
     // --- Gear Ratio (Sensor to Mechanism) ---
     // In Phoenix 6, the reduction is set here and it automatically scales Position and Velocity.

@@ -5,8 +5,8 @@ import static edu.wpi.first.units.Units.RPM;
 import static edu.wpi.first.units.Units.Rotations;
 
 /**
- * A no-{@code Angle}/{@code AngularVelocity} facade over any {@link EncoderIO}, for subsystems
- * (or students) who just want plain numbers.
+ * A no-{@code Angle}/{@code AngularVelocity} facade over any {@link EncoderIO}, for subsystems (or
+ * students) who just want plain numbers.
  *
  * <p>Wraps the same {@link EncoderIO} you'd otherwise call directly — call {@link #update()} once
  * per loop, then read whichever plain-double getter is convenient:

@@ -27,6 +27,7 @@ import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Current;
 import edu.wpi.first.units.measure.Voltage;
+import frc.lib.interfaces.encoder.EncoderIO;
 import frc.lib.interfaces.motor.advanced.MotorBase;
 import frc.lib.interfaces.motor.advanced.MotorConfig;
 import frc.lib.interfaces.motor.basic.BasicMotorConfig;
@@ -62,11 +63,12 @@ public class MotorIOSparkFlex extends MotorBase {
     // Initialize MotorBase (apply... methods called in super will return silently
     // since motor == null at that point)
     super(name, config);
+    this.sensorType =
+        config.externalFusionType != null ? config.externalFusionType : config.feedbackType;
 
     this.motor = new SparkFlex(id, type);
     this.closedLoopController = motor.getClosedLoopController();
     this.motorConfig = new SparkFlexConfig();
-    this.sensorType = config.feedbackType;
 
     // --- Configure Follower Motor
     if (config.leaderMotorID != 0) {
@@ -366,5 +368,15 @@ public class MotorIOSparkFlex extends MotorBase {
       case 3 -> ClosedLoopSlot.kSlot3;
       default -> ClosedLoopSlot.kSlot0;
     };
+  }
+
+  /**
+   * Returns a standalone read-only {@link frc.lib.interfaces.encoder.EncoderIO} view of the
+   * absolute encoder connected to the SparkFlex dataport. The underlying SparkFlex object is shared
+   * — no duplicate CAN ID is created.
+   */
+  public EncoderIO getAbsoluteEncoderIO() {
+    return new frc.lib.interfaces.encoder.EncoderIOSparkAbsolute(
+        name + "_AbsEnc", new frc.lib.interfaces.encoder.EncoderConfig(), motor);
   }
 }

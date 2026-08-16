@@ -3,6 +3,7 @@ package frc.lib.interfaces.motor.advanced;
 import static edu.wpi.first.units.Units.*;
 
 import edu.wpi.first.units.measure.*;
+import frc.lib.interfaces.encoder.EncoderIO;
 import frc.lib.interfaces.motor.basic.BasicMotorConfig;
 import org.littletonrobotics.junction.Logger;
 
@@ -43,7 +44,10 @@ public class MotorConfig extends BasicMotorConfig {
   public enum FeedbackSensorType {
     INTERNAL,
     ALTERNATE,
-    ABSOLUTE_DATAPORT
+    ABSOLUTE_DATAPORT,
+    REMOTE_CANCODER,
+    FUSED_CANCODER,
+    SYNC_CANCODER
   }
 
   /**
@@ -73,6 +77,9 @@ public class MotorConfig extends BasicMotorConfig {
 
   public FeedbackSensorType feedbackType = FeedbackSensorType.INTERNAL;
   public int countsPerRevolution = 8192;
+
+  public EncoderIO externalEncoder = null;
+  public FeedbackSensorType externalFusionType = null;
 
   public MotorConfig() {
     for (int i = 0; i < 4; i++) {
@@ -212,6 +219,16 @@ public class MotorConfig extends BasicMotorConfig {
   public MotorConfig withVelocityTolerance(AngularVelocity velocity) {
     this.velocityTolerance = velocity;
     return this;
+  }
+
+  public MotorConfig withExternalEncoder(EncoderIO encoder, FeedbackSensorType fusionType) {
+    this.externalEncoder = encoder;
+    this.externalFusionType = fusionType;
+    return this;
+  }
+
+  public boolean hasExternalEncoder() {
+    return externalEncoder != null;
   }
 
   /**

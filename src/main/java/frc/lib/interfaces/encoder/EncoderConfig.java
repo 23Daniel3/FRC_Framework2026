@@ -12,10 +12,10 @@ import edu.wpi.first.units.measure.Angle;
  * <p>All physical quantities are represented using WPILib Units. Conversion factors are
  * dimensionless scalars applied to raw rotations.
  *
- * <p>Note: {@code inverted} is interpreted by each {@link EncoderIO} implementation in whatever
- * way is correct for that sensor (sign flip for a relative/CAN sensor, {@code 1 - raw} for a
- * wrapped absolute duty-cycle sensor, hardware sensor-direction config for a CANcoder, etc.) —
- * {@link EncoderBase} deliberately does not reinterpret it, to avoid double-applying it.
+ * <p>Note: {@code inverted} is interpreted by each {@link EncoderIO} implementation in whatever way
+ * is correct for that sensor (sign flip for a relative/CAN sensor, {@code 1 - raw} for a wrapped
+ * absolute duty-cycle sensor, hardware sensor-direction config for a CANcoder, etc.) — {@link
+ * EncoderBase} deliberately does not reinterpret it, to avoid double-applying it.
  */
 public class EncoderConfig {
 
@@ -33,8 +33,8 @@ public class EncoderConfig {
 
   /**
    * Number of samples to average for velocity calculation. Only used by sensors with no native
-   * velocity signal — {@link EncoderBase} derives velocity numerically and smooths it with a
-   * moving average of this width.
+   * velocity signal — {@link EncoderBase} derives velocity numerically and smooths it with a moving
+   * average of this width.
    */
   public int samplesToAverage = 1;
 

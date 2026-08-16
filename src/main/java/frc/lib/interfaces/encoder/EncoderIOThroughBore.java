@@ -8,9 +8,9 @@ import edu.wpi.first.wpilibj.DutyCycleEncoder;
  * {@link frc.lib.interfaces.encoder.EncoderIO} for a REV Through Bore Encoder wired to DIO in PWM
  * absolute mode.
  *
- * <p>Has no native velocity signal — {@link EncoderBase} derives it numerically. If you need
- * clean, rollover-free velocity, wire the Through Bore's A/B quadrature outputs instead and use
- * {@link EncoderIOQuadrature}.
+ * <p>Has no native velocity signal — {@link EncoderBase} derives it numerically. If you need clean,
+ * rollover-free velocity, wire the Through Bore's A/B quadrature outputs instead and use {@link
+ * EncoderIOQuadrature}.
  */
 public class EncoderIOThroughBore extends EncoderBase {
 
@@ -30,6 +30,8 @@ public class EncoderIOThroughBore extends EncoderBase {
     }
 
     return RawSample.withoutVelocity(
-        Rotations.of(rawRotations), encoder.isConnected(), EncoderFaults.getDutyCycleFaults(encoder));
+        Rotations.of(rawRotations),
+        encoder.isConnected(),
+        EncoderFaults.getDutyCycleFaults(encoder));
   }
 }

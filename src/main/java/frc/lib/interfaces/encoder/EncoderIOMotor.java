@@ -7,14 +7,14 @@ import java.util.function.Supplier;
 
 /**
  * Bridges a closed-loop motor's own built-in feedback (a SparkFlex's encoder, a TalonFX's
- * integrated encoder, ...) into the standalone {@link frc.lib.interfaces.encoder.EncoderIO}
- * world, so a subsystem that just wants "an encoder" can treat an internal and an external sensor
+ * integrated encoder, ...) into the standalone {@link frc.lib.interfaces.encoder.EncoderIO} world,
+ * so a subsystem that just wants "an encoder" can treat an internal and an external sensor
  * identically — same {@code EncoderIOInputsAutoLogged}, same {@code setPosition(Angle)}.
  *
  * <p>This does <b>not</b> own or poll hardware itself: it reads whichever {@link MotorIOInputs}
  * object your subsystem already updates each cycle (avoiding a duplicate CAN read), and forwards
- * zeroing to the motor's own {@link MotorController#setOffset(Angle)} — a real hardware zero, not
- * a stacked software offset.
+ * zeroing to the motor's own {@link MotorController#setOffset(Angle)} — a real hardware zero, not a
+ * stacked software offset.
  *
  * <pre>{@code
  * MotorIOSparkFlex armMotor = new MotorIOSparkFlex("Arm", 9, MotorType.kBrushless, armConfig);

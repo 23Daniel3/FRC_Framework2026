@@ -14,9 +14,9 @@ import org.littletonrobotics.junction.AutoLog;
  * quadrature, analog, or even a motor controller's own built-in feedback via {@code
  * frc.lib.interfaces.encoder.impl.EncoderIOMotor}).
  *
- * <p>Every real implementation extends {@link EncoderBase} rather than implementing this
- * interface directly — that's where offset handling, conversion factors, numeric velocity
- * derivation, and connection debouncing live, written once and shared by every sensor type.
+ * <p>Every real implementation extends {@link EncoderBase} rather than implementing this interface
+ * directly — that's where offset handling, conversion factors, numeric velocity derivation, and
+ * connection debouncing live, written once and shared by every sensor type.
  */
 public interface EncoderIO {
 

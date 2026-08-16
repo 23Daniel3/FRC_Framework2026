@@ -9,6 +9,7 @@ import edu.wpi.first.math.filter.LinearFilter;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.wpilibj.Timer;
+import frc.lib.interfaces.HardwareHealthMonitor;
 import frc.lib.logger.LoggedTunableNumber;
 import frc.robot.Constants;
 
@@ -22,14 +23,14 @@ import frc.robot.Constants;
  *   <li>Software zero offset, live-tunable from the dashboard in tuning mode ({@code
  *       Name/Config/OffsetRot}), exactly like {@code MotorBase}'s tunable output range;
  *   <li>Position/velocity conversion factors;
- *   <li>Numeric velocity derivation with a moving-average filter for sensors that report no
- *       native velocity (e.g. an absolute duty-cycle or analog encoder);
+ *   <li>Numeric velocity derivation with a moving-average filter for sensors that report no native
+ *       velocity (e.g. an absolute duty-cycle or analog encoder);
  *   <li>Connection-state debouncing, so one missed CAN/DIO frame doesn't flicker a fault.
  * </ul>
  *
- * <p>Concrete subclasses implement only {@link #readRaw()}: read the sensor, correct for
- * inversion in whatever way is correct for that sensor type, and return a {@link RawSample}. If
- * the sensor supports a native hardware zero (CANcoder, a motor's own feedback), override {@link
+ * <p>Concrete subclasses implement only {@link #readRaw()}: read the sensor, correct for inversion
+ * in whatever way is correct for that sensor type, and return a {@link RawSample}. If the sensor
+ * supports a native hardware zero (CANcoder, a motor's own feedback), override {@link
  * #setPosition(Angle)} instead of relying on the default software-offset behavior.
  */
 public abstract class EncoderBase implements EncoderIO {
@@ -46,6 +47,9 @@ public abstract class EncoderBase implements EncoderIO {
   private Angle lastRawPosition = null;
   private double lastTimestampSeconds = 0.0;
 
+  private boolean lastIsConnected = false;
+  private String[] lastFaults = new String[] {};
+
   protected EncoderBase(String name, EncoderConfig config) {
     this.name = name;
     this.config = config;
@@ -53,6 +57,8 @@ public abstract class EncoderBase implements EncoderIO {
     this.offsetTunable =
         new LoggedTunableNumber(name + "/Config/OffsetRot", config.offset.in(Rotations));
     this.velocityFilter = LinearFilter.movingAverage(Math.max(1, config.samplesToAverage));
+
+    HardwareHealthMonitor.register(name, () -> lastIsConnected, () -> lastFaults);
   }
 
   /** Result of a single hardware read, before offset/conversion is applied. */
@@ -81,25 +87,29 @@ public abstract class EncoderBase implements EncoderIO {
     RawSample raw = readRaw();
 
     inputs.absolutePosition = raw.position();
-    inputs.position =
-        raw.position().minus(softwareOffset).times(config.positionConversionFactor);
+    inputs.position = raw.position().minus(softwareOffset).times(config.positionConversionFactor);
 
     inputs.velocity =
         raw.nativeVelocity()
-            ? RotationsPerSecond.of(raw.velocity().in(RotationsPerSecond) * config.velocityConversionFactor)
-            : RotationsPerSecond.of(deriveVelocity(raw.position()) * config.velocityConversionFactor);
+            ? RotationsPerSecond.of(
+                raw.velocity().in(RotationsPerSecond) * config.velocityConversionFactor)
+            : RotationsPerSecond.of(
+                deriveVelocity(raw.position()) * config.velocityConversionFactor);
 
     inputs.isConnected = connectionDebouncer.calculate(raw.isConnected());
     inputs.activeFaults = raw.faults();
+
+    this.lastIsConnected = inputs.isConnected;
+    this.lastFaults = inputs.activeFaults;
   }
 
   /**
    * Numerically differentiates raw position for sensors without a native velocity signal, then
    * smooths it with a moving average of {@link EncoderConfig#samplesToAverage} taps.
    *
-   * <p>Caveat: a wrapped absolute sensor (e.g. Through Bore in duty-cycle mode) will spike this
-   * for one sample when crossing its 0/1 rollover point. If you need clean continuous velocity,
-   * prefer {@code EncoderIOQuadrature} (native velocity, no rollover) for that mechanism instead.
+   * <p>Caveat: a wrapped absolute sensor (e.g. Through Bore in duty-cycle mode) will spike this for
+   * one sample when crossing its 0/1 rollover point. If you need clean continuous velocity, prefer
+   * {@code EncoderIOQuadrature} (native velocity, no rollover) for that mechanism instead.
    */
   private double deriveVelocity(Angle rawPosition) {
     double now = Timer.getFPGATimestamp();
@@ -119,8 +129,8 @@ public abstract class EncoderBase implements EncoderIO {
 
   /**
    * Zeros this encoder by shifting the software offset so the current raw position reports as
-   * {@code position}. Sensors with a native hardware zero override this instead — more precise,
-   * and it survives brownouts/reboots where a software offset would not.
+   * {@code position}. Sensors with a native hardware zero override this instead — more precise, and
+   * it survives brownouts/reboots where a software offset would not.
    */
   @Override
   public void setPosition(Angle position) {

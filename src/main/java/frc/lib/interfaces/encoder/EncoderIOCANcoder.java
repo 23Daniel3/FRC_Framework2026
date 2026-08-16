@@ -13,9 +13,9 @@ import edu.wpi.first.units.measure.Angle;
  *
  * <p>Reports native position and velocity straight off the CAN bus — no numeric differentiation.
  * Inversion is pushed into the hardware sensor-direction config so the sensor itself reports
- * correctly signed values from boot, before a subsystem's first periodic loop even runs. The
- * offset stays purely in {@link EncoderBase}'s software layer (not also baked into the hardware
- * {@code MagnetOffset}) so there's exactly one place it's applied.
+ * correctly signed values from boot, before a subsystem's first periodic loop even runs. The offset
+ * stays purely in {@link EncoderBase}'s software layer (not also baked into the hardware {@code
+ * MagnetOffset}) so there's exactly one place it's applied.
  */
 public class EncoderIOCANcoder extends EncoderBase {
 
