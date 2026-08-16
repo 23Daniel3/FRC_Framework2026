@@ -11,7 +11,12 @@ import org.littletonrobotics.junction.AutoLog;
  * Hardware abstraction interface for Encoders.
  *
  * <p>Provides a standard way to read position and velocity from any sensor (ThroughBore, CANCoder,
- * etc).
+ * quadrature, analog, or even a motor controller's own built-in feedback via {@code
+ * frc.lib.interfaces.encoder.impl.EncoderIOMotor}).
+ *
+ * <p>Every real implementation extends {@link EncoderBase} rather than implementing this
+ * interface directly — that's where offset handling, conversion factors, numeric velocity
+ * derivation, and connection debouncing live, written once and shared by every sensor type.
  */
 public interface EncoderIO {
 
