@@ -43,6 +43,11 @@ public class MotorIOTalonFX extends MotorBase {
   private final StatusSignal<Current> currentSignal;
   private final StatusSignal<Temperature> temperatureSignal;
 
+  public MotorIOTalonFX(
+      String name, int id, CANBus canBus, frc.lib.interfaces.motor.basic.BasicMotorConfig config) {
+    this(name, id, canBus, MotorConfig.fromBasic(config));
+  }
+
   public MotorIOTalonFX(String name, int id, CANBus canBus, MotorConfig config) {
     super(name, config);
 

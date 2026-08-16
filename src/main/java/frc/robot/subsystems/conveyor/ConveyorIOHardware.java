@@ -11,9 +11,7 @@ public class ConveyorIOHardware implements ConveyorIO {
   public ConveyorIOHardware() {
     motor =
         new MotorIOSparkMax(
-            "ConveyorMotor",
-            ConveyorConstants.MOTOR_ID,
-            ConveyorConstants.MOTOR_CONFIG);
+            "ConveyorMotor", ConveyorConstants.MOTOR_ID, ConveyorConstants.MOTOR_CONFIG);
   }
 
   @Override

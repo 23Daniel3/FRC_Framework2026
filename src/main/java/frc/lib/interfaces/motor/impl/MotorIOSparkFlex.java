@@ -39,6 +39,11 @@ public class MotorIOSparkFlex extends MotorBase {
   private AbsoluteEncoder absoluteEncoder;
   private final MotorConfig.FeedbackSensorType sensorType;
 
+  public MotorIOSparkFlex(
+      String name, int id, MotorType type, frc.lib.interfaces.motor.basic.BasicMotorConfig config) {
+    this(name, id, type, MotorConfig.fromBasic(config));
+  }
+
   public MotorIOSparkFlex(String name, int id, MotorType type, MotorConfig config) {
     super(name, config);
 

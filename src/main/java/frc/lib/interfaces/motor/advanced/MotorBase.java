@@ -84,6 +84,10 @@ public abstract class MotorBase extends BasicMotorBase implements MotorIO {
     }
   }
 
+  public MotorBase(String name, frc.lib.interfaces.motor.basic.BasicMotorConfig config) {
+    this(name, MotorConfig.fromBasic(config));
+  }
+
   @Override
   public void updateInputs(MotorIOInputs inputs) {
     checkOutputRangeTuning(); // reused from BasicMotorBase

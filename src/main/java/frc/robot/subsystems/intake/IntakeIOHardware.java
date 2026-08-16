@@ -23,9 +23,7 @@ public class IntakeIOHardware implements IntakeIO {
 
     intakeMotor =
         new MotorIOSparkMax(
-            "Intake/Intake",
-            IntakeConstants.INTAKE_MOTOR_ID,
-            IntakeConstants.CONFIG_INTAKE_MOTOR);
+            "Intake/Intake", IntakeConstants.INTAKE_MOTOR_ID, IntakeConstants.CONFIG_INTAKE_MOTOR);
   }
 
   @Override

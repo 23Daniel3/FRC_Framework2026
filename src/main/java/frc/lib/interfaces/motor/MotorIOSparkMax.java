@@ -29,6 +29,7 @@ import edu.wpi.first.units.measure.Current;
 import edu.wpi.first.units.measure.Voltage;
 import frc.lib.interfaces.motor.advanced.MotorBase;
 import frc.lib.interfaces.motor.advanced.MotorConfig;
+import frc.lib.interfaces.motor.basic.BasicMotorConfig;
 import frc.lib.util.security.SparkUtil;
 
 public class MotorIOSparkMax extends MotorBase {
@@ -43,6 +44,11 @@ public class MotorIOSparkMax extends MotorBase {
   private RelativeEncoder externalEncoder;
   private AbsoluteEncoder absoluteEncoder;
   private final MotorConfig.FeedbackSensorType sensorType;
+
+  public MotorIOSparkMax(
+      String name, int id, BasicMotorConfig config) {
+    this(name, id, MotorConfig.fromBasic(config));
+  }
 
   public MotorIOSparkMax(String name, int id, MotorConfig config) {
     // Initialize MotorBase (apply... methods called in super will return silently

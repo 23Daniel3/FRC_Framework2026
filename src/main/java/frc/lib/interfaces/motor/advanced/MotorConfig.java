@@ -57,6 +57,23 @@ public class MotorConfig extends BasicMotorConfig {
     }
   }
 
+  public static MotorConfig fromBasic(BasicMotorConfig basic) {
+    if (basic instanceof MotorConfig) {
+      return (MotorConfig) basic;
+    }
+    MotorConfig config = new MotorConfig();
+    config.currentLimit = basic.currentLimit;
+    config.inverted = basic.inverted;
+    config.brakeMode = basic.brakeMode;
+    config.nominalVoltage = basic.nominalVoltage;
+    config.minOutput = basic.minOutput;
+    config.maxOutput = basic.maxOutput;
+    config.openLoopRampSeconds = basic.openLoopRampSeconds;
+    config.leaderMotorID = basic.leaderMotorID;
+    config.followerInverted = basic.followerInverted;
+    return config;
+  }
+
   // --- Covariant re-declarations of the basic fluent setters (keeps chaining working) ---
 
   @Override
