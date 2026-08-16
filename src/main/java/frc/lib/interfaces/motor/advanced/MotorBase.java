@@ -30,9 +30,18 @@ public abstract class MotorBase extends BasicMotorBase implements MotorIO {
 
   private final MotorConfig config;
   private final LinearFilter currentFilter;
+
+  // --- Stall Reversal State Machine Fields ---
+  /** Tracks the time the motor has been physically stalled while being commanded to move. */
   private final Timer stallTimer = new Timer();
+
+  /** Tracks how long the forced un-jamming reversal has been applied. */
   private final Timer reverseTimer = new Timer();
+
+  /** Whether the motor is currently autonomously overriding commands to un-jam itself. */
   private boolean reversing = false;
+
+  /** The direction to apply the reversal output (opposite to the stalled attempt direction). */
   private double reverseDirection = 1.0;
 
   /** Extends the basic controller facade instead of rebuilding it — pure reuse. */
@@ -142,6 +151,13 @@ public abstract class MotorBase extends BasicMotorBase implements MotorIO {
     this(name, MotorConfig.fromBasic(config));
   }
 
+  /**
+   * Periodically updates motor inputs, manages tuning updates, and runs autonomous routines. This
+   * includes the current monitoring (moving average) and the autonomous Stall Reversal system which
+   * overrides subsystems commands to un-jam the mechanism if stalled.
+   *
+   * @param inputs The hardware inputs struct to update.
+   */
   @Override
   public void updateInputs(MotorIOInputs inputs) {
     checkOutputRangeTuning(); // reused from BasicMotorBase
