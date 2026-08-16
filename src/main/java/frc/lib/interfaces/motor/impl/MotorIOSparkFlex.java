@@ -24,6 +24,7 @@ import frc.lib.interfaces.motor.MotorControlMode;
 import frc.lib.interfaces.motor.MotorFaults;
 import frc.lib.interfaces.motor.advanced.MotorBase;
 import frc.lib.interfaces.motor.advanced.MotorConfig;
+import frc.lib.interfaces.motor.basic.BasicMotorConfig;
 import frc.lib.util.security.SparkUtil;
 
 /** Closed-loop IO for a REV SparkFlex (brushless: NEO Vortex, etc). */
@@ -40,7 +41,7 @@ public class MotorIOSparkFlex extends MotorBase {
   private final MotorConfig.FeedbackSensorType sensorType;
 
   public MotorIOSparkFlex(
-      String name, int id, MotorType type, frc.lib.interfaces.motor.basic.BasicMotorConfig config) {
+      String name, int id, MotorType type, BasicMotorConfig config) {
     this(name, id, type, MotorConfig.fromBasic(config));
   }
 

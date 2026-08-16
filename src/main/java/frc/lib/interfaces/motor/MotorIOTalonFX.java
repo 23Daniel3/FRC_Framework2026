@@ -18,6 +18,7 @@ import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.units.measure.*;
 import frc.lib.interfaces.motor.advanced.MotorBase;
 import frc.lib.interfaces.motor.advanced.MotorConfig;
+import frc.lib.interfaces.motor.basic.BasicMotorConfig;
 
 /**
  * MotorIO implementation for CTRE TalonFX (Kraken/Falcon). Optimized to run all control physics
@@ -44,7 +45,7 @@ public class MotorIOTalonFX extends MotorBase {
   private final StatusSignal<Temperature> temperatureSignal;
 
   public MotorIOTalonFX(
-      String name, int id, CANBus canBus, frc.lib.interfaces.motor.basic.BasicMotorConfig config) {
+      String name, int id, CANBus canBus, BasicMotorConfig config) {
     this(name, id, canBus, MotorConfig.fromBasic(config));
   }
 

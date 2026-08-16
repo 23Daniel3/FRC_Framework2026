@@ -11,6 +11,7 @@ import edu.wpi.first.wpilibj.simulation.DCMotorSim;
 import frc.lib.interfaces.motor.advanced.MotorBase;
 import frc.lib.interfaces.motor.advanced.MotorConfig;
 import frc.lib.interfaces.motor.advanced.MotorController;
+import frc.lib.interfaces.motor.basic.BasicMotorConfig;
 
 public class MotorIOSim extends MotorBase {
   // Physical simulation
@@ -34,7 +35,7 @@ public class MotorIOSim extends MotorBase {
    */
   public MotorIOSim(
       String name,
-      frc.lib.interfaces.motor.basic.BasicMotorConfig config,
+      BasicMotorConfig config,
       DCMotor motor,
       double gearing,
       double jInertia) {

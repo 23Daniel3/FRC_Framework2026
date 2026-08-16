@@ -5,6 +5,7 @@ import static edu.wpi.first.units.Units.*;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import frc.lib.interfaces.motor.basic.BasicMotorBase;
+import frc.lib.interfaces.motor.basic.BasicMotorConfig;
 import frc.lib.logger.LoggedTunableNumber;
 
 /**
@@ -84,7 +85,7 @@ public abstract class MotorBase extends BasicMotorBase implements MotorIO {
     }
   }
 
-  public MotorBase(String name, frc.lib.interfaces.motor.basic.BasicMotorConfig config) {
+  public MotorBase(String name, BasicMotorConfig config) {
     this(name, MotorConfig.fromBasic(config));
   }
 
