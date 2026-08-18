@@ -5,7 +5,8 @@ import static edu.wpi.first.units.Units.RotationsPerSecond;
 
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
-import org.littletonrobotics.junction.AutoLog;
+import org.littletonrobotics.junction.LogTable;
+import org.littletonrobotics.junction.inputs.LoggableInputs;
 
 /**
  * Hardware abstraction interface for Encoders.
@@ -20,8 +21,7 @@ import org.littletonrobotics.junction.AutoLog;
  */
 public interface EncoderIO {
 
-  @AutoLog
-  public static class EncoderIOInputs {
+  public static class EncoderIOInputs implements LoggableInputs {
     /** The absolute position in mechanism units (accounted for offset). */
     public Angle position = Rotations.of(0.0);
 
@@ -36,6 +36,24 @@ public interface EncoderIO {
 
     /** List of active faults. */
     public String[] activeFaults = new String[] {};
+
+    @Override
+    public void toLog(LogTable table) {
+      table.put("Position", position);
+      table.put("AbsolutePosition", absolutePosition);
+      table.put("Velocity", velocity);
+      table.put("IsConnected", isConnected);
+      table.put("ActiveFaults", activeFaults);
+    }
+
+    @Override
+    public void fromLog(LogTable table) {
+      position = table.get("Position", position);
+      absolutePosition = table.get("AbsolutePosition", absolutePosition);
+      velocity = table.get("Velocity", velocity);
+      isConnected = table.get("IsConnected", isConnected);
+      activeFaults = table.get("ActiveFaults", activeFaults);
+    }
   }
 
   /**
