@@ -27,7 +27,7 @@ public class IntakeConstants {
 
   public static final MotorConfig CONFIG_ROLLER_MOTOR =
       new MotorConfig()
-          .currentLimit(Amps.of(30))
+          .currentLimit(Amps.of(35))
           .coastMode()
           .nominalVoltage(Volts.of(10))
           .inverted(true)
@@ -35,7 +35,7 @@ public class IntakeConstants {
 
   public static final MotorConfig CONFIG_INTAKE_MOTOR =
       new MotorConfig()
-          .currentLimit(Amps.of(35))
+          .currentLimit(Amps.of(25))
           .brakeMode()
           .nominalVoltage(Volts.of(10.0))
           .inverted(false)
