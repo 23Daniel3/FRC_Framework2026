@@ -38,7 +38,7 @@ public class ShooterConstants {
 
   public static final MotorConfig KICKER_MOTOR_CONFIG =
       new MotorConfig()
-          .currentLimit(Amps.of(40))
+          .currentLimit(Amps.of(35))
           .coastMode()
           .nominalVoltage(Volts.of(10.0))
           .svag(0, 0.17, 0.01727, 0, 0)
@@ -46,7 +46,7 @@ public class ShooterConstants {
 
   public static final MotorConfig MOTOR_LEADER_CONFIG =
       new MotorConfig()
-          .currentLimit(Amps.of(40))
+          .currentLimit(Amps.of(35))
           .coastMode()
           .nominalVoltage(Volts.of(10))
           .inverted(true)
@@ -56,7 +56,7 @@ public class ShooterConstants {
 
   public static final MotorConfig MOTOR_FOLLOWER_CONFIG =
       new MotorConfig()
-          .currentLimit(Amps.of(40))
+          .currentLimit(Amps.of(35))
           .coastMode()
           .nominalVoltage(Volts.of(10))
           .withMotorLeader(LEADER_ID)

@@ -5,18 +5,23 @@ import static edu.wpi.first.units.Units.RotationsPerSecond;
 
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
-import org.littletonrobotics.junction.AutoLog;
+import org.littletonrobotics.junction.LogTable;
+import org.littletonrobotics.junction.inputs.LoggableInputs;
 
 /**
  * Hardware abstraction interface for Encoders.
  *
  * <p>Provides a standard way to read position and velocity from any sensor (ThroughBore, CANCoder,
- * etc).
+ * quadrature, analog, or even a motor controller's own built-in feedback via {@code
+ * frc.lib.interfaces.encoder.impl.EncoderIOMotor}).
+ *
+ * <p>Every real implementation extends {@link EncoderBase} rather than implementing this interface
+ * directly — that's where offset handling, conversion factors, numeric velocity derivation, and
+ * connection debouncing live, written once and shared by every sensor type.
  */
 public interface EncoderIO {
 
-  @AutoLog
-  public static class EncoderIOInputs {
+  public static class EncoderIOInputs implements LoggableInputs {
     /** The absolute position in mechanism units (accounted for offset). */
     public Angle position = Rotations.of(0.0);
 
@@ -31,15 +36,47 @@ public interface EncoderIO {
 
     /** List of active faults. */
     public String[] activeFaults = new String[] {};
+
+    @Override
+    public void toLog(LogTable table) {
+      table.put("Position", position);
+      table.put("AbsolutePosition", absolutePosition);
+      table.put("Velocity", velocity);
+      table.put("IsConnected", isConnected);
+      table.put("ActiveFaults", activeFaults);
+    }
+
+    @Override
+    public void fromLog(LogTable table) {
+      position = table.get("Position", position);
+      absolutePosition = table.get("AbsolutePosition", absolutePosition);
+      velocity = table.get("Velocity", velocity);
+      isConnected = table.get("IsConnected", isConnected);
+      activeFaults = table.get("ActiveFaults", activeFaults);
+    }
   }
 
-  /** Updates the inputs. */
+  /**
+   * Refreshes {@code inputs} from the sensor hardware.
+   *
+   * <p>The default empty implementation exists because {@link EncoderIO} is optional: a motor
+   * without an external sensor can use {@link EncoderIONone}, which relies on this no-op. Every
+   * real sensor extends {@link EncoderBase} whose {@code updateInputs} is {@code final} and
+   * overrides this automatically — direct implementors of this interface must override explicitly.
+   */
   public default void updateInputs(EncoderIOInputs inputs) {}
 
   /**
-   * Sets the current position as a new offset (zeroing).
+   * Zeros the encoder by treating the current physical position as {@code position}.
    *
-   * @param position The current known position.
+   * <p>The base implementation in {@link EncoderBase} applies a software offset. Sensors that
+   * support a native hardware zero (e.g. CANcoder, Spark relative encoder) should override this to
+   * push the zero to the hardware instead — more precise and survives brownouts.
+   *
+   * <p>The default empty implementation exists for read-only sensors (e.g. duty-cycle absolute
+   * encoders) whose position cannot be programmatically zeroed.
+   *
+   * @param position The current known mechanism position to treat as the new zero reference.
    */
   public default void setPosition(Angle position) {}
 }
