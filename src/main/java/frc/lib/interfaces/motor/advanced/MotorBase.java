@@ -2,11 +2,15 @@ package frc.lib.interfaces.motor.advanced;
 
 import static edu.wpi.first.units.Units.*;
 
+import edu.wpi.first.math.filter.LinearFilter;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.Timer;
 import frc.lib.interfaces.motor.basic.BasicMotorBase;
 import frc.lib.interfaces.motor.basic.BasicMotorConfig;
 import frc.lib.logger.LoggedTunableNumber;
+import org.littletonrobotics.junction.Logger;
 
 /**
  * Base for closed-loop-capable motor IOs. Extends {@link BasicMotorBase}, reusing the control mode
@@ -24,41 +28,94 @@ public abstract class MotorBase extends BasicMotorBase implements MotorIO {
   private final TunableSVAG[] svagSlots = new TunableSVAG[4];
   private final TunableSmart[] smartSlots = new TunableSmart[4];
 
+  private final MotorConfig config;
+  private final LinearFilter currentFilter;
+
+  // --- Stall Reversal State Machine Fields ---
+  /** Tracks the time the motor has been physically stalled while being commanded to move. */
+  private final Timer stallTimer = new Timer();
+
+  /** Tracks how long the forced un-jamming reversal has been applied. */
+  private final Timer reverseTimer = new Timer();
+
+  /** Whether the motor is currently autonomously overriding commands to un-jam itself. */
+  private boolean reversing = false;
+
+  /** The direction to apply the reversal output (opposite to the stalled attempt direction). */
+  private double reverseDirection = 1.0;
+
   /** Extends the basic controller facade instead of rebuilding it — pure reuse. */
   protected class MotorControllerImpl extends BasicControllerImpl implements MotorController {
 
     @Override
+    public void setBrakeMode(boolean enabled) {
+      if (reversing) return;
+      super.setBrakeMode(enabled);
+    }
+
+    @Override
+    public void runVoltage(edu.wpi.first.units.measure.Voltage volts) {
+      if (reversing) return;
+      super.runVoltage(volts);
+    }
+
+    @Override
+    public void runPercentOutput(double percent) {
+      if (reversing) return;
+      super.runPercentOutput(percent);
+    }
+
+    @Override
+    public void stop() {
+      if (reversing) return;
+      super.stop();
+    }
+
+    @Override
+    public void setCurrentLimit(edu.wpi.first.units.measure.Current current) {
+      if (reversing) return;
+      super.setCurrentLimit(current);
+    }
+
+    @Override
     public void setOffset(Angle offset) {
+      if (reversing) return;
       MotorBase.this.setOffset(offset);
     }
 
     @Override
     public void runVelocity(AngularVelocity velocity) {
+      if (reversing) return;
       MotorBase.this.runVelocity(velocity);
     }
 
     @Override
     public void runPosition(Angle position) {
+      if (reversing) return;
       MotorBase.this.runPosition(position);
     }
 
     @Override
     public void runSmartPosition(Angle position) {
+      if (reversing) return;
       MotorBase.this.runSmartPosition(position);
     }
 
     @Override
     public void runVelocity(AngularVelocity velocity, int slot) {
+      if (reversing) return;
       MotorBase.this.runVelocity(velocity, slot);
     }
 
     @Override
     public void runPosition(Angle position, int slot) {
+      if (reversing) return;
       MotorBase.this.runPosition(position, slot);
     }
 
     @Override
     public void runSmartPosition(Angle position, int slot) {
+      if (reversing) return;
       MotorBase.this.runSmartPosition(position, slot);
     }
   }
@@ -67,6 +124,11 @@ public abstract class MotorBase extends BasicMotorBase implements MotorIO {
 
   public MotorBase(String name, MotorConfig config) {
     super(name, config);
+    this.config = config;
+    this.currentFilter = LinearFilter.movingAverage(Math.max(1, config.currentAverageSamples));
+
+    stallTimer.start();
+    reverseTimer.start();
 
     this.positionTolerance = config.positionTolerance.in(Rotations);
     this.velocityTolerance = config.velocityTolerance.in(RPM);
@@ -89,6 +151,13 @@ public abstract class MotorBase extends BasicMotorBase implements MotorIO {
     this(name, MotorConfig.fromBasic(config));
   }
 
+  /**
+   * Periodically updates motor inputs, manages tuning updates, and runs autonomous routines. This
+   * includes the current monitoring (moving average) and the autonomous Stall Reversal system which
+   * overrides subsystems commands to un-jam the mechanism if stalled.
+   *
+   * @param inputs The hardware inputs struct to update.
+   */
   @Override
   public void updateInputs(MotorIOInputs inputs) {
     checkOutputRangeTuning(); // reused from BasicMotorBase
@@ -101,6 +170,65 @@ public abstract class MotorBase extends BasicMotorBase implements MotorIO {
     }
     updateHardwareInputs(inputs);
     inputs.atSetpoint = calculateAtSetpoint(inputs);
+
+    if (DriverStation.isDisabled()) {
+      currentFilter.reset();
+      stallTimer.restart();
+      reverseTimer.restart();
+      reversing = false;
+      return; // Do not calculate moving average or reverse when disabled
+    }
+
+    // Average current logic
+    if (currentMode != frc.lib.interfaces.motor.MotorControlMode.IDLE
+        && Math.abs(inputs.appliedVolts.in(Volts)) > 0.1) {
+      double avgCurrent = currentFilter.calculate(inputs.current.in(Amps));
+      Logger.recordOutput("MotorBase/" + name + "/AverageCurrentAmps", avgCurrent);
+
+      if (config.currentWarningThreshold.in(Amps) > 0
+          && avgCurrent > config.currentWarningThreshold.in(Amps)) {
+        DriverStation.reportWarning(
+            "Motor " + name + " exceeded current warning threshold! Avg: " + avgCurrent + "A",
+            false);
+      }
+    } else {
+      currentFilter.calculate(
+          inputs.current.in(Amps)); // Feed filter to keep it updated with 0 or low idle current
+    }
+
+    // Stall reversal logic
+    if (config.stallReversalEnabled) {
+      if (reversing) {
+        if (reverseTimer.hasElapsed(config.reversalTimeSeconds)) {
+          reversing = false;
+          stallTimer.restart();
+        } else {
+          // Force reverse percent output directly on this object (bypassing the MotorControllerImpl
+          // which blocks it)
+          MotorBase.this.runPercentOutput(reverseDirection * config.reversalPercentOutput);
+        }
+      } else {
+        boolean tryingToMove =
+            currentMode != frc.lib.interfaces.motor.MotorControlMode.IDLE
+                && Math.abs(inputs.appliedVolts.in(Volts)) > 0.1;
+        boolean isStalled = Math.abs(inputs.velocity.in(RPM)) < 10.0;
+        boolean highCurrent = inputs.current.in(Amps) > config.stallCurrentThreshold.in(Amps);
+
+        if (tryingToMove && isStalled && highCurrent) {
+          if (stallTimer.hasElapsed(config.stallTimeSeconds)) {
+            reversing = true;
+            reverseTimer.restart();
+            // Go opposite to the current applied voltage direction
+            reverseDirection = Math.signum(inputs.appliedVolts.in(Volts)) * -1.0;
+            if (reverseDirection == 0) reverseDirection = 1.0; // Fallback
+            DriverStation.reportWarning(
+                "Motor " + name + " STALLED! Activating reversal un-jam.", false);
+          }
+        } else {
+          stallTimer.restart();
+        }
+      }
+    }
   }
 
   // Note: updateHardwareInputs(BasicMotorIOInputs) is still abstract, inherited from
