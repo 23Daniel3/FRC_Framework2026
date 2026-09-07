@@ -45,7 +45,7 @@ public class Shooter
               io.controlFlywheel().runVelocity(velocity);
               io.controlKicker().runVelocity(velocity);
             })
-        .transitionTo(ShooterState.SHOOTING, () -> readyToStateShooting());
+        .transitionTo(ShooterState.SHOOTING, () -> almostReadyToShoot());
 
     fsm.state(ShooterState.SHOOTING)
         .onUpdate(
@@ -91,7 +91,7 @@ public class Shooter
   }
 
   public boolean almostReadyToShoot() {
-    return getState() == ShooterState.KICKER_RAMPING;
+    return inputs.kickerInputs.atSetpoint;
   }
 
   /**

@@ -7,6 +7,7 @@ import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
+import frc.lib.interfaces.HardwareHealthMonitor;
 import frc.lib.interfaces.motor.basic.BasicMotorBase;
 import frc.lib.interfaces.motor.basic.BasicMotorConfig;
 import frc.lib.logger.LoggedTunableNumber;
@@ -125,6 +126,10 @@ public abstract class MotorBase extends BasicMotorBase implements MotorIO {
   public MotorBase(String name, MotorConfig config) {
     super(name, config);
     this.config = config;
+
+    HardwareHealthMonitor.register(
+        name, () -> getMotorIOInputs().isConnected, () -> getMotorIOInputs().activeFaults);
+
     this.currentFilter = LinearFilter.movingAverage(Math.max(1, config.currentAverageSamples));
 
     stallTimer.start();
