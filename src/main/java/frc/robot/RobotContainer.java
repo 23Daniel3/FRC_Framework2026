@@ -163,14 +163,18 @@ public class RobotContainer {
                             ? Poses.RESET_POSE_BLUE
                             : Poses.RESET_POSE_RED)));
 
-    driverController
-        .rightBumper()
-        .whileTrue(
-            new JoystickDriveShooting(
-                drivetrain,
-                superStructure,
-                driverController.getLeftYSupplier(),
-                driverController.getLeftXSupplier()));
+    driverController.a().whileTrue(ConveyorCommands.run(conveyor));
+
+    driverController.b().whileTrue(ConveyorCommands.reverse(conveyor));
+
+    // driverController
+    //     .rightBumper()
+    //     .whileTrue(
+    //         new JoystickDriveShooting(
+    //             drivetrain,
+    //             superStructure,
+    //             driverController.getLeftYSupplier(),
+    //             driverController.getLeftXSupplier()));
 
     // Operator Controller (Piloto 2) - Manual Overrides
     // Interrompem apenas o subsistema especifico sem afetar o restante da SuperStructure.
