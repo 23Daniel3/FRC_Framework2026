@@ -17,7 +17,7 @@ public class ConveyorConstants {
 
   public static final MotorConfig MOTOR_CONFIG =
       new MotorConfig()
-          .currentLimit(Amps.of(32))
+          .currentLimit(Amps.of(25))
           .coastMode()
           .nominalVoltage(Volts.of(10))
           .inverted(false);

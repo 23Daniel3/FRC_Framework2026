@@ -154,13 +154,13 @@ public class MotorIOTalonSRX extends MotorBase {
   @Override
   public void runVoltage(Voltage volts) {
     this.currentMode = MotorControlMode.IDLE;
-    motor.set(ControlMode.PercentOutput, volts.in(Volts) / 12.0);
+    motor.set(ControlMode.PercentOutput, mapVoltage(volts.in(Volts)) / 12.0);
   }
 
   @Override
   public void runPercentOutput(double percent) {
     this.currentMode = MotorControlMode.IDLE;
-    motor.set(ControlMode.PercentOutput, percent);
+    motor.set(ControlMode.PercentOutput, mapOutput(percent));
   }
 
   @Override

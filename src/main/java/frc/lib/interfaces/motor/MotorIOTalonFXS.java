@@ -222,13 +222,13 @@ public class MotorIOTalonFXS extends MotorBase {
   @Override
   public void runVoltage(Voltage volts) {
     this.currentMode = MotorControlMode.IDLE;
-    motor.setControl(voltageRequest.withOutput(volts.in(Volts)));
+    motor.setControl(voltageRequest.withOutput(mapVoltage(volts.in(Volts))));
   }
 
   @Override
   public void runPercentOutput(double percent) {
     this.currentMode = MotorControlMode.IDLE;
-    motor.setControl(dutyCycleRequest.withOutput(percent));
+    motor.setControl(dutyCycleRequest.withOutput(mapOutput(percent)));
   }
 
   @Override

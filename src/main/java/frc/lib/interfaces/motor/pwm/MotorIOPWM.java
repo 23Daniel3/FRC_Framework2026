@@ -36,13 +36,13 @@ public abstract class MotorIOPWM extends BasicMotorBase {
   @Override
   public void runVoltage(Voltage volts) {
     currentMode = MotorControlMode.VOLTAGE;
-    motor.setVoltage(volts.in(Volts));
+    motor.setVoltage(mapVoltage(volts.in(Volts)));
   }
 
   @Override
   public void runPercentOutput(double percent) {
     currentMode = MotorControlMode.PERCENT;
-    motor.set(clampOutput(percent));
+    motor.set(mapOutput(percent));
   }
 
   @Override

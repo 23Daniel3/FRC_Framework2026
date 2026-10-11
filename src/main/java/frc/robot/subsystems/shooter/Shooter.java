@@ -13,7 +13,7 @@ import frc.robot.subsystems.shooter.ShooterConstants.ShooterState;
 public class Shooter
     extends StateSubsystem<ShooterRequest, ShooterState, ShooterIOInputsAutoLogged, ShooterIO> {
 
-  private AngularVelocity velocity = RPM.of(0.0);
+  private AngularVelocity velocity = RPM.of(3000.0);
 
   public Shooter(ShooterIO io) {
     super(
@@ -35,7 +35,7 @@ public class Shooter
     // Setpoints aplicados no onUpdate: o RPM do SOTM muda a cada ciclo enquanto o robo
     // se move, entao o alvo precisa ser reaplicado continuamente (nao apenas no onEnter).
     fsm.state(ShooterState.FLYWHEEL_RAMPING)
-        .onEnter(() -> io.controlKicker().stop())
+        .onEnter(() -> io.controlKicker().runVelocity(velocity))
         .onUpdate(() -> io.controlFlywheel().runVelocity(velocity))
         .transitionTo(ShooterState.KICKER_RAMPING, () -> isFlywheelReadyToKick());
 
@@ -45,15 +45,15 @@ public class Shooter
               io.controlFlywheel().runVelocity(velocity);
               io.controlKicker().runVelocity(velocity);
             })
-        .transitionTo(ShooterState.SHOOTING, () -> readyToStateShooting());
+        .transitionTo(ShooterState.SHOOTING, () -> almostReadyToShoot());
 
     fsm.state(ShooterState.SHOOTING)
         .onUpdate(
             () -> {
               io.controlFlywheel().runVelocity(velocity);
               io.controlKicker().runVelocity(velocity);
-            })
-        .transitionTo(ShooterState.KICKER_RAMPING, () -> !readyToStateShooting());
+            });
+    // .transitionTo(ShooterState.KICKER_RAMPING, () -> !readyToStateShooting());
 
     fsm.state(ShooterState.REVERSING)
         .onEnter(
@@ -91,7 +91,7 @@ public class Shooter
   }
 
   public boolean almostReadyToShoot() {
-    return getState() == ShooterState.KICKER_RAMPING;
+    return inputs.kickerInputs.atSetpoint;
   }
 
   /**

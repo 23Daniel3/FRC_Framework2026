@@ -70,7 +70,7 @@ public class SuperStructure extends SubsystemBase {
     shooterCalculator.update(pose, speeds);
 
     // Alimenta o shooter continuamente com o RPM calculado pelo SOTM.
-    shooter.setVelocity(RPM.of(getActiveShotParameters().rpm()));
+    shooter.setVelocity(RPM.of(3000));
 
     generalFsm.update();
 
@@ -173,23 +173,22 @@ public class SuperStructure extends SubsystemBase {
               setSubsystemRequests(ShooterRequest.SHOOT, IntakeRequest.OUT, ConveyorRequest.STOP);
               drivetrain.setMaxSpeed(SuperStructureConstants.MAX_VELOCITY_TO_SHOOT);
             })
-        .transitionTo(RobotState.SHOOTING, () -> shooter.readyToShoot() && isAtSetpointAngle());
+        .transitionTo(RobotState.SHOOTING, () -> shooter.readyToShoot());
 
     generalFsm
         .state(RobotState.SHOOTING)
         .onEnter(
             () -> {
-              this.conveyorRequest = ConveyorRequest.RUN;
+              this.conveyorRequest = ConveyorRequest.STOP;
             })
-        .transitionTo(RobotState.SHOOTING_RECOVERY, () -> !shooter.readyToShoot())
-        .transitionTo(RobotState.GOING_SHOOT, () -> !isAtSetpointAngle());
+        .transitionTo(RobotState.SHOOTING_RECOVERY, () -> !shooter.readyToShoot());
+    // .transitionTo(RobotState.GOING_SHOOT, () -> !isAtSetpointAngle());
 
     generalFsm
         .state(RobotState.SHOOTING_RECOVERY)
         .onEnter(
             () -> {
-              setSubsystemRequests(
-                  ShooterRequest.SHOOT, IntakeRequest.OUT, ConveyorRequest.RUN_SLOW);
+              setSubsystemRequests(ShooterRequest.SHOOT, IntakeRequest.OUT, ConveyorRequest.STOP);
               drivetrain.setMaxSpeed(SuperStructureConstants.MAX_VELOCITY_TO_SHOOT);
             })
         .transitionTo(RobotState.SHOOTING, () -> shooter.readyToShoot());
@@ -202,26 +201,25 @@ public class SuperStructure extends SubsystemBase {
                   ShooterRequest.SHOOT, IntakeRequest.COLLECT, ConveyorRequest.STOP);
               drivetrain.setMaxSpeed(SuperStructureConstants.MAX_VELOCITY_TO_SHOOT);
             })
-        .transitionTo(
-            RobotState.COLLECT_SHOOTING, () -> shooter.readyToShoot() && isAtSetpointAngle());
+        .transitionTo(RobotState.COLLECT_SHOOTING, () -> shooter.readyToShoot());
 
     generalFsm
         .state(RobotState.COLLECT_SHOOTING)
         .onEnter(
             () -> {
-              this.conveyorRequest = ConveyorRequest.RUN;
+              this.conveyorRequest = ConveyorRequest.STOP;
             })
-        .transitionTo(RobotState.COLLECT_SHOOTING_RECOVERY, () -> !shooter.readyToShoot())
-        // Perder o alinhamento em modo COLLECT_SHOOT volta para GOING_COLLECT_SHOOT
-        // (nao GOING_SHOOT), para o intake continuar coletando durante o realinhamento.
-        .transitionTo(RobotState.GOING_COLLECT_SHOOT, () -> !isAtSetpointAngle());
+        .transitionTo(RobotState.COLLECT_SHOOTING_RECOVERY, () -> !shooter.readyToShoot());
+    // Perder o alinhamento em modo COLLECT_SHOOT volta para GOING_COLLECT_SHOOT
+    // (nao GOING_SHOOT), para o intake continuar coletando durante o realinhamento.
+    // .transitionTo(RobotState.GOING_COLLECT_SHOOT, () -> !isAtSetpointAngle());
 
     generalFsm
         .state(RobotState.COLLECT_SHOOTING_RECOVERY)
         .onEnter(
             () -> {
               setSubsystemRequests(
-                  ShooterRequest.SHOOT, IntakeRequest.COLLECT, ConveyorRequest.RUN_SLOW);
+                  ShooterRequest.SHOOT, IntakeRequest.COLLECT, ConveyorRequest.STOP);
               drivetrain.setMaxSpeed(SuperStructureConstants.MAX_VELOCITY_TO_SHOOT);
             })
         .transitionTo(RobotState.COLLECT_SHOOTING, () -> shooter.readyToShoot());

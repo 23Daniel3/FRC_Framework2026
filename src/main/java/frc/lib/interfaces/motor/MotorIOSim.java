@@ -87,13 +87,15 @@ public class MotorIOSim extends MotorBase {
   public void runVoltage(Voltage volts) {
     currentMode = MotorControlMode.VOLTAGE;
     // Clamp voltage to +/- 12V
-    appliedVolts = Math.max(-12.0, Math.min(12.0, volts.in(Volts)));
+    appliedVolts = Math.max(-12.0, Math.min(12.0, mapVoltage(volts.in(Volts))));
     sim.setInputVoltage(appliedVolts);
   }
 
   @Override
   public void runPercentOutput(double percent) {
-    runVoltage(Volts.of(percent * 12.0));
+    currentMode = MotorControlMode.PERCENT;
+    appliedVolts = Math.max(-12.0, Math.min(12.0, mapOutput(percent) * 12.0));
+    sim.setInputVoltage(appliedVolts);
   }
 
   @Override

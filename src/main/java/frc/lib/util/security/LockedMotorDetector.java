@@ -1,5 +1,6 @@
 package frc.lib.util.security;
 
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import java.util.function.BooleanSupplier;
@@ -18,9 +19,15 @@ public class LockedMotorDetector implements BooleanSupplier {
   }
 
   public boolean update(boolean shouldBeMoving, double actualVelocity) {
+    if (DriverStation.isDisabled()) {
+      stallTimer.stop();
+      stallTimer.reset();
+      lastValue = false;
+      return false;
+    }
+
     if (shouldBeMoving && Math.abs(actualVelocity) < Math.abs(minVelocity)) {
       stallTimer.start();
-
       lastValue = stallTimer.hasElapsed(timeThresholdSeconds);
       return lastValue;
     } else {

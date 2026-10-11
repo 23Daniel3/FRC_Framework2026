@@ -52,13 +52,13 @@ public class MotorIOVictorSPX extends BasicMotorBase {
   @Override
   public void runVoltage(Voltage volts) {
     currentMode = MotorControlMode.VOLTAGE;
-    motor.set(ControlMode.PercentOutput, volts.in(Volts) / 12.0);
+    motor.set(ControlMode.PercentOutput, mapVoltage(volts.in(Volts)) / 12.0);
   }
 
   @Override
   public void runPercentOutput(double percent) {
     currentMode = MotorControlMode.PERCENT;
-    motor.set(ControlMode.PercentOutput, percent);
+    motor.set(ControlMode.PercentOutput, mapOutput(percent));
   }
 
   @Override

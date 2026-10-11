@@ -3,6 +3,7 @@ package frc.lib.interfaces.motor.advanced;
 import static edu.wpi.first.units.Units.*;
 
 import edu.wpi.first.units.measure.*;
+import frc.lib.interfaces.encoder.EncoderIO;
 import frc.lib.interfaces.motor.basic.BasicMotorConfig;
 import org.littletonrobotics.junction.Logger;
 
@@ -43,11 +44,42 @@ public class MotorConfig extends BasicMotorConfig {
   public enum FeedbackSensorType {
     INTERNAL,
     ALTERNATE,
-    ABSOLUTE_DATAPORT
+    ABSOLUTE_DATAPORT,
+    REMOTE_CANCODER,
+    FUSED_CANCODER,
+    SYNC_CANCODER
   }
+
+  /**
+   * Threshold for triggering a DriverStation warning about high current consumption. 0 disables.
+   */
+  public Current currentWarningThreshold = Amps.of(0);
+
+  /** Number of loop iterations (usually 20ms each) to use for the moving average calculation. */
+  public int currentAverageSamples = 25; // 0.5s at 50Hz
+
+  /** Whether the automatic stall reversal (un-jam) system is enabled. */
+  public boolean stallReversalEnabled = false;
+
+  /**
+   * Current threshold that defines a stall condition (alongside low velocity and active command).
+   */
+  public Current stallCurrentThreshold = Amps.of(40);
+
+  /** Time the motor must remain in a stall condition before triggering the reversal. */
+  public double stallTimeSeconds = 0.5;
+
+  /** Duration of the forced reverse movement when un-jamming. */
+  public double reversalTimeSeconds = 0.5;
+
+  /** Percent output [-1.0, 1.0] applied in the opposite direction during the reversal period. */
+  public double reversalPercentOutput = 0.2;
 
   public FeedbackSensorType feedbackType = FeedbackSensorType.INTERNAL;
   public int countsPerRevolution = 8192;
+
+  public EncoderIO externalEncoder = null;
+  public FeedbackSensorType externalFusionType = null;
 
   public MotorConfig() {
     for (int i = 0; i < 4; i++) {
@@ -189,6 +221,50 @@ public class MotorConfig extends BasicMotorConfig {
     return this;
   }
 
+  public MotorConfig withExternalEncoder(EncoderIO encoder, FeedbackSensorType fusionType) {
+    this.externalEncoder = encoder;
+    this.externalFusionType = fusionType;
+    return this;
+  }
+
+  public boolean hasExternalEncoder() {
+    return externalEncoder != null;
+  }
+
+  /**
+   * Configures a DriverStation warning when the average current exceeds the given threshold.
+   *
+   * @param threshold The current limit that triggers a warning.
+   * @param samples Number of periodic iterations to average over (e.g. 25 = 0.5s at 50Hz).
+   * @return This config instance for chaining.
+   */
+  public MotorConfig withCurrentWarning(Current threshold, int samples) {
+    this.currentWarningThreshold = threshold;
+    this.currentAverageSamples = samples;
+    return this;
+  }
+
+  /**
+   * Enables the autonomous Stall Reversal (un-jam) system. If the motor is commanded to move but
+   * detects it is stalled (high current, near-zero velocity), it will ignore subsystem commands and
+   * force a momentary reverse movement to un-jam itself.
+   *
+   * @param stallCurrent The current threshold that defines a physical stall.
+   * @param stallTime How long the motor must be stalled before un-jamming triggers.
+   * @param reverseTime How long to apply the reverse output.
+   * @param reverseOutput The percent output to apply in the opposite direction.
+   * @return This config instance for chaining.
+   */
+  public MotorConfig withStallReversal(
+      Current stallCurrent, double stallTime, double reverseTime, double reverseOutput) {
+    this.stallReversalEnabled = true;
+    this.stallCurrentThreshold = stallCurrent;
+    this.stallTimeSeconds = stallTime;
+    this.reversalTimeSeconds = reverseTime;
+    this.reversalPercentOutput = reverseOutput;
+    return this;
+  }
+
   @Override
   public void toLog(String path) {
     super.toLog(path);
@@ -207,6 +283,19 @@ public class MotorConfig extends BasicMotorConfig {
     Logger.recordOutput(path + "/positionWrap", positionWrap);
     Logger.recordOutput(path + "/feedbackType", feedbackType.toString());
     Logger.recordOutput(path + "/countsPerRevolution", countsPerRevolution);
+
+    if (currentWarningThreshold.in(Amps) > 0) {
+      Logger.recordOutput(path + "/currentWarningThresholdAmps", currentWarningThreshold.in(Amps));
+    }
+
+    Logger.recordOutput(path + "/stallReversalEnabled", stallReversalEnabled);
+    if (stallReversalEnabled) {
+      Logger.recordOutput(
+          path + "/stallReversal/stallThresholdAmps", stallCurrentThreshold.in(Amps));
+      Logger.recordOutput(path + "/stallReversal/stallTimeSec", stallTimeSeconds);
+      Logger.recordOutput(path + "/stallReversal/reverseTimeSec", reversalTimeSeconds);
+      Logger.recordOutput(path + "/stallReversal/reverseOutput", reversalPercentOutput);
+    }
 
     for (int i = 0; i < 4; i++) {
       boolean hasGains =
