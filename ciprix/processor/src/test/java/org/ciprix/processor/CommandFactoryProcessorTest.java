@@ -51,7 +51,20 @@ public class CommandFactoryProcessorTest {
           "package frc.robot.subsystems;",
           "public enum MockRequest { IN, OUT }");
 
+  /** Same shape as a StateSubsystem: setRequest for the relay, override for the copilot. */
   private static final JavaFileObject SUBSYSTEM =
+      JavaFileObjects.forSourceLines(
+          "frc.robot.subsystems.Mock",
+          "package frc.robot.subsystems;",
+          "import org.ciprix.annotations.AutoCommandFactory;",
+          "@AutoCommandFactory(requestEnum = MockRequest.class)",
+          "public class Mock {",
+          "    public void setRequest(MockRequest req) {}",
+          "    public void override(MockRequest req) {}",
+          "}");
+
+  /** A class that only has setRequest: the generated overrides must fall back to it. */
+  private static final JavaFileObject SUBSYSTEM_WITHOUT_OVERRIDE =
       JavaFileObjects.forSourceLines(
           "frc.robot.subsystems.Mock",
           "package frc.robot.subsystems;",
@@ -131,20 +144,31 @@ public class CommandFactoryProcessorTest {
                 "  }",
                 "",
                 "  public static Command override(Mock mock, MockRequest request) {",
-                "    return Commands.run(() -> mock.setRequest(request), mock)",
+                "    return Commands.run(() -> mock.override(request))",
                 "        .withName(\"Mock Override \" + request);",
                 "  }",
                 "",
                 "  public static Command in(Mock mock) {",
-                "    return Commands.run(() -> mock.setRequest(MockRequest.IN), mock)",
+                "    return Commands.run(() -> mock.override(MockRequest.IN))",
                 "        .withName(\"Mock Override IN\");",
                 "  }",
                 "",
                 "  public static Command out(Mock mock) {",
-                "    return Commands.run(() -> mock.setRequest(MockRequest.OUT), mock)",
+                "    return Commands.run(() -> mock.override(MockRequest.OUT))",
                 "        .withName(\"Mock Override OUT\");",
                 "  }",
                 "}"));
+  }
+
+  @Test
+  public void classWithoutOverrideFallsBackToSetRequestWithRequirement() {
+    Compilation compilation = compile(REQUEST_ENUM, SUBSYSTEM_WITHOUT_OVERRIDE);
+
+    assertThat(compilation).succeeded();
+    String source = generated(compilation, "frc.robot.subsystems.MockCommands");
+    assertThat(source).contains("Commands.run(() -> mock.setRequest(request), mock)");
+    assertThat(source).contains("Commands.run(() -> mock.setRequest(MockRequest.IN), mock)");
+    assertThat(source).doesNotContain("mock.override(");
   }
 
   @Test

@@ -133,4 +133,103 @@ class StateSubsystemTest {
     assertTrue(s.atGoal());
     assertEquals(2, s.runningEnters);
   }
+
+  // ---------------------------------------------------------------------------------------------
+  // Override transitorio (backup do copiloto)
+  // ---------------------------------------------------------------------------------------------
+
+  @Test
+  void overrideWinsForOneCycleAndTheRequestComesBackByItself() {
+    FakeSubsystem s = new FakeSubsystem("Test/Override");
+    s.periodic();
+    assertEquals(St.STOPPED, s.getState());
+
+    s.override(Req.RUN); // copiloto apertou o botao
+    assertTrue(s.isOverrideActive());
+    assertEquals(Req.RUN, s.getActiveRequest());
+    assertEquals(Req.STOP, s.getRequest(), "o request da SuperStructure continua guardado");
+
+    s.periodic();
+    assertEquals(St.RUNNING, s.getState());
+    assertTrue(s.isOverrideActive());
+    assertEquals(Req.RUN, s.getActiveRequest());
+
+    s.override(Req.RUN); // continua segurando
+    s.periodic();
+    assertEquals(St.RUNNING, s.getState());
+    assertEquals(1, s.runningEnters, "manter o override nao re-executa o onEnter");
+
+    s.periodic(); // soltou: nenhum override() neste ciclo
+    assertFalse(s.isOverrideActive());
+    assertEquals(Req.STOP, s.getActiveRequest());
+    assertEquals(St.STOPPING, s.getState(), "volta sozinho para o request da SuperStructure");
+  }
+
+  @Test
+  void atGoalStaysRelativeToTheSuperStructureRequestDuringOverride() {
+    FakeSubsystem s = new FakeSubsystem("Test/OverrideGoal");
+    s.periodic();
+    assertTrue(s.atGoal());
+
+    s.override(Req.RUN);
+    s.periodic();
+    assertEquals(St.RUNNING, s.getState());
+    assertFalse(s.atGoal(), "RUNNING atende o override, nao o STOP pedido pela SuperStructure");
+  }
+
+  @Test
+  void relayKeepsUpdatingTheRequestWhileTheOverrideIsHeld() {
+    FakeSubsystem s = new FakeSubsystem("Test/OverrideRelay");
+    s.spinStopped = true;
+
+    // O relay continua rodando durante o override: o request muda por baixo sem afetar a FSM.
+    s.setRequest(Req.RUN);
+    s.override(Req.STOP);
+    s.periodic();
+    assertEquals(St.STOPPED, s.getState(), "STOPPED ja atende o override STOP");
+    assertEquals(Req.RUN, s.getRequest());
+
+    s.periodic(); // soltou o botao: passa a valer o RUN que o relay deixou guardado
+    assertEquals(St.RUNNING, s.getState());
+    assertTrue(s.atGoal());
+  }
+
+  @Test
+  void nullRequestsAreIgnoredAndReportedOnce() {
+    java.util.List<String> reports = new java.util.ArrayList<>();
+    org.ciprix.util.Report.setSink((isError, message, printTrace) -> reports.add(message));
+    try {
+      FakeSubsystem s = new FakeSubsystem("Test/Null");
+      s.setRequest(Req.RUN);
+      s.setRequest(null);
+      s.override(null);
+      s.setRequest(null);
+
+      assertEquals(Req.RUN, s.getRequest());
+      assertFalse(s.isOverrideActive());
+      assertEquals(1, reports.size());
+      s.periodic(); // nao pode lancar excecao
+      assertEquals(St.RUNNING, s.getState());
+    } finally {
+      org.ciprix.util.Report.resetSink();
+    }
+  }
+
+  @Test
+  void inStateTriggerAndStatusFollowTheSubsystem() {
+    FakeSubsystem s = new FakeSubsystem("Test/Trigger");
+    var running = s.inState(St.RUNNING);
+    var stopped = s.inState(St.STOPPED, St.STOPPING);
+
+    s.periodic();
+    assertFalse(running.getAsBoolean());
+    assertTrue(stopped.getAsBoolean());
+    assertEquals("STOP | STOPPED", s.getStatus());
+
+    s.override(Req.RUN);
+    s.periodic();
+    assertTrue(running.getAsBoolean());
+    assertFalse(stopped.getAsBoolean());
+    assertEquals("RUN | RUNNING | OVERRIDE", s.getStatus());
+  }
 }

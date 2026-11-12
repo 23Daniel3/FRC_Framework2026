@@ -147,24 +147,42 @@ public class CommandFactoryProcessor extends AbstractProcessor {
               .build());
     }
 
-    // Manual override with an arbitrary request.
-    classBuilder.addMethod(
+    // Manual override (copilot backup). A StateSubsystem has override(request), which lasts one
+    // cycle and never touches the request of the SuperStructure, so the command needs no
+    // requirement and the relay keeps running underneath. Any other class falls back to
+    // setRequest with the subsystem as requirement, which interrupts the relay while held.
+    final boolean transientOverride = hasMethod(subsystemElement, "override", 1);
+    final String overrideDoc =
+        transientOverride
+            ? "The relay keeps running underneath, so the subsystem goes back to the request of\n"
+                + "the SuperStructure by itself on the cycle after the command ends.\n"
+            : "It interrupts only the relay of this subsystem, which resumes when the command\n"
+                + "ends.\n";
+
+    MethodSpec.Builder override =
         MethodSpec.methodBuilder("override")
             .addJavadoc(
-                "Manual override: holds {@code request} while the command is scheduled. It\n"
-                    + "interrupts only the relay of this subsystem, which resumes when the\n"
-                    + "command ends.\n")
+                "Manual override: follows {@code request} while the command is scheduled.\n"
+                    + overrideDoc)
             .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
             .returns(COMMAND_CLASS)
             .addParameter(subsystemClassName, param)
-            .addParameter(enumClassName, "request")
-            .addStatement(
-                "return $T.run(() -> $L.setRequest(request), $L)\n.withName($S + request)",
-                COMMANDS_CLASS,
-                param,
-                param,
-                subsystemName + " Override ")
-            .build());
+            .addParameter(enumClassName, "request");
+    if (transientOverride) {
+      override.addStatement(
+          "return $T.run(() -> $L.override(request))\n.withName($S + request)",
+          COMMANDS_CLASS,
+          param,
+          subsystemName + " Override ");
+    } else {
+      override.addStatement(
+          "return $T.run(() -> $L.setRequest(request), $L)\n.withName($S + request)",
+          COMMANDS_CLASS,
+          param,
+          param,
+          subsystemName + " Override ");
+    }
+    classBuilder.addMethod(override.build());
 
     // One manual override per request.
     for (Element enclosed : enumElement.getEnclosedElements()) {
@@ -172,24 +190,34 @@ public class CommandFactoryProcessor extends AbstractProcessor {
         continue;
       }
       String enumValue = enclosed.getSimpleName().toString();
-      classBuilder.addMethod(
+      MethodSpec.Builder method =
           MethodSpec.methodBuilder(methodNameFor(enumValue))
               .addJavadoc(
-                  "Manual override: holds {@link $T#$L} while the command is scheduled.\n",
+                  "Manual override: follows {@link $T#$L} while the command is scheduled.\n",
                   enumClassName,
                   enumValue)
               .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
               .returns(COMMAND_CLASS)
-              .addParameter(subsystemClassName, param)
-              .addStatement(
-                  "return $T.run(() -> $L.setRequest($T.$L), $L)\n.withName($S)",
-                  COMMANDS_CLASS,
-                  param,
-                  enumClassName,
-                  enumValue,
-                  param,
-                  subsystemName + " Override " + enumValue)
-              .build());
+              .addParameter(subsystemClassName, param);
+      if (transientOverride) {
+        method.addStatement(
+            "return $T.run(() -> $L.override($T.$L))\n.withName($S)",
+            COMMANDS_CLASS,
+            param,
+            enumClassName,
+            enumValue,
+            subsystemName + " Override " + enumValue);
+      } else {
+        method.addStatement(
+            "return $T.run(() -> $L.setRequest($T.$L), $L)\n.withName($S)",
+            COMMANDS_CLASS,
+            param,
+            enumClassName,
+            enumValue,
+            param,
+            subsystemName + " Override " + enumValue);
+      }
+      classBuilder.addMethod(method.build());
     }
 
     JavaFile javaFile = JavaFile.builder(packageName, classBuilder.build()).indent("  ").build();
@@ -217,6 +245,20 @@ public class CommandFactoryProcessor extends AbstractProcessor {
   private static String decapitalize(String name) {
     String lower = name.toLowerCase(Locale.ROOT);
     return SourceVersion.isKeyword(lower) ? lower + "Subsystem" : lower;
+  }
+
+  /** True when {@code type} has (or inherits) a public instance method with that name and arity. */
+  private boolean hasMethod(TypeElement type, String name, int parameterCount) {
+    for (Element member : processingEnv.getElementUtils().getAllMembers(type)) {
+      if (member.getKind() == ElementKind.METHOD
+          && member.getSimpleName().contentEquals(name)
+          && member.getModifiers().contains(Modifier.PUBLIC)
+          && !member.getModifiers().contains(Modifier.STATIC)
+          && ((ExecutableElement) member).getParameters().size() == parameterCount) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private TypeElement resolveSuperStructure(AnnotationMirror mirror) {

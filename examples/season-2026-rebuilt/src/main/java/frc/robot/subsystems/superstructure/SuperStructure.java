@@ -6,7 +6,6 @@ import static edu.wpi.first.units.Units.RPM;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
-import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.game.AllianceManager;
 import frc.game.FieldConstants;
 import frc.robot.Constants.RobotRequest;
@@ -21,12 +20,11 @@ import frc.robot.subsystems.intake.IntakeConstants.IntakeRequest;
 import frc.robot.subsystems.shooter.Shooter;
 import frc.robot.subsystems.shooter.ShooterConstants.ShooterRequest;
 import org.ciprix.calculus.ShotParameters;
-import org.ciprix.interfaces.fsm.StateMachine;
+import org.ciprix.interfaces.subsystem.SuperStructureBase;
 import org.ciprix.util.ConstantsLogger;
-import org.ciprix.util.PeriodicTimer;
 import org.littletonrobotics.junction.Logger;
 
-public class SuperStructure extends SubsystemBase {
+public class SuperStructure extends SuperStructureBase<RobotRequest, RobotState> {
 
   private final Conveyor conveyor;
   private final Drivetrain drivetrain;
@@ -35,12 +33,11 @@ public class SuperStructure extends SubsystemBase {
 
   private final ShooterTargetCalculator shooterCalculator;
 
-  private RobotRequest robotRequest = RobotRequest.IDLE;
-
   private final AllianceManager allianceManager = AllianceManager.getInstance();
-  private final StateMachine<RobotState> generalFsm;
 
   public SuperStructure(Conveyor conveyor, Drivetrain drivetrain, Intake intake, Shooter shooter) {
+    // A base guarda o request do robo e a FSM geral ("Subsystems/SuperStructure/RobotState").
+    super("Subsystems/SuperStructure", RobotState.class, RobotState.IDLE, RobotRequest.IDLE);
 
     this.conveyor = conveyor;
     this.drivetrain = drivetrain;
@@ -49,20 +46,14 @@ public class SuperStructure extends SubsystemBase {
 
     this.shooterCalculator = new ShooterTargetCalculator(allianceManager);
 
-    generalFsm =
-        new StateMachine<>(
-            "Subsystems/SuperStructure/RobotState", RobotState.class, RobotState.IDLE);
-
     configureGeneralFSM();
 
-    setName("Subsystems/SuperStructure");
     ConstantsLogger.logConstants(SuperStructureConstants.class, getName());
   }
 
+  /** Roda todo ciclo antes da FSM geral: atualiza o que as transicoes leem. */
   @Override
-  public void periodic() {
-    PeriodicTimer.start(getName());
-
+  protected void beforeUpdate() {
     allianceManager.showAllianceMessageOnDashboard();
 
     Pose2d pose = drivetrain.getPose();
@@ -71,26 +62,17 @@ public class SuperStructure extends SubsystemBase {
 
     // Alimenta o shooter continuamente com o RPM calculado pelo SOTM.
     shooter.setVelocity(RPM.of(3000));
+  }
 
-    generalFsm.update();
-
+  /** Roda todo ciclo depois da FSM geral. */
+  @Override
+  protected void afterUpdate() {
     log();
-
-    PeriodicTimer.stop(getName());
   }
 
   private IntakeRequest intakeRequest = IntakeRequest.STOP;
   private ShooterRequest shooterRequest = ShooterRequest.STOP;
   private ConveyorRequest conveyorRequest = ConveyorRequest.STOP;
-
-  public void setRequest(RobotRequest request) {
-    this.robotRequest = request;
-  }
-
-  /** Estado atual da FSM geral (consumido pelo observador de LEDs e por telemetria). */
-  public RobotState getRobotState() {
-    return generalFsm.getCurrentState();
-  }
 
   public ConveyorRequest getConveyorRequest() {
     return conveyorRequest;
@@ -244,28 +226,23 @@ public class SuperStructure extends SubsystemBase {
 
     // Mapeamento request → (estado de entrada, estados que ja satisfazem o request).
     // O estado de entrada e excluido automaticamente pelo framework.
-    generalFsm.addRequestTransition(
-        () -> robotRequest == RobotRequest.SHOOT,
+    bindRequest(
+        RobotRequest.SHOOT,
         RobotState.GOING_SHOOT,
         RobotState.SHOOTING,
         RobotState.SHOOTING_RECOVERY);
 
-    generalFsm.addRequestTransition(
-        () -> robotRequest == RobotRequest.COLLECT,
-        RobotState.GOING_COLLECT,
-        RobotState.COLLECTING);
+    bindRequest(RobotRequest.COLLECT, RobotState.GOING_COLLECT, RobotState.COLLECTING);
 
-    generalFsm.addRequestTransition(
-        () -> robotRequest == RobotRequest.COLLECT_SHOOT,
+    bindRequest(
+        RobotRequest.COLLECT_SHOOT,
         RobotState.GOING_COLLECT_SHOOT,
         RobotState.COLLECT_SHOOTING,
         RobotState.COLLECT_SHOOTING_RECOVERY);
 
-    generalFsm.addRequestTransition(
-        () -> robotRequest == RobotRequest.CLOSE, RobotState.CLOSING, RobotState.CLOSED);
+    bindRequest(RobotRequest.CLOSE, RobotState.CLOSING, RobotState.CLOSED);
 
-    generalFsm.addRequestTransition(
-        () -> robotRequest == RobotRequest.IDLE, RobotState.IDLING, RobotState.IDLE);
+    bindRequest(RobotRequest.IDLE, RobotState.IDLING, RobotState.IDLE);
 
     generalFsm.validateComplete();
   }
