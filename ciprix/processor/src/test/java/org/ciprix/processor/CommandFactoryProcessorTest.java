@@ -154,7 +154,9 @@ public class CommandFactoryProcessorTest {
     assertThat(compilation).succeeded();
     String source = generated(compilation, "frc.robot.subsystems.MockCommands");
     assertThat(source).contains("defaultCommand(Supplier<MockRequest> requestSource");
-    assertThat(source).doesNotContain("SuperStructure");
+    // The Javadoc may mention the SuperStructure; what must not exist is the overload using it.
+    assertThat(source).doesNotContain("SuperStructure superStructure");
+    assertThat(source).doesNotContain("import frc.robot.subsystems.superstructure");
   }
 
   @Test
