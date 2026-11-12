@@ -10,8 +10,8 @@ projetos de robô, e os projetos de robô ficam em pastas de templates e exemplo
 | --- | --- |
 | [`ciprix/`](./ciprix) | A biblioteca **Ciprix**, dividida em módulos (`core`, `ctre`, `phoenix5`, `rev`, `pathplanner`, `processor`). É o que as equipes instalam como vendordep. |
 | [`examples/season-2026-rebuilt/`](./examples/season-2026-rebuilt) | O robô completo da Techmaker (9047) na temporada 2026, usando a Ciprix. É o exemplo de referência do padrão. |
-| `templates/` | Projetos mínimos prontos para copiar e começar um robô novo. |
-| `docs/` | Guias de arquitetura, simulação, visão e migração. |
+| [`templates/skeleton/`](./templates/skeleton) | O menor robô completo no padrão, pronto para copiar e começar um robô novo. |
+| [`docs/`](./docs) | Guias de arquitetura, simulação, visão, hardware e migração para a WPILib 2027. |
 
 Cada template e cada exemplo é um **projeto GradleRIO completo**: abra a pasta do projeto no
 VS Code da WPILib (por exemplo `examples/season-2026-rebuilt`), e os comandos de sempre
@@ -31,6 +31,20 @@ VS Code da WPILib (por exemplo `examples/season-2026-rebuilt`), e os comandos de
    (`XxxCommands.defaultCommand(superStructure, xxx)`), que entrega o request da `SuperStructure`.
 6. O copiloto é o backup manual: os comandos `XxxCommands.<request>(xxx)` sobrepõem o request
    de um subsistema enquanto o botão está pressionado.
+
+## O que a Ciprix traz
+
+| Recurso | Guia |
+| --- | --- |
+| Máquinas de estado com transições temporizadas, estados de segurança e override do copiloto | [Arquitetura](./docs/arquitetura.md) |
+| Motores que guardam a intenção do código, com un-jam e saúde (Talon FX/FXS, SPARK, SRX/SPX, PWM) | [Arquitetura](./docs/arquitetura.md#motores) |
+| Simulação com física e bateria usando a mesma configuração do robô | [Simulação](./docs/simulacao.md) |
+| Robô 3D no AdvantageScope com o CAD da equipe | [Robô 3D](./examples/season-2026-rebuilt/advantagescope/README.md) |
+| Visão por AprilTags pronta (Limelight), com filtros que dizem por que cada pose ficou de fora | [Visão](./docs/visao.md) |
+| Alertas de hardware para o dashboard, gerenciamento de bateria, autoteste no pit e checklist da fila | [Hardware, energia e pit](./docs/hardware-energia-e-pit.md) |
+
+Antes do primeiro deploy desta versão no robô, leia
+[Mudanças no robô real](./docs/mudancas-no-robo-real.md).
 
 ## Como a Ciprix é consumida
 
@@ -63,6 +77,9 @@ annotationProcessor "org.ciprix:ciprix-processor:$ciprixJson.version"
 # Biblioteca: formatação, build e testes de todos os módulos
 cd ciprix && ./gradlew build
 
+# Template: build (o CI compila os três projetos)
+cd templates/skeleton && ./gradlew build
+
 # Robô de exemplo: build, testes e simulação
 cd examples/season-2026-rebuilt && ./gradlew build
 cd examples/season-2026-rebuilt && ./gradlew simulateJava
@@ -71,4 +88,4 @@ cd examples/season-2026-rebuilt && ./gradlew simulateJava
 cd ciprix && ./gradlew generateVendordeps
 ```
 
-O CI roda exatamente esses builds para a biblioteca e para cada projeto de robô.
+O CI roda exatamente esses builds para a biblioteca, para o template e para o exemplo.
