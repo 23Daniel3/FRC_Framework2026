@@ -23,10 +23,14 @@ import frc.robot.subsystems.shooter.*;
 import frc.robot.subsystems.superstructure.SuperStructure;
 import frc.robot.subsystems.vision.*;
 import frc.robot.subsystems.vision.VisionConstants.VisionCamera;
+import java.nio.file.Path;
 import org.ciprix.controller.NaturalXboxController;
 import org.ciprix.controller.VibrateXboxController;
 import org.ciprix.util.AllianceSelector;
 import org.ciprix.util.ConstantsLogger;
+import org.ciprix.visualization.MechanismPoses;
+import org.ciprix.visualization.MechanismPoses.Axis;
+import org.ciprix.visualization.RobotVisualizer;
 
 /**
  * This class is where the bulk of the robot should be declared. Since Command-based is a
@@ -120,6 +124,7 @@ public class RobotContainer {
     // Configure the button bindings
     configureButtonBindings();
     triggersActions();
+    configureVisualizer();
 
     ConstantsLogger.logConstants(Zones.class, "Zones");
   }
@@ -223,6 +228,27 @@ public class RobotContainer {
         Commands.sequence(
                 intake.selfTestCommand(), conveyor.selfTestCommand(), shooter.selfTestCommand())
             .withName("SelfTest All"));
+  }
+
+  /**
+   * Visualizacao 3D no AdvantageScope: cada peca movel do CAD ({@code model_N.glb}) segue o
+   * mecanismo de verdade, no robo, na simulacao e no replay. Passo a passo em {@code
+   * advantagescope/README.md}.
+   */
+  private void configureVisualizer() {
+    // model_0.glb: o intake, girando em volta do eixo do pivot.
+    RobotVisualizer.component(
+        0,
+        MechanismPoses.pivot(IntakeConstants.PIVOT_AXIS, Axis.PITCH, intake::getPivotAngle),
+        IntakeConstants.PIVOT_AXIS);
+
+    if (Constants.currentMode == Constants.Mode.SIM) {
+      // Gera os offsets de cada peca para colar no config.json do robo customizado.
+      RobotVisualizer.writeAdvantageScopeConfig(
+          Path.of("advantagescope", "Robot_Techmaker2026", "config.generated.json"),
+          "Techmaker 2026",
+          RobotVisualizer.ONSHAPE_ROTATIONS);
+    }
   }
 
   /**

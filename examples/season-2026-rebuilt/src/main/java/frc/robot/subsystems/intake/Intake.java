@@ -1,10 +1,12 @@
 package frc.robot.subsystems.intake;
 
 import static edu.wpi.first.units.Units.Amps;
+import static edu.wpi.first.units.Units.Degrees;
 import static edu.wpi.first.units.Units.RPM;
 import static edu.wpi.first.units.Units.Rotations;
 import static edu.wpi.first.units.Units.RotationsPerSecond;
 
+import edu.wpi.first.units.measure.Angle;
 import frc.robot.subsystems.intake.IntakeConstants.IntakeRequest;
 import frc.robot.subsystems.intake.IntakeConstants.IntakeState;
 import org.ciprix.annotations.AutoCommandFactory;
@@ -101,5 +103,17 @@ public class Intake
         .output(0.3)
         .currentBetween(Amps.of(0.3), Amps.of(25))
         .mustTurn(RotationsPerSecond.of(5));
+  }
+
+  /**
+   * Angulo do pivot para a visualizacao 3D: zero na posicao inicial (como no CAD) e {@link
+   * IntakeConstants#PIVOT_DEPLOY_DEGREES} em OUT. Vem dos inputs, entao vale no robo, na simulacao
+   * e no replay.
+   */
+  public Angle getPivotAngle() {
+    double travel =
+        inputs.intakeMotorInputs.position.in(Rotations) - IntakeConstants.INTAKE_START_POSITION;
+    double fullTravel = IntakeConstants.INTAKE_OUT_POSITION - IntakeConstants.INTAKE_START_POSITION;
+    return Degrees.of(travel / fullTravel * IntakeConstants.PIVOT_DEPLOY_DEGREES);
   }
 }

@@ -12,6 +12,7 @@ import org.ciprix.util.Report;
 import org.ciprix.util.RobotClock;
 import org.ciprix.util.RobotLoop;
 import org.ciprix.util.RobotStatus;
+import org.ciprix.visualization.RobotVisualizer;
 
 /**
  * Replaces everything the library reads from or writes to the robot (clock, enabled state, Driver
@@ -88,6 +89,7 @@ public final class TestEnvironment {
     SimBattery.setRoboRioSink(volts -> {});
     PowerManager.resetForTesting();
     PowerManager.setVoltageSource(() -> batteryVolts);
+    RobotVisualizer.resetForTesting();
   }
 
   public void uninstall() {
@@ -97,6 +99,7 @@ public final class TestEnvironment {
     SimBattery.resetForTesting();
     SimBattery.resetRoboRioSink();
     PowerManager.resetForTesting();
+    RobotVisualizer.resetForTesting();
     PersistentAlert.resetBackendFactory();
     Report.resetSink();
     RobotStatus.resetEnabledSource();
