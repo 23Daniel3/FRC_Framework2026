@@ -1,96 +1,68 @@
 package org.ciprix.interfaces.motor.impl;
 
+import static edu.wpi.first.units.Units.Amps;
 import static edu.wpi.first.units.Units.Rotations;
 import static edu.wpi.first.units.Units.RotationsPerSecond;
-import static edu.wpi.first.units.Units.RotationsPerSecondPerSecond;
 import static edu.wpi.first.units.Units.Volts;
 
-import edu.wpi.first.math.controller.PIDController;
-import edu.wpi.first.math.controller.SimpleMotorFeedforward;
-import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.units.measure.Angle;
-import edu.wpi.first.units.measure.AngularVelocity;
-import edu.wpi.first.units.measure.Current;
-import edu.wpi.first.units.measure.Voltage;
-import edu.wpi.first.wpilibj.DriverStation;
+import org.ciprix.CiprixSettings;
 import org.ciprix.interfaces.encoder.EncoderIO;
 import org.ciprix.interfaces.encoder.EncoderIO.EncoderIOInputs;
 import org.ciprix.interfaces.motor.MotorControlMode;
+import org.ciprix.interfaces.motor.SoftwareClosedLoop;
 import org.ciprix.interfaces.motor.advanced.MotorBase;
 import org.ciprix.interfaces.motor.advanced.MotorConfig;
 import org.ciprix.interfaces.motor.basic.BasicMotorIO;
-import org.ciprix.util.PeriodicSystem;
+import org.ciprix.util.Report;
+import org.ciprix.util.RobotClock;
+import org.ciprix.util.RobotStatus;
 
 /**
  * A software-composed {@link org.ciprix.interfaces.motor.advanced.MotorIO} that pairs any {@link
- * BasicMotorIO} for power output with any {@link EncoderIO} for positional feedback and runs a
- * WPILib PID+FF loop on the RIO at 50 Hz via {@link PeriodicSystem}.
+ * BasicMotorIO} for power output with any {@link EncoderIO} for feedback and closes the loop on the
+ * roboRIO (PID, feedforward and motion profile from {@link SoftwareClosedLoop}).
  *
  * <p>This is the automatic fallback used by the vendor factories ({@code CtreMotorIOFactory},
  * {@code RevMotorIOFactory}) when no native hardware fusion path exists between the chosen motor
  * controller and the external encoder (e.g., a CIM + a quadrature encoder). It is a full drop-in
  * replacement for any hardware-closed-loop MotorIO.
+ *
+ * <p>The loop runs inside {@code updateInputs}, right after the encoder is read, so the output is
+ * always computed from the newest measurement. The gains follow the WPILib convention: volts per
+ * rotation and per rotation per second.
+ *
+ * <p>Safety: when the encoder stops answering, a closed loop cannot know where the mechanism is, so
+ * the motor is stopped (and reported) until the encoder comes back.
+ *
+ * <p>The power stage must be created with the full output range (see {@code
+ * BasicMotorConfig.copyAsPowerStage()}): the output range of {@code config} is applied here.
  */
 public class MotorIOComposed extends MotorBase {
 
   private final BasicMotorIO powerOut;
   private final EncoderIO feedback;
-
-  /** Internal inputs struct — same pattern as every hardware MotorIO. */
-  private final MotorIOInputs inputs = new MotorIOInputs();
+  private final SoftwareClosedLoop loop;
 
   /** Latest encoder readings refreshed inside updateHardwareInputs. */
   private final EncoderIOInputs feedbackInputs = new EncoderIOInputs();
 
-  // Per-slot software control objects
-  private final PIDController[] pidControllers = new PIDController[4];
-  private final SimpleMotorFeedforward[] feedforwards = new SimpleMotorFeedforward[4];
-  private final TrapezoidProfile[] profiles = new TrapezoidProfile[4];
-
-  private TrapezoidProfile.State profileState = new TrapezoidProfile.State();
-  private int activeSlot = 0;
-
-  /**
-   * Tracks the previous disabled state so PID controllers and the trapezoid profile are reset
-   * exactly once on the disabled frame before the robot re-enables. This prevents integral windup
-   * accumulated during the disabled period from causing an output spike on re-enable.
-   */
-  private boolean wasDisabled = true;
-
-  // Background periodic control loop (registers with the WPILib scheduler automatically)
-  @SuppressWarnings("unused")
-  private final PeriodicSystem controlLoop;
+  private MotorControlMode loopMode = MotorControlMode.IDLE;
+  private double loopTarget = 0.0;
+  private int loopSlot = 0;
+  private double lastLoopTime = Double.NaN;
+  private boolean feedbackLossReported = false;
 
   public MotorIOComposed(
       String name, BasicMotorIO powerOut, EncoderIO feedback, MotorConfig config) {
     super(name, config);
     this.powerOut = powerOut;
     this.feedback = feedback;
-
-    for (int i = 0; i < 4; i++) {
-      pidControllers[i] = new PIDController(config.kP[i], config.kI[i], config.kD[i]);
-      feedforwards[i] = new SimpleMotorFeedforward(config.kS[i], config.kV[i], config.kA[i]);
-      if (config.maxMotionMaxVelocity[i] != null
-          && config.maxMotionMaxVelocity[i].in(RotationsPerSecond) > 0) {
-        profiles[i] =
-            new TrapezoidProfile(
-                new TrapezoidProfile.Constraints(
-                    config.maxMotionMaxVelocity[i].in(RotationsPerSecond),
-                    config.maxMotionMaxAcceleration[i].in(RotationsPerSecondPerSecond)));
-      }
-    }
-
-    this.controlLoop =
-        new PeriodicSystem(name + "_SoftwarePID") {
-          @Override
-          public void periodic() {
-            applyControlLoop();
-          }
-        };
+    this.loop = new SoftwareClosedLoop(config, SoftwareClosedLoop.Style.VOLTS);
   }
 
   // ---------------------------------------------------------------------------
-  // Hardware-inputs bridge (required by MotorBase)
+  // Inputs and control loop
   // ---------------------------------------------------------------------------
 
   @Override
@@ -105,144 +77,98 @@ public class MotorIOComposed extends MotorBase {
     inputs.position = feedbackInputs.position;
     inputs.velocity = feedbackInputs.velocity;
     inputs.isConnected = inputs.isConnected && feedbackInputs.isConnected;
+    runLoop();
   }
 
-  /** Returns the shared inputs struct used by this instance. */
-  @Override
-  public MotorIOInputs getMotorIOInputs() {
-    return inputs;
-  }
+  private void runLoop() {
+    double now = RobotClock.now();
+    double dt =
+        Double.isNaN(lastLoopTime)
+            ? CiprixSettings.getLoopPeriodSeconds()
+            : Math.max(1e-3, Math.min(0.1, now - lastLoopTime));
+    lastLoopTime = now;
 
-  // ---------------------------------------------------------------------------
-  // Background control loop
-  // ---------------------------------------------------------------------------
+    double position = feedbackInputs.position.in(Rotations);
+    double velocity = feedbackInputs.velocity.in(RotationsPerSecond);
 
-  private void applyControlLoop() {
-    if (DriverStation.isDisabled()) {
-      if (!wasDisabled) {
-        // Transition into disabled: flush PID state so there is no windup on re-enable.
-        for (PIDController pid : pidControllers) pid.reset();
-        profileState =
-            new TrapezoidProfile.State(
-                feedbackInputs.position.in(Rotations),
-                feedbackInputs.velocity.in(RotationsPerSecond));
-      }
-      wasDisabled = true;
+    boolean closedLoop =
+        loopMode == MotorControlMode.VELOCITY
+            || loopMode == MotorControlMode.POSITION
+            || loopMode == MotorControlMode.SMART_POSITION;
+
+    if (!closedLoop || RobotStatus.isDisabled() || isOutputOverridden()) {
+      // Nothing accumulates while the loop is not in charge (no windup when it comes back).
+      loop.reset(position, velocity);
       return;
     }
-    wasDisabled = false;
 
-    switch (currentMode) {
-      case VELOCITY -> {
-        double tgt = targetVelocity.in(RotationsPerSecond);
-        double meas = feedbackInputs.velocity.in(RotationsPerSecond);
-        double out =
-            pidControllers[activeSlot].calculate(meas, tgt)
-                + feedforwards[activeSlot].calculate(tgt);
-        powerOut.runVoltage(Volts.of(out));
+    if (!feedbackInputs.isConnected) {
+      loop.reset(position, velocity);
+      powerOut.stop();
+      if (!feedbackLossReported) {
+        feedbackLossReported = true;
+        Report.error(
+            "Motor " + name + ": encoder lost, closed loop stopped until the encoder is back.");
       }
-      case POSITION -> {
-        double tgt = targetPosition.in(Rotations);
-        double meas = feedbackInputs.position.in(Rotations);
-        double out =
-            pidControllers[activeSlot].calculate(meas, tgt)
-                + feedforwards[activeSlot].calculate(0.0);
-        powerOut.runVoltage(Volts.of(out));
-      }
-      case SMART_POSITION -> {
-        if (profiles[activeSlot] != null) {
-          double tgt = targetPosition.in(Rotations);
-          double meas = feedbackInputs.position.in(Rotations);
-          TrapezoidProfile.State goal = new TrapezoidProfile.State(tgt, 0.0);
-          profileState = profiles[activeSlot].calculate(0.02, profileState, goal);
-          double out =
-              pidControllers[activeSlot].calculate(meas, profileState.position)
-                  + feedforwards[activeSlot].calculate(profileState.velocity);
-          powerOut.runVoltage(Volts.of(out));
-        }
-      }
-      case VOLTAGE, PERCENT, IDLE -> {
-        // Handled directly by runVoltage / runPercentOutput / stop.
-      }
+      return;
     }
+    feedbackLossReported = false;
+
+    double volts = loop.calculate(loopMode, loopTarget, loopSlot, position, velocity, dt);
+    powerOut.runVoltage(Volts.of(volts));
   }
 
   // ---------------------------------------------------------------------------
-  // MotorIO — control commands
+  // Commands
   // ---------------------------------------------------------------------------
 
-  @Override
-  public void runVelocity(AngularVelocity velocity) {
-    runVelocity(velocity, 0);
+  private void setLoop(MotorControlMode mode, double target, int slot) {
+    loopMode = mode;
+    loopTarget = target;
+    loopSlot = slot;
   }
 
   @Override
-  public void runPosition(Angle position) {
-    runPosition(position, 0);
+  protected void applyVelocity(double rotationsPerSecond, int slot) {
+    setLoop(MotorControlMode.VELOCITY, rotationsPerSecond, slot);
   }
 
   @Override
-  public void runSmartPosition(Angle position) {
-    runSmartPosition(position, 0);
+  protected void applyPosition(double rotations, int slot) {
+    setLoop(MotorControlMode.POSITION, rotations, slot);
   }
 
   @Override
-  public void runVelocity(AngularVelocity velocity, int slot) {
-    this.currentMode = MotorControlMode.VELOCITY;
-    this.targetVelocity = velocity;
-    this.activeSlot = slot;
-    pidControllers[slot].reset();
+  protected void applySmartPosition(double rotations, int slot) {
+    setLoop(MotorControlMode.SMART_POSITION, rotations, slot);
   }
 
   @Override
-  public void runPosition(Angle position, int slot) {
-    this.currentMode = MotorControlMode.POSITION;
-    this.targetPosition = position;
-    this.activeSlot = slot;
-    pidControllers[slot].reset();
+  protected void applyVoltage(double volts) {
+    setLoop(MotorControlMode.VOLTAGE, volts, 0);
+    powerOut.runVoltage(Volts.of(volts));
   }
 
   @Override
-  public void runSmartPosition(Angle position, int slot) {
-    this.currentMode = MotorControlMode.SMART_POSITION;
-    this.targetPosition = position;
-    this.activeSlot = slot;
-    pidControllers[slot].reset();
-    profileState =
-        new TrapezoidProfile.State(
-            feedbackInputs.position.in(Rotations), feedbackInputs.velocity.in(RotationsPerSecond));
-  }
-
-  @Override
-  public void runVoltage(Voltage volts) {
-    this.currentMode = MotorControlMode.IDLE;
-    powerOut.runVoltage(volts);
-  }
-
-  @Override
-  public void runPercentOutput(double percent) {
-    this.currentMode = MotorControlMode.IDLE;
+  protected void applyPercentOutput(double percent) {
+    setLoop(MotorControlMode.PERCENT, percent, 0);
     powerOut.runPercentOutput(percent);
   }
 
   @Override
-  public void stop() {
-    this.currentMode = MotorControlMode.IDLE;
+  protected void applyStop() {
+    setLoop(MotorControlMode.IDLE, 0.0, 0);
     powerOut.stop();
   }
 
-  // ---------------------------------------------------------------------------
-  // BasicMotorIO — delegates to the wrapped BasicMotorIO
-  // ---------------------------------------------------------------------------
-
   @Override
-  public void setBrakeMode(boolean enabled) {
+  protected void applyBrakeMode(boolean enabled) {
     powerOut.setBrakeMode(enabled);
   }
 
   @Override
-  public void setCurrentLimit(Current current) {
-    powerOut.setCurrentLimit(current);
+  protected void applyCurrentLimit(double amps) {
+    powerOut.setCurrentLimit(Amps.of(amps));
   }
 
   @Override
@@ -251,27 +177,27 @@ public class MotorIOComposed extends MotorBase {
   }
 
   // ---------------------------------------------------------------------------
-  // Tuning — wire into WPILib PID objects
+  // Tuning
   // ---------------------------------------------------------------------------
 
   @Override
   public void applyHardwarePID(int slot, double p, double i, double d) {
-    pidControllers[slot].setPID(p, i, d);
+    loop.setPID(slot, p, i, d);
   }
 
   @Override
   public void applyHardwareSVAG(int slot, double s, double v, double a, double g) {
-    feedforwards[slot] = new SimpleMotorFeedforward(s, v, a);
+    loop.setFeedforward(slot, s, v, a, g);
   }
 
   @Override
   public void applyHardwareSmartMotion(
       int slot, double maxVel, double maxAccel, double allowedErr) {
-    profiles[slot] = new TrapezoidProfile(new TrapezoidProfile.Constraints(maxVel, maxAccel));
+    loop.setMotion(slot, maxVel, maxAccel);
   }
 
   @Override
   public void applyHardwareOutputRange(int slot, double min, double max) {
-    // Output clamping could be added here if required
+    loop.setOutputRange(min, max);
   }
 }

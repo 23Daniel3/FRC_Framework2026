@@ -30,6 +30,16 @@ public interface BasicMotorIO {
     public boolean isConnected = false;
     public String[] activeFaults = new String[] {};
 
+    /**
+     * True when the motor cannot be trusted to do its job: disconnected, stalled, spinning free,
+     * too hot or drawing too much current. Use it in the state machine, for example {@code
+     * .transitionToSecurityState(() -> inputs.motorInputs.hasProblem)}.
+     */
+    public boolean hasProblem = false;
+
+    /** What is wrong, for example {@code "Stalled"}; empty when all is well. */
+    public String problem = "";
+
     @Override
     public void toLog(LogTable table) {
       table.put("PercentOutput", percentOutput);
@@ -38,6 +48,8 @@ public interface BasicMotorIO {
       table.put("Temperature", temperature);
       table.put("IsConnected", isConnected);
       table.put("ActiveFaults", activeFaults);
+      table.put("HasProblem", hasProblem);
+      table.put("Problem", problem);
     }
 
     @Override
@@ -48,6 +60,8 @@ public interface BasicMotorIO {
       temperature = table.get("Temperature", temperature);
       isConnected = table.get("IsConnected", isConnected);
       activeFaults = table.get("ActiveFaults", activeFaults);
+      hasProblem = table.get("HasProblem", hasProblem);
+      problem = table.get("Problem", problem);
     }
   }
 

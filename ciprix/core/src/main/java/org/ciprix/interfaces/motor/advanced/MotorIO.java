@@ -21,12 +21,28 @@ public interface MotorIO extends BasicMotorIO {
     public AngularVelocity velocity = RadiansPerSecond.of(0.0);
     public boolean atSetpoint = false;
 
+    /** Moving average of the current, in amps (window set by {@code currentAverageSamples}). */
+    public double averageCurrentAmps = 0.0;
+
+    /** True from the moment a stall is detected until the motor runs normally again. */
+    public boolean stalled = false;
+
+    /** True while the motor is driven backwards by the automatic un-jam. */
+    public boolean unjamming = false;
+
+    /** True while the motor turns fast with almost no load (broken belt, loose coupler). */
+    public boolean freeSpinning = false;
+
     @Override
     public void toLog(LogTable table) {
       super.toLog(table);
       table.put("Position", position);
       table.put("Velocity", velocity);
       table.put("AtSetpoint", atSetpoint);
+      table.put("AverageCurrentAmps", averageCurrentAmps);
+      table.put("Stalled", stalled);
+      table.put("Unjamming", unjamming);
+      table.put("FreeSpinning", freeSpinning);
     }
 
     @Override
@@ -35,6 +51,10 @@ public interface MotorIO extends BasicMotorIO {
       position = table.get("Position", position);
       velocity = table.get("Velocity", velocity);
       atSetpoint = table.get("AtSetpoint", atSetpoint);
+      averageCurrentAmps = table.get("AverageCurrentAmps", averageCurrentAmps);
+      stalled = table.get("Stalled", stalled);
+      unjamming = table.get("Unjamming", unjamming);
+      freeSpinning = table.get("FreeSpinning", freeSpinning);
     }
   }
 

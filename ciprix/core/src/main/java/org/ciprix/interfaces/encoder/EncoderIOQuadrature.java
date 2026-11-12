@@ -9,9 +9,9 @@ import edu.wpi.first.wpilibj.Encoder;
 /**
  * {@link org.ciprix.interfaces.encoder.EncoderIO} for a relative quadrature encoder wired to two
  * DIO ports — a Through Bore in relative mode, a US Digital E4T, or any encoder mounted on a
- * CIM/RedLine shaft to give closed-loop feedback to an otherwise sensorless motor (see {@code
- * org.ciprix.interfaces.motor.impl.MotorIOTalonSRX}, {@code MotorIOSparkMaxBrushed}, or {@code
- * MotorIOPWM}).
+ * CIM/RedLine shaft to give closed-loop feedback to an otherwise sensorless motor (see {@link
+ * org.ciprix.interfaces.motor.impl.MotorIOComposed}, which closes the loop on the roboRIO with any
+ * motor of the library, PWM included).
  *
  * <p>Reports native velocity straight from the RoboRIO's hardware counter — no numeric
  * differentiation, and no rollover artifacts, unlike a wrapped absolute sensor.

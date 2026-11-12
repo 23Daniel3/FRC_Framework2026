@@ -15,34 +15,45 @@ public final class RevMotorFaults {
   private RevMotorFaults() {}
 
   /**
+   * Describes the active faults and warnings of a SPARK, for example {@code "Fault: Over
+   * Temperature"} or {@code "Warn: Brownout"}.
+   *
+   * @param faults active faults ({@code motor.getFaults()})
+   * @param warnings active warnings ({@code motor.getWarnings()})
+   * @return one line per active flag, empty when there is none
+   */
+  public static String[] describe(SparkBase.Faults faults, SparkBase.Warnings warnings) {
+    List<String> messages = new ArrayList<>();
+    if (faults.other) messages.add("Fault: Other");
+    if (faults.motorType) messages.add("Fault: Motor Type Mismatch");
+    if (faults.sensor) messages.add("Fault: Sensor Error");
+    if (faults.can) messages.add("Fault: CAN Error");
+    if (faults.temperature) messages.add("Fault: Over Temperature");
+    if (faults.gateDriver) messages.add("Fault: Gate Driver");
+    if (faults.escEeprom) messages.add("Fault: ESC EEPROM");
+    if (faults.firmware) messages.add("Fault: Firmware Error");
+
+    if (warnings.brownout) messages.add("Warn: Brownout");
+    if (warnings.overcurrent) messages.add("Warn: Overcurrent");
+    if (warnings.escEeprom) messages.add("Warn: ESC EEPROM");
+    if (warnings.extEeprom) messages.add("Warn: Ext EEPROM");
+    if (warnings.sensor) messages.add("Warn: Sensor Signal");
+    if (warnings.stall) messages.add("Warn: Stall Detected");
+    if (warnings.hasReset) messages.add("Warn: Motor Reset Detected");
+    if (warnings.other) messages.add("Warn: Other");
+    return messages.toArray(new String[0]);
+  }
+
+  /**
    * Retrieves active faults and warnings from a REV SparkBase motor controller (SparkMax or
-   * SparkFlex, brushed or brushless — this call is identical either way).
+   * SparkFlex, brushed or brushless), plus the last API error and a missing supply voltage.
    *
    * @param motor The SparkBase instance to check.
    * @return An array of strings describing the active faults.
    */
   public static String[] getSparkFaults(SparkBase motor) {
-    List<String> messages = new ArrayList<>();
-
-    SparkBase.Faults f = motor.getFaults();
-    if (f.other) messages.add("Fault: Other");
-    if (f.motorType) messages.add("Fault: Motor Type Mismatch");
-    if (f.sensor) messages.add("Fault: Sensor Error");
-    if (f.can) messages.add("Fault: CAN Error");
-    if (f.temperature) messages.add("Fault: Over Temperature");
-    if (f.gateDriver) messages.add("Fault: Gate Driver");
-    if (f.escEeprom) messages.add("Fault: ESC EEPROM");
-    if (f.firmware) messages.add("Fault: Firmware Error");
-
-    SparkBase.Warnings w = motor.getWarnings();
-    if (w.brownout) messages.add("Warn: Brownout");
-    if (w.overcurrent) messages.add("Warn: Overcurrent");
-    if (w.escEeprom) messages.add("Warn: ESC EEPROM");
-    if (w.extEeprom) messages.add("Warn: Ext EEPROM");
-    if (w.sensor) messages.add("Warn: Sensor Signal");
-    if (w.stall) messages.add("Warn: Stall Detected");
-    if (w.hasReset) messages.add("Warn: Motor Reset Detected");
-    if (w.other) messages.add("Warn: Other");
+    List<String> messages =
+        new ArrayList<>(List.of(describe(motor.getFaults(), motor.getWarnings())));
 
     REVLibError lastError = motor.getLastError();
     if (lastError != REVLibError.kOk) {

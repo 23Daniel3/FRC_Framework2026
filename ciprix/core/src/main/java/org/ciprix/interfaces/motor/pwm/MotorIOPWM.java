@@ -2,23 +2,22 @@ package org.ciprix.interfaces.motor.pwm;
 
 import static edu.wpi.first.units.Units.Volts;
 
-import edu.wpi.first.units.measure.Current;
-import edu.wpi.first.units.measure.Voltage;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.motorcontrol.MotorController;
-import org.ciprix.interfaces.motor.MotorControlMode;
 import org.ciprix.interfaces.motor.basic.BasicMotorBase;
 import org.ciprix.interfaces.motor.basic.BasicMotorConfig;
 
 /**
  * Common base class for all PWM-driven motor controllers. Centralizes the boilerplate for basic
- * operations and explicitly empty methods for features not supported by PWM (like current limits
- * and brake mode).
+ * operations; features that PWM cannot provide (current limit, brake mode from software) are simply
+ * not implemented.
+ *
+ * <p>A PWM controller knows nothing about the battery, so the compensation to the nominal voltage
+ * is done here: the output is recomputed every cycle from the present battery voltage.
  */
 public abstract class MotorIOPWM extends BasicMotorBase {
 
   protected final MotorController motor;
-  private final BasicMotorIOInputs inputs = new BasicMotorIOInputs();
 
   public MotorIOPWM(String name, MotorController motor, BasicMotorConfig config) {
     super(name, config);
@@ -28,41 +27,30 @@ public abstract class MotorIOPWM extends BasicMotorBase {
 
   @Override
   protected void updateHardwareInputs(BasicMotorIOInputs inputs) {
-    inputs.percentOutput = motor.get();
-    inputs.appliedVolts = Volts.of(motor.get() * RobotController.getBatteryVoltage());
+    double output = motor.get();
+    inputs.percentOutput = output;
+    inputs.appliedVolts = Volts.of(output * RobotController.getBatteryVoltage());
     inputs.isConnected = true;
   }
 
   @Override
-  public void runVoltage(Voltage volts) {
-    currentMode = MotorControlMode.VOLTAGE;
-    motor.setVoltage(mapVoltage(volts.in(Volts)));
+  protected void applyVoltage(double volts) {
+    motor.setVoltage(volts);
   }
 
   @Override
-  public void runPercentOutput(double percent) {
-    currentMode = MotorControlMode.PERCENT;
-    motor.set(mapOutput(percent));
+  protected void applyPercentOutput(double percent) {
+    motor.setVoltage(percent * nominalVolts);
   }
 
   @Override
-  public void stop() {
-    currentMode = MotorControlMode.IDLE;
+  protected void applyStop() {
     motor.stopMotor();
   }
 
+  /** Every cycle: the voltage compensation depends on the battery voltage of the moment. */
   @Override
-  public void setBrakeMode(boolean enabled) {
-    // Not controllable over plain PWM — neutral mode is set on the controller hardware itself.
-  }
-
-  @Override
-  public void setCurrentLimit(Current current) {
-    // PWM controllers have no current-limiting capability via software.
-  }
-
-  @Override
-  public BasicMotorIOInputs getMotorIOInputs() {
-    return inputs;
+  protected double getCommandRefreshSeconds() {
+    return 0.0;
   }
 }

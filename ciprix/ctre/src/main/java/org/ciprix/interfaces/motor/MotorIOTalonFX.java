@@ -1,49 +1,90 @@
 package org.ciprix.interfaces.motor;
 
-import static edu.wpi.first.units.Units.*;
-import static org.ciprix.util.security.PhoenixUtil.tryUntilOk;
+import static edu.wpi.first.units.Units.Amps;
+import static edu.wpi.first.units.Units.Rotations;
 
 import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.CANBus;
+import com.ctre.phoenix6.StatusCode;
 import com.ctre.phoenix6.StatusSignal;
-import com.ctre.phoenix6.configs.Slot0Configs;
-import com.ctre.phoenix6.configs.Slot1Configs;
-import com.ctre.phoenix6.configs.Slot2Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
-import com.ctre.phoenix6.controls.*;
+import com.ctre.phoenix6.controls.Follower;
+import com.ctre.phoenix6.controls.MotionMagicVoltage;
+import com.ctre.phoenix6.controls.PositionVoltage;
+import com.ctre.phoenix6.controls.VelocityVoltage;
+import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.TalonFX;
-import com.ctre.phoenix6.signals.InvertedValue;
+import com.ctre.phoenix6.signals.FeedbackSensorSourceValue;
 import com.ctre.phoenix6.signals.MotorAlignmentValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
-import edu.wpi.first.units.measure.*;
+import edu.wpi.first.units.measure.Angle;
+import edu.wpi.first.units.measure.AngularVelocity;
+import edu.wpi.first.units.measure.Current;
+import edu.wpi.first.units.measure.Temperature;
+import edu.wpi.first.units.measure.Voltage;
+import org.ciprix.CiprixSettings;
 import org.ciprix.interfaces.motor.advanced.MotorBase;
 import org.ciprix.interfaces.motor.advanced.MotorConfig;
 import org.ciprix.interfaces.motor.advanced.MotorConfig.FeedbackSensorType;
 import org.ciprix.interfaces.motor.basic.BasicMotorConfig;
+import org.ciprix.util.Report;
+import org.ciprix.util.RobotClock;
 
 /**
- * MotorIO implementation for CTRE TalonFX (Kraken/Falcon). Optimized to run all control physics
- * (SVAG + PID + Motion Magic) natively on hardware.
+ * Talon FX (Kraken X60, Kraken X44, Falcon 500). PID, feedforward and Motion Magic run on the
+ * controller at 1 kHz; this class only translates the commands of {@link MotorBase}.
+ *
+ * <p>Units follow Phoenix 6: positions in rotations of the mechanism (after {@code
+ * SensorToMechanismRatio}, which comes from the position conversion factor), velocities in
+ * rotations per second, gains in volts ({@code kV} in volts per rotation per second). The gravity
+ * gain uses {@code Elevator_Static} or {@code Arm_Cosine} according to {@link
+ * MotorConfig#gravityType}. A percent output is sent as a voltage ({@code percent x
+ * nominalVoltage}), so it does not change with the battery.
+ *
+ * <p>Notes:
+ *
+ * <ul>
+ *   <li>a Talon has three gain slots (0 to 2). Slot 3 is reported and replaced by slot 0;
+ *   <li>Motion Magic limits belong to the controller, not to a slot: they are rewritten when a
+ *       profiled command uses another slot;
+ *   <li>the supply current limit follows {@link BasicMotorConfig#supplyCurrentLimit}, or the stator
+ *       limit when it is not set;
+ *   <li>changes made while the robot runs (brake mode, current limit, dashboard tuning) are only
+ *       written when they change.
+ * </ul>
  */
 public class MotorIOTalonFX extends MotorBase {
 
+  /** A controller that does not answer for this long counts as disconnected. */
+  public static final double DISCONNECT_TIMEOUT_SECONDS = 0.5;
+
   private final TalonFX motor;
-  private final TalonFXConfiguration driveConfig = new TalonFXConfiguration();
-  private final MotorIOInputs inputs = new MotorIOInputs();
+  private final TalonFXConfiguration talonConfig = new TalonFXConfiguration();
+  private final boolean explicitSupplyLimit;
 
-  // Control Requests (reused to avoid memory allocation in the loop)
-  private final VoltageOut voltageRequest = new VoltageOut(0);
-  private final VelocityVoltage velocityRequest = new VelocityVoltage(0);
-  private final PositionVoltage positionRequest = new PositionVoltage(0);
-  private final MotionMagicVoltage motionMagicRequest = new MotionMagicVoltage(0);
-  private final DutyCycleOut dutyCycleRequest = new DutyCycleOut(0);
+  private final VoltageOut voltageRequest = new VoltageOut(0.0);
+  private final VelocityVoltage velocityRequest = new VelocityVoltage(0.0);
+  private final PositionVoltage positionRequest = new PositionVoltage(0.0);
+  private final MotionMagicVoltage motionMagicRequest = new MotionMagicVoltage(0.0);
 
-  // Status Signals for telemetry (Phoenix 6 uses optimized signals)
-  private final StatusSignal<Angle> posSignal;
-  private final StatusSignal<AngularVelocity> velSignal;
-  private final StatusSignal<Voltage> voltSignal;
-  private final StatusSignal<Current> currentSignal;
-  private final StatusSignal<Temperature> temperatureSignal;
+  private final StatusSignal<Angle> position;
+  private final StatusSignal<AngularVelocity> velocity;
+  private final StatusSignal<Voltage> motorVoltage;
+  private final StatusSignal<Current> statorCurrent;
+  private final StatusSignal<Temperature> deviceTemp;
+  private final BaseStatusSignal dutyCycle;
+  private final CtreFaultReader faultReader;
+  private final BaseStatusSignal[] cycleSignals;
+
+  private final double[] cruiseRps = new double[SLOT_COUNT];
+  private final double[] accelerationRps2 = new double[SLOT_COUNT];
+  private int appliedMotionSlot = 0;
+  private double appliedMinOutput;
+  private double appliedMaxOutput;
+
+  private double lastAnswerTime = Double.NEGATIVE_INFINITY;
+  private boolean slotReported = false;
+  private boolean missingProfileReported = false;
 
   public MotorIOTalonFX(String name, int id, CANBus canBus, BasicMotorConfig config) {
     this(name, id, canBus, MotorConfig.fromBasic(config));
@@ -51,367 +92,300 @@ public class MotorIOTalonFX extends MotorBase {
 
   public MotorIOTalonFX(String name, int id, CANBus canBus, MotorConfig config) {
     super(name, config);
-
     this.motor = new TalonFX(id, canBus);
+    this.explicitSupplyLimit = config.supplyCurrentLimit != null;
+    this.appliedMinOutput = config.minOutput;
+    this.appliedMaxOutput = config.maxOutput;
 
-    // --- Output and Neutral Configuration ---
-    driveConfig.MotorOutput.Inverted =
-        config.inverted
-            ? InvertedValue.Clockwise_Positive
-            : InvertedValue.CounterClockwise_Positive;
+    TalonConfigs.writeOutput(talonConfig.MotorOutput, config.inverted, config.brakeMode);
+    TalonConfigs.writeCurrentLimits(
+        talonConfig.CurrentLimits,
+        Math.abs(config.currentLimit.in(Amps)),
+        TalonConfigs.supplyLimitAmps(config));
+    TalonConfigs.writePeaks(talonConfig.Voltage, config.minOutput, config.maxOutput, nominalVolts);
+    TalonConfigs.writeRamps(
+        talonConfig.OpenLoopRamps,
+        talonConfig.ClosedLoopRamps,
+        config.openLoopRampSeconds,
+        config.closedLoopRampSeconds);
+    TalonConfigs.writeSoftLimits(talonConfig.SoftwareLimitSwitch, config);
+    TalonConfigs.writeWrap(talonConfig.ClosedLoopGeneral, config, name);
 
-    driveConfig.MotorOutput.NeutralMode =
-        config.brakeMode ? NeutralModeValue.Brake : NeutralModeValue.Coast;
-
-    // --- Current Limits ---
-    driveConfig.CurrentLimits.StatorCurrentLimit = config.currentLimit.in(Amps);
-    driveConfig.CurrentLimits.StatorCurrentLimitEnable = true;
-    driveConfig.CurrentLimits.SupplyCurrentLimit =
-        config.currentLimit.in(Amps); // Battery protection
-    driveConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
-
-    // --- Soft Limits ---
-    if (config.softLimitEnabled) {
-      driveConfig.SoftwareLimitSwitch.ForwardSoftLimitEnable = true;
-      driveConfig.SoftwareLimitSwitch.ForwardSoftLimitThreshold = config.maxPosition.in(Rotations);
-      driveConfig.SoftwareLimitSwitch.ReverseSoftLimitEnable = true;
-      driveConfig.SoftwareLimitSwitch.ReverseSoftLimitThreshold = config.minPosition.in(Rotations);
+    FeedbackSensorType sensor = TalonConfigs.resolveSensor(config, name, false);
+    talonConfig.Feedback.SensorToMechanismRatio = TalonConfigs.sensorToMechanismRatio(config);
+    switch (sensor) {
+      case REMOTE_CANCODER, FUSED_CANCODER, SYNC_CANCODER -> {
+        talonConfig.Feedback.FeedbackRemoteSensorID = TalonConfigs.remoteSensorId(config);
+        talonConfig.Feedback.RotorToSensorRatio = config.rotorToSensorRatio;
+        talonConfig.Feedback.FeedbackSensorSource =
+            switch (sensor) {
+              case FUSED_CANCODER -> FeedbackSensorSourceValue.FusedCANcoder;
+              case SYNC_CANCODER -> FeedbackSensorSourceValue.SyncCANcoder;
+              default -> FeedbackSensorSourceValue.RemoteCANcoder;
+            };
+      }
+      default -> talonConfig.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.RotorSensor;
     }
 
-    // --- Configure Follower Motor
+    TalonConfigs.writeGains(talonConfig.Slot0, config, 0);
+    TalonConfigs.writeGains(talonConfig.Slot1, config, 1);
+    TalonConfigs.writeGains(talonConfig.Slot2, config, 2);
+    for (int i = 0; i < SLOT_COUNT; i++) {
+      cruiseRps[i] = TalonConfigs.cruise(config, i);
+      accelerationRps2[i] = TalonConfigs.acceleration(config, i);
+    }
+    TalonConfigs.writeMotion(talonConfig.MotionMagic, cruiseRps[0], accelerationRps2[0]);
+    if (TalonConfigs.usesSlot3(config)) {
+      Report.warning("Motor " + name + ": a Talon has slots 0 to 2; slot 3 is replaced by slot 0.");
+    }
+
+    TalonConfigs.applyAtBoot(
+        name, () -> motor.getConfigurator().apply(talonConfig, TalonConfigs.BOOT_TIMEOUT_SECONDS));
+
     if (config.leaderMotorID != 0) {
+      // After the configuration, so the follower keeps its own inversion and neutral mode.
       motor.setControl(
           new Follower(
               config.leaderMotorID,
               config.followerInverted ? MotorAlignmentValue.Opposed : MotorAlignmentValue.Aligned));
     }
 
-    driveConfig.Voltage.PeakForwardVoltage = config.maxOutput * config.nominalVoltage.in(Volts);
-    driveConfig.Voltage.PeakReverseVoltage = config.minOutput * config.nominalVoltage.in(Volts);
+    position = motor.getPosition();
+    velocity = motor.getVelocity();
+    motorVoltage = motor.getMotorVoltage();
+    statorCurrent = motor.getStatorCurrent();
+    deviceTemp = motor.getDeviceTemp();
+    dutyCycle = motor.getDutyCycle();
+    faultReader = CtreMotorFaults.readerFor(motor);
+    cycleSignals =
+        new BaseStatusSignal[] {
+          position,
+          velocity,
+          motorVoltage,
+          statorCurrent,
+          deviceTemp,
+          dutyCycle,
+          faultReader.field()
+        };
 
-    // --- Feedback Sensor ---
-    FeedbackSensorType sensorType =
-        config.externalFusionType != null ? config.externalFusionType : config.feedbackType;
-    switch (sensorType) {
-      case REMOTE_CANCODER -> {
-        // Assume externalEncoder is a CANcoder that exposes its CAN ID.
-        // For CTRE Phoenix 6, we would need the CAN ID. But FRC_Framework2026 might not expose it
-        // in EncoderIO.
-        // Actually, WPILib or AdvKit usually passes the remote sensor ID through config.
-        // We'll configure it as RemoteCANcoder using config.countsPerRevolution as the CAN ID?
-        // Let's use config.leaderMotorID or similar if available, or just throw for now to prompt
-        // the user.
-        // Wait, TalonFX FeedbackSensorSourceValue has RemoteCANcoder.
-        driveConfig.Feedback.FeedbackSensorSource =
-            com.ctre.phoenix6.signals.FeedbackSensorSourceValue.RemoteCANcoder;
-        driveConfig.Feedback.FeedbackRemoteSensorID =
-            config.countsPerRevolution; // Assuming we hack it via countsPerRevolution for CAN ID
-      }
-      case FUSED_CANCODER -> {
-        driveConfig.Feedback.FeedbackSensorSource =
-            com.ctre.phoenix6.signals.FeedbackSensorSourceValue.FusedCANcoder;
-        driveConfig.Feedback.FeedbackRemoteSensorID = config.countsPerRevolution;
-      }
-      case SYNC_CANCODER -> {
-        driveConfig.Feedback.FeedbackSensorSource =
-            com.ctre.phoenix6.signals.FeedbackSensorSourceValue.SyncCANcoder;
-        driveConfig.Feedback.FeedbackRemoteSensorID = config.countsPerRevolution;
-      }
-      default -> {
-        driveConfig.Feedback.FeedbackSensorSource =
-            com.ctre.phoenix6.signals.FeedbackSensorSourceValue.RotorSensor;
-      }
-    }
-
-    // --- Gear Ratio (Sensor to Mechanism) ---
-    // In Phoenix 6, the reduction is set here and it automatically scales Position and Velocity.
-    driveConfig.Feedback.SensorToMechanismRatio =
-        (config.positionConversionFactor != 0.0) ? 1.0 / config.positionConversionFactor : 1.0;
-
-    // --- Control Slots (0 to 3) ---
-    // Apply full native PID and SVAG for each slot defined in MotorConfig
-    applySlotConfig(
-        0,
-        config.kP[0],
-        config.kI[0],
-        config.kD[0],
-        config.kS[0],
-        config.kV[0],
-        config.kA[0],
-        config.kG[0]);
-    applySlotConfig(
-        1,
-        config.kP[1],
-        config.kI[1],
-        config.kD[1],
-        config.kS[1],
-        config.kV[1],
-        config.kA[1],
-        config.kG[1]);
-    applySlotConfig(
-        2,
-        config.kP[2],
-        config.kI[2],
-        config.kD[2],
-        config.kS[2],
-        config.kV[2],
-        config.kA[2],
-        config.kG[2]);
-
-    // --- Motion Magic (Native on Hardware) ---
-    // Slot 0 is used as the default for Motion Magic
-    driveConfig.MotionMagic.MotionMagicCruiseVelocity =
-        config.maxMotionMaxVelocity[0].in(RotationsPerSecond);
-    driveConfig.MotionMagic.MotionMagicAcceleration =
-        config.maxMotionMaxAcceleration[0].in(RotationsPerSecondPerSecond);
-
-    // Initial configuration application
-    tryUntilOk(5, () -> motor.getConfigurator().apply(driveConfig));
-
-    // --- Signal Configuration ---
-    posSignal = motor.getPosition();
-    velSignal = motor.getVelocity();
-    voltSignal = motor.getMotorVoltage();
-    currentSignal = motor.getStatorCurrent();
-    temperatureSignal = motor.getDeviceTemp();
-
-    // Optimized frequencies for control and logging
-    BaseStatusSignal.setUpdateFrequencyForAll(100.0, posSignal, velSignal);
-    BaseStatusSignal.setUpdateFrequencyForAll(20.0, voltSignal, currentSignal, temperatureSignal);
-
-    // Optimize CAN bus bandwidth utilization
+    double loopHz = 1.0 / CiprixSettings.getLoopPeriodSeconds();
+    BaseStatusSignal.setUpdateFrequencyForAll(Math.max(100.0, loopHz), position, velocity);
+    BaseStatusSignal.setUpdateFrequencyForAll(loopHz, motorVoltage, statorCurrent, dutyCycle);
+    BaseStatusSignal.setUpdateFrequencyForAll(4.0, deviceTemp);
+    BaseStatusSignal.setUpdateFrequencyForAll(4.0, faultReader.allSignals());
     motor.optimizeBusUtilization();
 
-    motor.setPosition(0);
+    if (sensor == FeedbackSensorType.INTERNAL) {
+      // A CANcoder keeps its absolute position; only the rotor sensor starts at zero.
+      TalonConfigs.applyAtBoot(
+          name, () -> motor.setPosition(0.0, TalonConfigs.BOOT_TIMEOUT_SECONDS));
+    }
   }
 
-  @Override
-  protected void updateHardwareInputs(
-      org.ciprix.interfaces.motor.basic.BasicMotorIO.BasicMotorIOInputs inputs) {
-    BaseStatusSignal.refreshAll(voltSignal, currentSignal, temperatureSignal);
-    inputs.appliedVolts = voltSignal.getValue();
-    inputs.current = currentSignal.getValue();
-    inputs.temperature = temperatureSignal.getValue();
-    inputs.isConnected = BaseStatusSignal.isAllGood(voltSignal);
+  // ---------------------------------------------------------------------------
+  // Inputs
+  // ---------------------------------------------------------------------------
 
-    if (!inputs.isConnected) {
-      inputs.activeFaults = CtreMotorFaults.getTalonFaults(motor);
-    } else {
-      inputs.activeFaults = new String[] {};
+  @Override
+  protected void updateHardwareInputs(BasicMotorIOInputs inputs) {
+    StatusCode status = BaseStatusSignal.refreshAll(cycleSignals);
+    double now = RobotClock.now();
+    if (status.isOK()) {
+      lastAnswerTime = now;
     }
+    inputs.isConnected = now - lastAnswerTime < DISCONNECT_TIMEOUT_SECONDS;
+    inputs.percentOutput = dutyCycle.getValueAsDouble();
+    inputs.appliedVolts = motorVoltage.getValue();
+    inputs.current = statorCurrent.getValue();
+    inputs.temperature = deviceTemp.getValue();
+    inputs.activeFaults = faultReader.read();
   }
 
   @Override
   protected void updateHardwareInputs(MotorIOInputs inputs) {
-    updateHardwareInputs(
-        (org.ciprix.interfaces.motor.basic.BasicMotorIO.BasicMotorIOInputs) inputs);
-    BaseStatusSignal.refreshAll(posSignal, velSignal);
-    inputs.position = posSignal.getValue();
-    inputs.velocity = velSignal.getValue();
-    inputs.isConnected = inputs.isConnected && BaseStatusSignal.isAllGood(posSignal, velSignal);
+    updateHardwareInputs((BasicMotorIOInputs) inputs);
+    inputs.position = position.getValue();
+    inputs.velocity = velocity.getValue();
   }
 
-  // --- Native Control Implementation ---
+  // ---------------------------------------------------------------------------
+  // Hardware hooks
+  // ---------------------------------------------------------------------------
 
-  @Override
-  public void runVelocity(AngularVelocity velocity) {
-    this.currentMode = MotorControlMode.VELOCITY;
-    this.targetVelocity = velocity;
-    motor.setControl(velocityRequest.withVelocity(velocity).withSlot(0));
-  }
-
-  @Override
-  public void runPosition(Angle position) {
-    this.currentMode = MotorControlMode.POSITION;
-    this.targetPosition = position;
-    motor.setControl(positionRequest.withPosition(position).withSlot(0));
+  /** Slot of the Talon for a slot of the library (a Talon has no slot 3). */
+  private int talonSlot(int slot) {
+    if (slot < TalonConfigs.TALON_SLOTS) {
+      return slot;
+    }
+    if (!slotReported) {
+      slotReported = true;
+      Report.warning("Motor " + name + ": slot " + slot + " does not exist on a Talon, using 0.");
+    }
+    return 0;
   }
 
   @Override
-  public void runSmartPosition(Angle position) {
-    this.currentMode = MotorControlMode.SMART_POSITION;
-    this.targetPosition = position;
-    // Motion Magic nativo
-    motor.setControl(motionMagicRequest.withPosition(position).withSlot(0));
+  protected void applyVoltage(double volts) {
+    motor.setControl(voltageRequest.withOutput(volts));
   }
 
   @Override
-  public void runVelocity(AngularVelocity velocity, int slot) {
-    this.currentMode = MotorControlMode.VELOCITY;
-    this.targetVelocity = velocity;
-    motor.setControl(velocityRequest.withVelocity(velocity).withSlot(slot));
+  protected void applyPercentOutput(double percent) {
+    motor.setControl(voltageRequest.withOutput(percent * nominalVolts));
   }
 
   @Override
-  public void runPosition(Angle position, int slot) {
-    this.currentMode = MotorControlMode.POSITION;
-    this.targetPosition = position;
-    motor.setControl(positionRequest.withPosition(position).withSlot(slot));
-  }
-
-  @Override
-  public void runSmartPosition(Angle position, int slot) {
-    this.currentMode = MotorControlMode.SMART_POSITION;
-    this.targetPosition = position;
-    motor.setControl(motionMagicRequest.withPosition(position).withSlot(slot));
-  }
-
-  @Override
-  public void runVoltage(Voltage volts) {
-    this.currentMode = MotorControlMode.IDLE;
-    motor.setControl(voltageRequest.withOutput(mapVoltage(volts.in(Volts))));
-  }
-
-  @Override
-  public void runPercentOutput(double percent) {
-    this.currentMode = MotorControlMode.IDLE;
-    motor.setControl(dutyCycleRequest.withOutput(mapOutput(percent)));
-  }
-
-  @Override
-  public void stop() {
-    this.currentMode = MotorControlMode.IDLE;
+  protected void applyStop() {
     motor.stopMotor();
   }
 
   @Override
+  protected void applyVelocity(double rotationsPerSecond, int slot) {
+    motor.setControl(velocityRequest.withVelocity(rotationsPerSecond).withSlot(talonSlot(slot)));
+  }
+
+  @Override
+  protected void applyPosition(double rotations, int slot) {
+    motor.setControl(positionRequest.withPosition(rotations).withSlot(talonSlot(slot)));
+  }
+
+  @Override
+  protected void applySmartPosition(double rotations, int slot) {
+    int talonSlot = talonSlot(slot);
+    if (cruiseRps[talonSlot] <= 0.0) {
+      if (!missingProfileReported) {
+        missingProfileReported = true;
+        Report.warning(
+            "Motor "
+                + name
+                + ": runSmartPosition without smartMotion(...) on slot "
+                + talonSlot
+                + ", using position control.");
+      }
+      applyPosition(rotations, talonSlot);
+      return;
+    }
+    if (talonSlot != appliedMotionSlot) {
+      appliedMotionSlot = talonSlot;
+      writeMotionLimits();
+    }
+    motor.setControl(motionMagicRequest.withPosition(rotations).withSlot(talonSlot));
+  }
+
+  private void writeMotionLimits() {
+    TalonConfigs.writeMotion(
+        talonConfig.MotionMagic, cruiseRps[appliedMotionSlot], accelerationRps2[appliedMotionSlot]);
+    motor.getConfigurator().apply(talonConfig.MotionMagic, TalonConfigs.RUNTIME_TIMEOUT_SECONDS);
+  }
+
+  @Override
+  protected void applyBrakeMode(boolean enabled) {
+    talonConfig.MotorOutput.NeutralMode = enabled ? NeutralModeValue.Brake : NeutralModeValue.Coast;
+    motor.getConfigurator().apply(talonConfig.MotorOutput, TalonConfigs.RUNTIME_TIMEOUT_SECONDS);
+  }
+
+  @Override
+  protected void applyCurrentLimit(double amps) {
+    talonConfig.CurrentLimits.StatorCurrentLimit = amps;
+    if (!explicitSupplyLimit) {
+      talonConfig.CurrentLimits.SupplyCurrentLimit = amps;
+    }
+    motor.getConfigurator().apply(talonConfig.CurrentLimits, TalonConfigs.RUNTIME_TIMEOUT_SECONDS);
+  }
+
+  @Override
   public void setOffset(Angle offset) {
-    motor.setPosition(offset);
+    motor.setPosition(offset.in(Rotations));
+  }
+
+  // ---------------------------------------------------------------------------
+  // Tuning (dashboard)
+  // ---------------------------------------------------------------------------
+
+  @Override
+  public void applyHardwarePID(int slot, double p, double i, double d) {
+    if (slot >= TalonConfigs.TALON_SLOTS) {
+      talonSlot(slot);
+      return;
+    }
+    switch (slot) {
+      case 0 -> {
+        talonConfig.Slot0.kP = p;
+        talonConfig.Slot0.kI = i;
+        talonConfig.Slot0.kD = d;
+        motor.getConfigurator().apply(talonConfig.Slot0, TalonConfigs.RUNTIME_TIMEOUT_SECONDS);
+      }
+      case 1 -> {
+        talonConfig.Slot1.kP = p;
+        talonConfig.Slot1.kI = i;
+        talonConfig.Slot1.kD = d;
+        motor.getConfigurator().apply(talonConfig.Slot1, TalonConfigs.RUNTIME_TIMEOUT_SECONDS);
+      }
+      default -> {
+        talonConfig.Slot2.kP = p;
+        talonConfig.Slot2.kI = i;
+        talonConfig.Slot2.kD = d;
+        motor.getConfigurator().apply(talonConfig.Slot2, TalonConfigs.RUNTIME_TIMEOUT_SECONDS);
+      }
+    }
+  }
+
+  @Override
+  public void applyHardwareSVAG(int slot, double s, double v, double a, double g) {
+    if (slot >= TalonConfigs.TALON_SLOTS) {
+      talonSlot(slot);
+      return;
+    }
+    switch (slot) {
+      case 0 -> {
+        talonConfig.Slot0.kS = s;
+        talonConfig.Slot0.kV = v;
+        talonConfig.Slot0.kA = a;
+        talonConfig.Slot0.kG = g;
+        motor.getConfigurator().apply(talonConfig.Slot0, TalonConfigs.RUNTIME_TIMEOUT_SECONDS);
+      }
+      case 1 -> {
+        talonConfig.Slot1.kS = s;
+        talonConfig.Slot1.kV = v;
+        talonConfig.Slot1.kA = a;
+        talonConfig.Slot1.kG = g;
+        motor.getConfigurator().apply(talonConfig.Slot1, TalonConfigs.RUNTIME_TIMEOUT_SECONDS);
+      }
+      default -> {
+        talonConfig.Slot2.kS = s;
+        talonConfig.Slot2.kV = v;
+        talonConfig.Slot2.kA = a;
+        talonConfig.Slot2.kG = g;
+        motor.getConfigurator().apply(talonConfig.Slot2, TalonConfigs.RUNTIME_TIMEOUT_SECONDS);
+      }
+    }
   }
 
   @Override
   public void applyHardwareSmartMotion(
       int slot, double maxVel, double maxAccel, double allowedErr) {
-    // Phoenix 6 prefers updating MotionMagic via TalonFXConfiguration for greater stability
-    driveConfig.MotionMagic.MotionMagicCruiseVelocity = maxVel;
-    driveConfig.MotionMagic.MotionMagicAcceleration = maxAccel;
-    motor.getConfigurator().apply(driveConfig.MotionMagic);
+    int talonSlot = talonSlot(slot);
+    cruiseRps[talonSlot] = maxVel;
+    accelerationRps2[talonSlot] = maxAccel;
+    if (talonSlot == appliedMotionSlot) {
+      writeMotionLimits();
+    }
   }
 
   @Override
   public void applyHardwareOutputRange(int slot, double min, double max) {
-    driveConfig.Voltage.PeakForwardVoltage = max * 12.0;
-    driveConfig.Voltage.PeakReverseVoltage = min * 12.0;
-    motor.getConfigurator().apply(driveConfig.Voltage);
-  }
-
-  @Override
-  public void setBrakeMode(boolean enabled) {
-    driveConfig.MotorOutput.NeutralMode = enabled ? NeutralModeValue.Brake : NeutralModeValue.Coast;
-    motor.getConfigurator().apply(driveConfig.MotorOutput);
-  }
-
-  @Override
-  public void setCurrentLimit(Current current) {
-    driveConfig.CurrentLimits.StatorCurrentLimit = current.in(Amps);
-    motor.getConfigurator().apply(driveConfig.CurrentLimits);
-  }
-
-  @Override
-  public MotorIOInputs getMotorIOInputs() {
-    return inputs;
-  }
-
-  private void applySlotConfig(
-      int slot, double p, double i, double d, double s, double v, double a, double g) {
-    switch (slot) {
-      case 0 -> {
-        driveConfig.Slot0.kP = p;
-        driveConfig.Slot0.kI = i;
-        driveConfig.Slot0.kD = d;
-        driveConfig.Slot0.kS = s;
-        driveConfig.Slot0.kV = v;
-        driveConfig.Slot0.kA = a;
-        driveConfig.Slot0.kG = g;
-      }
-      case 1 -> {
-        driveConfig.Slot1.kP = p;
-        driveConfig.Slot1.kI = i;
-        driveConfig.Slot1.kD = d;
-        driveConfig.Slot1.kS = s;
-        driveConfig.Slot1.kV = v;
-        driveConfig.Slot1.kA = a;
-        driveConfig.Slot1.kG = g;
-      }
-      case 2 -> {
-        driveConfig.Slot2.kP = p;
-        driveConfig.Slot2.kI = i;
-        driveConfig.Slot2.kD = d;
-        driveConfig.Slot2.kS = s;
-        driveConfig.Slot2.kV = v;
-        driveConfig.Slot2.kA = a;
-        driveConfig.Slot2.kG = g;
-      }
+    // The peak voltages belong to the controller: written once for all the slots.
+    if (min == appliedMinOutput && max == appliedMaxOutput) {
+      return;
     }
+    appliedMinOutput = min;
+    appliedMaxOutput = max;
+    TalonConfigs.writePeaks(talonConfig.Voltage, min, max, nominalVolts);
+    motor.getConfigurator().apply(talonConfig.Voltage, TalonConfigs.RUNTIME_TIMEOUT_SECONDS);
   }
 
-  @Override
-  public void applyHardwarePID(int slot, double p, double i, double d) {
-    if (motor == null) return;
-    applySlotUpdate(slot, p, i, d, Double.NaN, Double.NaN, Double.NaN, Double.NaN);
-  }
-
-  @Override
-  public void applyHardwareSVAG(int slot, double s, double v, double a, double g) {
-    if (motor == null) return;
-    applySlotUpdate(slot, Double.NaN, Double.NaN, Double.NaN, s, v, a, g);
-  }
-
-  private void applySlotUpdate(
-      int slot, double p, double i, double d, double s, double v, double a, double g) {
-    switch (slot) {
-      case 0 -> {
-        Slot0Configs s0 = new Slot0Configs();
-        motor.getConfigurator().refresh(s0);
-        if (!Double.isNaN(p)) {
-          s0.kP = p;
-          s0.kI = i;
-          s0.kD = d;
-        }
-        if (!Double.isNaN(s)) {
-          s0.kS = s;
-          s0.kV = v;
-          s0.kA = a;
-          s0.kG = g;
-        }
-        motor.getConfigurator().apply(s0);
-        break;
-      }
-      case 1 -> {
-        Slot1Configs s1 = new Slot1Configs();
-        motor.getConfigurator().refresh(s1);
-        if (!Double.isNaN(p)) {
-          s1.kP = p;
-          s1.kI = i;
-          s1.kD = d;
-        }
-        if (!Double.isNaN(s)) {
-          s1.kS = s;
-          s1.kV = v;
-          s1.kA = a;
-          s1.kG = g;
-        }
-        motor.getConfigurator().apply(s1);
-        break;
-      }
-      case 2 -> {
-        Slot2Configs s2 = new Slot2Configs();
-        motor.getConfigurator().refresh(s2);
-        if (!Double.isNaN(p)) {
-          s2.kP = p;
-          s2.kI = i;
-          s2.kD = d;
-        }
-        if (!Double.isNaN(s)) {
-          s2.kS = s;
-          s2.kV = v;
-          s2.kA = a;
-          s2.kG = g;
-        }
-        motor.getConfigurator().apply(s2);
-        break;
-      }
-      default -> System.err.println("[MotorIOTalonFX] Slot " + slot + " not supported.");
-    }
+  /** The Phoenix 6 object, for features this class does not cover (Orchestra, for example). */
+  public TalonFX getTalon() {
+    return motor;
   }
 }

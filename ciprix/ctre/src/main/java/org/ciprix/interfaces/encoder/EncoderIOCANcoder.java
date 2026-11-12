@@ -49,6 +49,11 @@ public class EncoderIOCANcoder extends EncoderBase {
         CtreEncoderFaults.getCANcoderFaults(encoder));
   }
 
+  /** CAN id of the CANcoder (used by a Talon that reads it directly as feedback). */
+  public int getDeviceId() {
+    return encoder.getDeviceID();
+  }
+
   @Override
   public void setPosition(Angle position) {
     // Hardware-level zero: more precise and survives brownouts, unlike a software offset.

@@ -109,4 +109,37 @@ public final class CtreMotorFaults {
 
     return faults.toArray(new String[0]);
   }
+
+  /** Fault reader of a Talon FX, used by {@link MotorIOTalonFX} every cycle. */
+  static CtreFaultReader readerFor(TalonFX motor) {
+    return new CtreFaultReader(motor.getFaultField())
+        .add(motor.getFault_Hardware(), "Hardware Failure")
+        .add(motor.getFault_BootDuringEnable(), "Boot During Enable")
+        .add(motor.getFault_Undervoltage(), "Under Voltage (< 4.5V)")
+        .add(motor.getFault_OverSupplyV(), "Over Supply Voltage")
+        .add(motor.getFault_UnstableSupplyV(), "Unstable Supply V")
+        .add(motor.getFault_BridgeBrownout(), "Bridge Brownout")
+        .add(motor.getFault_ProcTemp(), "Processor Over Temp")
+        .add(motor.getFault_DeviceTemp(), "Device Over Temp")
+        .add(motor.getFault_FusedSensorOutOfSync(), "Fused Sensor Out of Sync")
+        .add(motor.getFault_RemoteSensorDataInvalid(), "Remote Sensor Invalid")
+        .add(motor.getFault_RemoteSensorPosOverflow(), "Remote Sensor Overflow")
+        .add(motor.getFault_RemoteSensorReset(), "Remote Sensor Reset")
+        .add(motor.getFault_MissingDifferentialFX(), "Missing Diff TalonFX")
+        .add(motor.getFault_UnlicensedFeatureInUse(), "Unlicensed Feature");
+  }
+
+  /** Fault reader of a Talon FXS, used by {@link MotorIOTalonFXS} every cycle. */
+  static CtreFaultReader readerFor(TalonFXS motor) {
+    return new CtreFaultReader(motor.getFaultField())
+        .add(motor.getFault_Hardware(), "Hardware Failure")
+        .add(motor.getFault_BootDuringEnable(), "Boot During Enable")
+        .add(motor.getFault_Undervoltage(), "Under Voltage (< 4.5V)")
+        .add(motor.getFault_OverSupplyV(), "Over Supply Voltage")
+        .add(motor.getFault_UnstableSupplyV(), "Unstable Supply V")
+        .add(motor.getFault_BridgeBrownout(), "Bridge Brownout")
+        .add(motor.getFault_ProcTemp(), "Processor Over Temp")
+        .add(motor.getFault_DeviceTemp(), "Device Over Temp")
+        .add(motor.getFault_UnlicensedFeatureInUse(), "Unlicensed Feature");
+  }
 }
