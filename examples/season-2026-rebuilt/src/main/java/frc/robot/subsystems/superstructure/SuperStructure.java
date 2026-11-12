@@ -1,0 +1,282 @@
+package frc.robot.subsystems.superstructure;
+
+import static edu.wpi.first.units.Units.MetersPerSecond;
+import static edu.wpi.first.units.Units.RPM;
+
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import frc.game.AllianceManager;
+import frc.game.FieldConstants;
+import frc.robot.Constants.RobotRequest;
+import frc.robot.Constants.RobotState;
+import frc.robot.power.RobotPowerDistribution;
+import frc.robot.subsystems.conveyor.Conveyor;
+import frc.robot.subsystems.conveyor.ConveyorConstants.ConveyorRequest;
+import frc.robot.subsystems.drivetrain.Drivetrain;
+import frc.robot.subsystems.drivetrain.DrivetrainConstants;
+import frc.robot.subsystems.intake.Intake;
+import frc.robot.subsystems.intake.IntakeConstants.IntakeRequest;
+import frc.robot.subsystems.shooter.Shooter;
+import frc.robot.subsystems.shooter.ShooterConstants.ShooterRequest;
+import org.ciprix.calculus.ShotParameters;
+import org.ciprix.interfaces.subsystem.SuperStructureBase;
+import org.ciprix.util.ConstantsLogger;
+import org.littletonrobotics.junction.Logger;
+
+public class SuperStructure extends SuperStructureBase<RobotRequest, RobotState> {
+
+  private final Conveyor conveyor;
+  private final Drivetrain drivetrain;
+  private final Intake intake;
+  private final Shooter shooter;
+
+  private final ShooterTargetCalculator shooterCalculator;
+
+  private final AllianceManager allianceManager = AllianceManager.getInstance();
+
+  public SuperStructure(Conveyor conveyor, Drivetrain drivetrain, Intake intake, Shooter shooter) {
+    // A base guarda o request do robo e a FSM geral ("Subsystems/SuperStructure/RobotState").
+    super("Subsystems/SuperStructure", RobotState.class, RobotState.IDLE, RobotRequest.IDLE);
+
+    this.conveyor = conveyor;
+    this.drivetrain = drivetrain;
+    this.intake = intake;
+    this.shooter = shooter;
+
+    this.shooterCalculator = new ShooterTargetCalculator(allianceManager);
+
+    configureGeneralFSM();
+
+    ConstantsLogger.logConstants(SuperStructureConstants.class, getName());
+  }
+
+  /** Roda todo ciclo antes da FSM geral: atualiza o que as transicoes leem. */
+  @Override
+  protected void beforeUpdate() {
+    allianceManager.showAllianceMessageOnDashboard();
+
+    Pose2d pose = drivetrain.getPose();
+    ChassisSpeeds speeds = drivetrain.getRobotVelocity();
+    shooterCalculator.update(pose, speeds);
+
+    // Alimenta o shooter continuamente com o RPM calculado pelo SOTM.
+    shooter.setVelocity(RPM.of(3000));
+  }
+
+  /** Roda todo ciclo depois da FSM geral. */
+  @Override
+  protected void afterUpdate() {
+    log();
+  }
+
+  private IntakeRequest intakeRequest = IntakeRequest.STOP;
+  private ShooterRequest shooterRequest = ShooterRequest.STOP;
+  private ConveyorRequest conveyorRequest = ConveyorRequest.STOP;
+
+  public ConveyorRequest getConveyorRequest() {
+    return conveyorRequest;
+  }
+
+  public IntakeRequest getIntakeRequest() {
+    return intakeRequest;
+  }
+
+  public ShooterRequest getShooterRequest() {
+    return shooterRequest;
+  }
+
+  public ShotParameters getActiveShotParameters() {
+    return shooterCalculator.getActiveShotParameters(isInAllianceZone());
+  }
+
+  public boolean isAtSetpointAngle() {
+    Rotation2d current = drivetrain.getPose().getRotation();
+    Rotation2d target = getActiveShotParameters().aimAngle();
+    double errorDeg = Math.abs(current.minus(target).getDegrees());
+    double tolerance =
+        isInAllianceZone()
+            ? SuperStructureConstants.MAX_ERROR_ANGLE_DEG_SHOOT
+            : SuperStructureConstants.MAX_ERROR_ANGLE_DEG_NEUTRAL;
+    return errorDeg <= tolerance;
+  }
+
+  private void setSubsystemRequests(
+      ShooterRequest shooterReq, IntakeRequest intakeReq, ConveyorRequest conveyorReq) {
+    this.shooterRequest = shooterReq;
+    this.intakeRequest = intakeReq;
+    this.conveyorRequest = conveyorReq;
+  }
+
+  private void configureGeneralFSM() {
+    generalFsm
+        .state(RobotState.IDLE)
+        .onEnter(
+            () -> {
+              setSubsystemRequests(ShooterRequest.STOP, IntakeRequest.STOP, ConveyorRequest.STOP);
+              drivetrain.setMaxSpeed(MetersPerSecond.of(DrivetrainConstants.MAX_SPEED));
+            });
+
+    generalFsm
+        .state(RobotState.IDLING)
+        .onEnter(
+            () -> {
+              setSubsystemRequests(ShooterRequest.STOP, IntakeRequest.STOP, ConveyorRequest.STOP);
+              drivetrain.setMaxSpeed(MetersPerSecond.of(DrivetrainConstants.MAX_SPEED));
+            })
+        .transitionTo(
+            RobotState.IDLE,
+            () ->
+                intake.atGoal() && shooter.atGoal() && conveyor.atGoal() && !drivetrain.isMoving());
+
+    generalFsm
+        .state(RobotState.COLLECTING)
+        .onEnter(
+            () -> {
+              setSubsystemRequests(
+                  ShooterRequest.STOP, IntakeRequest.COLLECT, ConveyorRequest.STOP);
+              drivetrain.setMaxSpeed(MetersPerSecond.of(DrivetrainConstants.MAX_SPEED));
+            });
+
+    generalFsm
+        .state(RobotState.GOING_COLLECT)
+        .onEnter(
+            () -> {
+              setSubsystemRequests(
+                  ShooterRequest.STOP, IntakeRequest.COLLECT, ConveyorRequest.STOP);
+              drivetrain.setMaxSpeed(MetersPerSecond.of(DrivetrainConstants.MAX_SPEED));
+            })
+        .transitionTo(RobotState.COLLECTING, () -> intake.atGoal());
+
+    generalFsm
+        .state(RobotState.GOING_SHOOT)
+        .onEnter(
+            () -> {
+              setSubsystemRequests(ShooterRequest.SHOOT, IntakeRequest.OUT, ConveyorRequest.STOP);
+              drivetrain.setMaxSpeed(SuperStructureConstants.MAX_VELOCITY_TO_SHOOT);
+            })
+        .transitionTo(RobotState.SHOOTING, () -> shooter.readyToShoot());
+
+    generalFsm
+        .state(RobotState.SHOOTING)
+        .onEnter(
+            () -> {
+              this.conveyorRequest = ConveyorRequest.STOP;
+            })
+        .transitionTo(RobotState.SHOOTING_RECOVERY, () -> !shooter.readyToShoot());
+    // .transitionTo(RobotState.GOING_SHOOT, () -> !isAtSetpointAngle());
+
+    generalFsm
+        .state(RobotState.SHOOTING_RECOVERY)
+        .onEnter(
+            () -> {
+              setSubsystemRequests(ShooterRequest.SHOOT, IntakeRequest.OUT, ConveyorRequest.STOP);
+              drivetrain.setMaxSpeed(SuperStructureConstants.MAX_VELOCITY_TO_SHOOT);
+            })
+        .transitionTo(RobotState.SHOOTING, () -> shooter.readyToShoot());
+
+    generalFsm
+        .state(RobotState.GOING_COLLECT_SHOOT)
+        .onEnter(
+            () -> {
+              setSubsystemRequests(
+                  ShooterRequest.SHOOT, IntakeRequest.COLLECT, ConveyorRequest.STOP);
+              drivetrain.setMaxSpeed(SuperStructureConstants.MAX_VELOCITY_TO_SHOOT);
+            })
+        .transitionTo(RobotState.COLLECT_SHOOTING, () -> shooter.readyToShoot());
+
+    generalFsm
+        .state(RobotState.COLLECT_SHOOTING)
+        .onEnter(
+            () -> {
+              this.conveyorRequest = ConveyorRequest.STOP;
+            })
+        .transitionTo(RobotState.COLLECT_SHOOTING_RECOVERY, () -> !shooter.readyToShoot());
+    // Perder o alinhamento em modo COLLECT_SHOOT volta para GOING_COLLECT_SHOOT
+    // (nao GOING_SHOOT), para o intake continuar coletando durante o realinhamento.
+    // .transitionTo(RobotState.GOING_COLLECT_SHOOT, () -> !isAtSetpointAngle());
+
+    generalFsm
+        .state(RobotState.COLLECT_SHOOTING_RECOVERY)
+        .onEnter(
+            () -> {
+              setSubsystemRequests(
+                  ShooterRequest.SHOOT, IntakeRequest.COLLECT, ConveyorRequest.STOP);
+              drivetrain.setMaxSpeed(SuperStructureConstants.MAX_VELOCITY_TO_SHOOT);
+            })
+        .transitionTo(RobotState.COLLECT_SHOOTING, () -> shooter.readyToShoot());
+
+    generalFsm
+        .state(RobotState.CLOSING)
+        .onEnter(
+            () -> {
+              setSubsystemRequests(ShooterRequest.STOP, IntakeRequest.IN, ConveyorRequest.STOP);
+              drivetrain.setMaxSpeed(MetersPerSecond.of(DrivetrainConstants.MAX_SPEED));
+            })
+        .transitionTo(
+            RobotState.CLOSED, () -> intake.atGoal() && conveyor.atGoal() && shooter.atGoal());
+
+    generalFsm
+        .state(RobotState.CLOSED)
+        .onEnter(
+            () -> {
+              setSubsystemRequests(ShooterRequest.STOP, IntakeRequest.IN, ConveyorRequest.STOP);
+              drivetrain.setMaxSpeed(MetersPerSecond.of(DrivetrainConstants.MAX_SPEED));
+            });
+
+    // Reverse em todos os subsistemas: devolve tudo o que estiver preso no robo.
+    generalFsm
+        .state(RobotState.EJECTING)
+        .onEnter(
+            () -> {
+              setSubsystemRequests(
+                  ShooterRequest.REVERSE, IntakeRequest.REVERSE, ConveyorRequest.REVERSE);
+              drivetrain.setMaxSpeed(MetersPerSecond.of(DrivetrainConstants.MAX_SPEED));
+            });
+
+    // Mapeamento request → (estado de entrada, estados que ja satisfazem o request).
+    // O estado de entrada e excluido automaticamente pelo framework.
+    bindRequest(
+        RobotRequest.SHOOT,
+        RobotState.GOING_SHOOT,
+        RobotState.SHOOTING,
+        RobotState.SHOOTING_RECOVERY);
+
+    bindRequest(RobotRequest.COLLECT, RobotState.GOING_COLLECT, RobotState.COLLECTING);
+
+    bindRequest(
+        RobotRequest.COLLECT_SHOOT,
+        RobotState.GOING_COLLECT_SHOOT,
+        RobotState.COLLECT_SHOOTING,
+        RobotState.COLLECT_SHOOTING_RECOVERY);
+
+    bindRequest(RobotRequest.CLOSE, RobotState.CLOSING, RobotState.CLOSED);
+
+    bindRequest(RobotRequest.IDLE, RobotState.IDLING, RobotState.IDLE);
+
+    bindRequest(RobotRequest.EJECT, RobotState.EJECTING, RobotState.EJECTING);
+
+    generalFsm.validateComplete();
+  }
+
+  private boolean isInAllianceZone() {
+    return allianceManager.isInAllianceZone(
+        FieldConstants.Zones.getGeneralZone(drivetrain.getPose().getTranslation()));
+  }
+
+  private void log() {
+    if (getCurrentCommand() != null) {
+      Logger.recordOutput("SuperStructure/Command", getCurrentCommand().getName());
+    }
+
+    Logger.recordOutput("SuperStructure/GeneralFSM/State", generalFsm.getCurrentState());
+    Logger.recordOutput("SuperStructure/GeneralFSM/Request", robotRequest);
+    Logger.recordOutput("SuperStructure/GeneralFSM/TimeInState", generalFsm.getTimeInState());
+    Logger.recordOutput("SuperStructure/Flags/DrivetrainAligned", isAtSetpointAngle());
+    Logger.recordOutput("SuperStructure/Flags/InAllianceZone", isInAllianceZone());
+
+    shooterCalculator.log(drivetrain.getPose(), isInAllianceZone());
+
+    RobotPowerDistribution.getInstance().log();
+  }
+}

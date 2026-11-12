@@ -1,6 +1,7 @@
-# CI/CD do template FRC: compila, roda os testes de unidade (JUnit), checa formatacao
-# em PR/push para main e cria release automatica em push no main. Nao precisa de roboRIO: o build desktop do
-# GradleRIO + HAL simulado cobrem tudo que os testes exercitam.
+# CI do framework: cada pasta abaixo e um build Gradle independente (igual ao que uma equipe
+# abre no VS Code). A biblioteca Ciprix e compilada e testada sozinha, e cada template/exemplo
+# e compilado consumindo a Ciprix pelo codigo-fonte (composite build).
+# Nao precisa de roboRIO: o build desktop do GradleRIO + HAL simulado cobrem os testes.
 name: CI/CD
 
 on:
@@ -10,6 +11,7 @@ on:
   pull_request:
     branches:
       - main
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -17,11 +19,21 @@ concurrency:
 
 jobs:
   build-and-test:
-    name: CI - Build, Test and Format
+    name: ${{ matrix.name }}
     runs-on: ubuntu-latest
-    # Alternativa oficial da WPILib (ja traz JDK/toolchains do ano):
-    #   container: wpilib/ubuntu-base:22.04
-    # Mantemos setup-java por ser mais simples de atualizar entre temporadas.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Ciprix (biblioteca)
+            dir: ciprix
+          - name: Exemplo season-2026-rebuilt
+            dir: examples/season-2026-rebuilt
+          - name: Template skeleton
+            dir: templates/skeleton
+    defaults:
+      run:
+        working-directory: ${{ matrix.dir }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -35,15 +47,24 @@ jobs:
       - name: Permissao do wrapper
         run: chmod +x gradlew
 
-      # 'build' ja compila main + test e executa os testes JUnit.
+      # Roda antes do build de proposito: o build aplica o Spotless sozinho, entao checar
+      # depois dele nunca falharia.
+      - name: Spotless (formatacao)
+        run: ./gradlew spotlessCheck
+
+      # 'build' compila main + test e executa os testes JUnit.
       - name: Build + testes
         run: ./gradlew build --max-workers 2
 
-      # Formatacao e obrigatoria (TEMPLATE.md). Se o projeto ainda nao tiver o
-      # plugin Spotless, este passo falha "task nao encontrada" — remova a linha
-      # ou adicione o plugin ao build.gradle.
-      - name: Spotless
-        run: ./gradlew spotlessCheck
+      - name: Relatorios de teste
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports-${{ strategy.job-index }}
+          path: |
+            ${{ matrix.dir }}/**/build/reports/tests/
+            ${{ matrix.dir }}/**/build/test-results/
+          if-no-files-found: ignore
 
   release:
     name: CD - GitHub Release

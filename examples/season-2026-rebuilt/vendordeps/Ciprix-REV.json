@@ -1,0 +1,34 @@
+{
+    "fileName": "Ciprix-REV.json",
+    "name": "Ciprix-REV",
+    "version": "2026.2.0",
+    "frcYear": "2026",
+    "uuid": "a85a4e26-49f4-431f-b562-d7108fa0c5ba",
+    "mavenUrls": [
+        "https://23daniel3.github.io/Ciprix/repo"
+    ],
+    "jsonUrl": "https://23daniel3.github.io/Ciprix/Ciprix-REV.json",
+    "javaDependencies": [
+        {
+            "groupId": "org.ciprix",
+            "artifactId": "ciprix-rev",
+            "version": "2026.2.0"
+        }
+    ],
+    "jniDependencies": [],
+    "cppDependencies": [],
+    "requires": [
+        {
+            "uuid": "14266e51-de92-4a56-a425-6bd7e565b7c1",
+            "errorMessage": "This Ciprix module requires the Ciprix core vendordep (Ciprix.json).",
+            "offlineFileName": "Ciprix.json",
+            "onlineUrl": "https://23daniel3.github.io/Ciprix/Ciprix.json"
+        },
+        {
+            "uuid": "3f48eb8c-50fe-43a6-9cb7-44c86353c4cb",
+            "errorMessage": "Ciprix-REV requires the REVLib vendordep.",
+            "offlineFileName": "REVLib.json",
+            "onlineUrl": "https://software-metadata.revrobotics.com/REVLib-2026.json"
+        }
+    ]
+}

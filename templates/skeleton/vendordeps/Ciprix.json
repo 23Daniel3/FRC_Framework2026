@@ -1,0 +1,34 @@
+{
+    "fileName": "Ciprix.json",
+    "name": "Ciprix",
+    "version": "2026.2.0",
+    "frcYear": "2026",
+    "uuid": "14266e51-de92-4a56-a425-6bd7e565b7c1",
+    "mavenUrls": [
+        "https://23daniel3.github.io/Ciprix/repo"
+    ],
+    "jsonUrl": "https://23daniel3.github.io/Ciprix/Ciprix.json",
+    "javaDependencies": [
+        {
+            "groupId": "org.ciprix",
+            "artifactId": "ciprix-core",
+            "version": "2026.2.0"
+        }
+    ],
+    "jniDependencies": [],
+    "cppDependencies": [],
+    "requires": [
+        {
+            "uuid": "d820cc26-74e3-11ec-90d6-0242ac120003",
+            "errorMessage": "Ciprix requires AdvantageKit. Install the AdvantageKit vendordep before adding Ciprix.",
+            "offlineFileName": "AdvantageKit.json",
+            "onlineUrl": "https://github.com/Mechanical-Advantage/AdvantageKit/releases/latest/download/AdvantageKit.json"
+        },
+        {
+            "uuid": "111e20f7-815e-48f8-9dd6-e675ce75b266",
+            "errorMessage": "Ciprix requires the WPILib command library (WPILibNewCommands).",
+            "offlineFileName": "WPILibNewCommands.json",
+            "onlineUrl": ""
+        }
+    ]
+}

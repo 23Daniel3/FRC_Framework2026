@@ -1,0 +1,4 @@
+// ciprix-ctre: CTRE Phoenix 6 hardware (TalonFX, TalonFXS, CANcoder, CAN bus diagnostics).
+dependencies {
+    api project(':ciprix-core')
+}
