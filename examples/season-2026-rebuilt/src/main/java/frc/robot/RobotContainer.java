@@ -28,6 +28,7 @@ import org.ciprix.controller.NaturalXboxController;
 import org.ciprix.controller.VibrateXboxController;
 import org.ciprix.util.AllianceSelector;
 import org.ciprix.util.ConstantsLogger;
+import org.ciprix.util.PreMatchChecklist;
 import org.ciprix.visualization.MechanismPoses;
 import org.ciprix.visualization.MechanismPoses.Axis;
 import org.ciprix.visualization.RobotVisualizer;
@@ -128,6 +129,7 @@ public class RobotContainer {
     configureButtonBindings();
     triggersActions();
     configureVisualizer();
+    configurePreMatchChecklist();
 
     ConstantsLogger.logConstants(Zones.class, "Zones");
   }
@@ -252,6 +254,16 @@ public class RobotContainer {
           "Techmaker 2026",
           RobotVisualizer.ONSHAPE_ROTATIONS);
     }
+  }
+
+  /**
+   * Checklist da fila: com o robo desabilitado, o dashboard mostra o que ainda falta antes da
+   * partida ({@code PreMatch/Ready} e {@code PreMatch/Pending}) e um alerta lista as pendencias.
+   */
+  private void configurePreMatchChecklist() {
+    PreMatchChecklist.addDefaults(); // bateria, dispositivos conectados, sem falhas
+    PreMatchChecklist.add("Aliança definida", () -> DriverStation.getAlliance().isPresent());
+    PreMatchChecklist.add("Visão localizou o robô", vision::hasRecentPose);
   }
 
   /**

@@ -282,6 +282,20 @@ public class AllianceFlipUtil {
   }
 
   /**
+   * Picks the value of the current alliance, for anything that is not a simple mirror (a different
+   * path, zone or target per alliance):
+   *
+   * <pre>{@code
+   * Polygon2d trench = AllianceFlipUtil.resolve(Zones.TRENCH_LEFT_BLUE, Zones.TRENCH_LEFT_RED);
+   * }</pre>
+   *
+   * @return {@code red} on the Red Alliance, otherwise {@code blue}
+   */
+  public static <T> T resolve(T blue, T red) {
+    return shouldFlip() ? red : blue;
+  }
+
+  /**
    * Determines whether field mirroring should be applied based on the current alliance.
    *
    * @return {@code true} if the robot is on the Red Alliance; {@code false} otherwise

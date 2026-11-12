@@ -245,6 +245,11 @@ public class Vision extends SubsystemBase {
     return VecBuilder.fill(finalXY, finalXY, thetaStdDev);
   }
 
+  /** True quando alguma camera corrigiu a pose no ultimo segundo: o robo sabe onde esta. */
+  public boolean hasRecentPose() {
+    return RobotClock.now() - lastAcceptedTime < VisionProcessor.TRUST_SECONDS;
+  }
+
   public double getAvgTagDistance(VisionCamera camera) {
     if (ioMap.containsKey(camera)) {
       return inputsMap.get(camera).avgTagDistance;

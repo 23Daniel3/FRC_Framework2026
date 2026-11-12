@@ -1,6 +1,7 @@
 package org.ciprix.util;
 
 import edu.wpi.first.math.geometry.*;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import java.util.List;
 import java.util.function.Supplier;
@@ -143,6 +144,24 @@ public class GeomUtil {
    */
   public static Translation2d translation3dTo2dXZ(Translation3d translation) {
     return new Translation2d(translation.getX(), translation.getZ());
+  }
+
+  /**
+   * Where the robot will be after {@code seconds} at its current speeds. With field-relative speeds
+   * a holonomic drivetrain moves in a straight line even while it turns, so this is exact for
+   * constant speeds. Used to aim while moving: aim from the pose the robot will have when the game
+   * piece leaves.
+   *
+   * @param pose current pose
+   * @param fieldRelativeSpeeds current speeds, relative to the field
+   * @param seconds how far ahead (latency, time of flight, ...)
+   */
+  public static Pose2d predictPose(Pose2d pose, ChassisSpeeds fieldRelativeSpeeds, double seconds) {
+    return new Pose2d(
+        pose.getX() + fieldRelativeSpeeds.vxMetersPerSecond * seconds,
+        pose.getY() + fieldRelativeSpeeds.vyMetersPerSecond * seconds,
+        pose.getRotation()
+            .plus(Rotation2d.fromRadians(fieldRelativeSpeeds.omegaRadiansPerSecond * seconds)));
   }
 
   public static Pose2d closestPose(Pose2d currentPose, List<Pose2d> poses) {

@@ -8,6 +8,7 @@ import org.ciprix.interfaces.HardwareHealthMonitor;
 import org.ciprix.power.PowerManager;
 import org.ciprix.sim.SimBattery;
 import org.ciprix.util.PersistentAlert;
+import org.ciprix.util.PreMatchChecklist;
 import org.ciprix.util.Report;
 import org.ciprix.util.RobotClock;
 import org.ciprix.util.RobotLoop;
@@ -90,6 +91,7 @@ public final class TestEnvironment {
     PowerManager.resetForTesting();
     PowerManager.setVoltageSource(() -> batteryVolts);
     RobotVisualizer.resetForTesting();
+    PreMatchChecklist.resetForTesting();
   }
 
   public void uninstall() {
@@ -100,6 +102,7 @@ public final class TestEnvironment {
     SimBattery.resetRoboRioSink();
     PowerManager.resetForTesting();
     RobotVisualizer.resetForTesting();
+    PreMatchChecklist.resetForTesting();
     PersistentAlert.resetBackendFactory();
     Report.resetSink();
     RobotStatus.resetEnabledSource();
