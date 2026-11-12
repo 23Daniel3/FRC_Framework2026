@@ -5,6 +5,7 @@ import static edu.wpi.first.units.Units.*;
 import edu.wpi.first.units.measure.*;
 import org.ciprix.interfaces.encoder.EncoderIO;
 import org.ciprix.interfaces.motor.basic.BasicMotorConfig;
+import org.ciprix.power.PowerPriority;
 import org.littletonrobotics.junction.Logger;
 
 /**
@@ -145,6 +146,7 @@ public class MotorConfig extends BasicMotorConfig {
     config.openLoopRampSeconds = basic.openLoopRampSeconds;
     config.leaderMotorID = basic.leaderMotorID;
     config.followerInverted = basic.followerInverted;
+    config.powerPriority = basic.powerPriority;
     return config;
   }
 
@@ -213,6 +215,12 @@ public class MotorConfig extends BasicMotorConfig {
   @Override
   public MotorConfig withFollowerInverted(boolean inverted) {
     super.withFollowerInverted(inverted);
+    return this;
+  }
+
+  @Override
+  public MotorConfig powerPriority(PowerPriority priority) {
+    super.powerPriority(priority);
     return this;
   }
 

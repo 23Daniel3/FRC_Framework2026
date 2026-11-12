@@ -14,6 +14,7 @@ public class IntakeIOSim implements IntakeIO {
   // What the mechanisms are made of. Estimates: replace them with the CAD values when known.
   private static final double ROLLER_GEARING = 3.0;
   private static final double ROLLER_INERTIA_KG_M2 = 0.001;
+  private static final double ROLLER_FRICTION_NM = 0.06; // a free roller draws about 1 A
   private static final double PIVOT_GEARING = 12.0;
   private static final double PIVOT_INERTIA_KG_M2 = 0.02;
 
@@ -21,7 +22,8 @@ public class IntakeIOSim implements IntakeIO {
       MotorIOSim.talonFX(
           "Intake/Roller",
           IntakeConstants.CONFIG_ROLLER_MOTOR,
-          SimMechanism.roller(DCMotor.getKrakenX60(1), ROLLER_GEARING, ROLLER_INERTIA_KG_M2));
+          SimMechanism.roller(DCMotor.getKrakenX60(1), ROLLER_GEARING, ROLLER_INERTIA_KG_M2)
+              .withFriction(ROLLER_FRICTION_NM, 0.0));
 
   private final MotorIOSim intakeMotor =
       MotorIOSim.spark(

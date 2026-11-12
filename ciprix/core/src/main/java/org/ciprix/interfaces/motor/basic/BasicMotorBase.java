@@ -10,6 +10,8 @@ import org.ciprix.CiprixSettings;
 import org.ciprix.interfaces.HardwareHealthMonitor;
 import org.ciprix.interfaces.motor.MotorControlMode;
 import org.ciprix.logger.LoggedTunableNumber;
+import org.ciprix.power.PowerManager;
+import org.ciprix.power.PowerPriority;
 import org.ciprix.util.RobotClock;
 import org.littletonrobotics.junction.Logger;
 
@@ -32,6 +34,8 @@ import org.littletonrobotics.junction.Logger;
  *       Name/Config/CurrentLimit}) can be edited from the dashboard in tuning mode;
  *   <li>brake mode and current limit are only written to the controller when they change (those
  *       writes block the loop for a long time);
+ *   <li>the current limit follows the {@link PowerManager} when the motor has a {@link
+ *       PowerPriority} other than {@code HIGH};
  *   <li>the motor registers itself in the {@link HardwareHealthMonitor}.
  * </ul>
  */
@@ -72,6 +76,10 @@ public abstract class BasicMotorBase implements BasicMotorIO {
   private boolean brakeMode;
   private double currentLimitAmps;
   private final double temperatureWarningCelsius;
+
+  // Fraction of the current limit allowed by the power manager (1.0 for HIGH priority).
+  private final PowerPriority powerPriority;
+  private double powerScale = 1.0;
 
   private final LoggedTunableNumber minOutputTunable;
   private final LoggedTunableNumber maxOutputTunable;
@@ -129,6 +137,10 @@ public abstract class BasicMotorBase implements BasicMotorIO {
     this.brakeMode = config.brakeMode;
     this.currentLimitAmps = config.currentLimit.in(Amps);
     this.temperatureWarningCelsius = config.temperatureWarning.in(Celsius);
+    this.powerPriority = config.powerPriority == null ? PowerPriority.HIGH : config.powerPriority;
+    if (powerPriority != PowerPriority.HIGH) {
+      PowerManager.start();
+    }
 
     this.minOutputTunable = new LoggedTunableNumber(name + "/Config/MinOutput", config.minOutput);
     this.maxOutputTunable = new LoggedTunableNumber(name + "/Config/MaxOutput", config.maxOutput);
@@ -181,7 +193,10 @@ public abstract class BasicMotorBase implements BasicMotorIO {
     applyBrakeMode(enabled);
   }
 
-  /** Changes the current limit. The controller is only written when the value changes. */
+  /**
+   * Changes the current limit. The controller is only written when the value changes. While the
+   * power manager is saving power, the controller receives the reduced value.
+   */
   @Override
   public final void setCurrentLimit(Current current) {
     double amps = Math.abs(current.in(Amps));
@@ -189,7 +204,22 @@ public abstract class BasicMotorBase implements BasicMotorIO {
       return;
     }
     currentLimitAmps = amps;
-    applyCurrentLimit(amps);
+    applyCurrentLimit(amps * powerScale);
+  }
+
+  /**
+   * Follows the {@link PowerManager}: writes the reduced current limit when its level changes.
+   * Called once per cycle from {@code updateInputs}; costs nothing for {@code HIGH} priority.
+   */
+  protected final void updatePowerScale() {
+    if (powerPriority == PowerPriority.HIGH) {
+      return;
+    }
+    double scale = PowerManager.getCurrentScale(powerPriority);
+    if (scale != powerScale) {
+      powerScale = scale;
+      applyCurrentLimit(currentLimitAmps * scale);
+    }
   }
 
   /**
@@ -320,6 +350,7 @@ public abstract class BasicMotorBase implements BasicMotorIO {
     String problem =
         !inputs.isConnected ? "Disconnected" : overTemperature ? "Over temperature" : "";
     publishHealth(inputs, problem);
+    updatePowerScale();
     refreshCommand(RobotClock.now());
   }
 
@@ -433,9 +464,9 @@ public abstract class BasicMotorBase implements BasicMotorIO {
   /** Reads the hardware into {@code inputs}. */
   protected abstract void updateHardwareInputs(BasicMotorIOInputs inputs);
 
-  /** Current limit in effect, in amps. */
+  /** Current limit in effect, in amps (already reduced by the power manager, when it is). */
   protected final double getCurrentLimitAmps() {
-    return currentLimitAmps;
+    return currentLimitAmps * powerScale;
   }
 
   /** True when the motor is configured to brake in neutral. */

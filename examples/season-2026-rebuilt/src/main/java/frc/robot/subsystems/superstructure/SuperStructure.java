@@ -224,6 +224,16 @@ public class SuperStructure extends SuperStructureBase<RobotRequest, RobotState>
               drivetrain.setMaxSpeed(MetersPerSecond.of(DrivetrainConstants.MAX_SPEED));
             });
 
+    // Reverse em todos os subsistemas: devolve tudo o que estiver preso no robo.
+    generalFsm
+        .state(RobotState.EJECTING)
+        .onEnter(
+            () -> {
+              setSubsystemRequests(
+                  ShooterRequest.REVERSE, IntakeRequest.REVERSE, ConveyorRequest.REVERSE);
+              drivetrain.setMaxSpeed(MetersPerSecond.of(DrivetrainConstants.MAX_SPEED));
+            });
+
     // Mapeamento request → (estado de entrada, estados que ja satisfazem o request).
     // O estado de entrada e excluido automaticamente pelo framework.
     bindRequest(
@@ -243,6 +253,8 @@ public class SuperStructure extends SuperStructureBase<RobotRequest, RobotState>
     bindRequest(RobotRequest.CLOSE, RobotState.CLOSING, RobotState.CLOSED);
 
     bindRequest(RobotRequest.IDLE, RobotState.IDLING, RobotState.IDLE);
+
+    bindRequest(RobotRequest.EJECT, RobotState.EJECTING, RobotState.EJECTING);
 
     generalFsm.validateComplete();
   }

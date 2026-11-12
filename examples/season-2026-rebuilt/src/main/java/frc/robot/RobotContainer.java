@@ -2,6 +2,7 @@ package frc.robot;
 
 import com.ctre.phoenix6.swerve.SwerveRequest;
 import edu.wpi.first.wpilibj.*;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.*;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
@@ -151,7 +152,8 @@ public class RobotContainer {
             superStructure,
             driverController.leftBumper(),
             driverController.rightBumper(),
-            driverController.povLeft()));
+            driverController.povLeft(),
+            driverController.povRight()));
 
     driverController
         .start()
@@ -188,6 +190,7 @@ public class RobotContainer {
         .and(operatorController.start().negate())
         .whileTrue(ShooterCommands.reverse(shooter));
     operatorController.y().whileTrue(ConveyorCommands.reverse(conveyor));
+    operatorController.rightBumper().whileTrue(IntakeCommands.reverse(intake));
 
     Trigger invertButton = operatorController.leftStick();
 
@@ -210,6 +213,16 @@ public class RobotContainer {
         .whileTrue(drivetrain.applyRequest(() -> idle).ignoringDisable(true));
 
     drivetrain.registerTelemetry(driveLogger::telemeterize);
+
+    // Autoteste de pit (robo habilitado, mecanismos livres): um botao por subsistema e um geral.
+    SmartDashboard.putData("SelfTest/Intake", intake.selfTestCommand());
+    SmartDashboard.putData("SelfTest/Conveyor", conveyor.selfTestCommand());
+    SmartDashboard.putData("SelfTest/Shooter", shooter.selfTestCommand());
+    SmartDashboard.putData(
+        "SelfTest/All",
+        Commands.sequence(
+                intake.selfTestCommand(), conveyor.selfTestCommand(), shooter.selfTestCommand())
+            .withName("SelfTest All"));
   }
 
   /**

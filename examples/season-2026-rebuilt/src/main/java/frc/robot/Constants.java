@@ -45,7 +45,8 @@ public final class Constants {
     IDLE,
     IDLING,
     CLOSING,
-    CLOSED
+    CLOSED,
+    EJECTING
   }
 
   public static enum RobotRequest {
@@ -53,7 +54,8 @@ public final class Constants {
     SHOOT,
     COLLECT_SHOOT,
     IDLE,
-    CLOSE
+    CLOSE,
+    EJECT
   }
 
   /** Alliance pre-seted just for security if have no connection */

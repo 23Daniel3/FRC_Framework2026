@@ -326,6 +326,31 @@ public class StateMachine<S extends Enum<S>> {
     if (next != current) applyTransition(next, Kind.FORCED, "forced", RobotClock.now());
   }
 
+  /**
+   * Starts again from the initial state, as after boot: runs {@code onExit} of the current state
+   * and {@code onEnter} of the initial one (even when the machine is already there) and clears the
+   * faults. Used after something drove the hardware behind the machine's back, like a self-test.
+   */
+  public void restart() {
+    clearFault();
+    final double now = RobotClock.now();
+    if (current != initial) {
+      applyTransition(initial, Kind.FORCED, "restart", now);
+      return;
+    }
+    State<S> state = states.get(current);
+    if (state != null) {
+      state.onExit();
+      state.onEnter();
+    }
+    stateEnterTimestampSec = now;
+  }
+
+  /** The state the machine starts in. */
+  public S getInitialState() {
+    return initial;
+  }
+
   private void applyTransition(S next, Kind kind, String label, double now) {
     final S from = current;
     recordExit(from, now);

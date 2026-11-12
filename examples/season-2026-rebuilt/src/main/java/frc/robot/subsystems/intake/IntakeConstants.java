@@ -5,6 +5,7 @@ import static edu.wpi.first.units.Units.Rotations;
 import static edu.wpi.first.units.Units.Volts;
 
 import org.ciprix.interfaces.motor.advanced.MotorConfig;
+import org.ciprix.power.PowerPriority;
 
 public class IntakeConstants {
   public static final int ROLLER_MOTOR_ID = 18;
@@ -31,7 +32,8 @@ public class IntakeConstants {
           .coastMode()
           .nominalVoltage(Volts.of(10))
           .inverted(true)
-          .svag(0, 0.42, 0.115, 0, 0);
+          .svag(0, 0.42, 0.115, 0, 0)
+          .powerPriority(PowerPriority.LOW);
 
   public static final MotorConfig CONFIG_INTAKE_MOTOR =
       new MotorConfig()
@@ -47,6 +49,7 @@ public class IntakeConstants {
     OUT,
     COLLECT,
     STOP,
+    REVERSE
   }
 
   public enum IntakeState {
@@ -56,6 +59,7 @@ public class IntakeConstants {
     STOPPING,
     COLLECT,
     GOING_IN,
-    GOING_OUT
+    GOING_OUT,
+    REVERSING
   }
 }

@@ -286,6 +286,7 @@ public abstract class MotorBase extends BasicMotorBase implements MotorIO {
       releaseOutputOverride();
     }
 
+    updatePowerScale();
     refreshCommand(now);
   }
 

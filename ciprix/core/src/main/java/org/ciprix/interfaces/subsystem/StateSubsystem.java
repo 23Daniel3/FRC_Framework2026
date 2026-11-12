@@ -2,6 +2,8 @@ package org.ciprix.interfaces.subsystem;
 
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
+import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import java.util.Arrays;
@@ -62,6 +64,10 @@ public abstract class StateSubsystem<
   private final Alert faultAlert;
   private boolean faultAlertActive = false;
   private boolean nullRequestReported = false;
+
+  // Autoteste de pit: declarado com selfTest(), executado por selfTestCommand().
+  private SelfTest selfTest = null;
+  private boolean selfTestRunning = false;
 
   // Status em texto: so e remontado quando algo muda.
   private String status = "";
@@ -252,7 +258,10 @@ public abstract class StateSubsystem<
     overrideActive = transientOverrideRequest != null;
     lastOverrideRequest = transientOverrideRequest;
 
-    fsm.update();
+    // Durante o autoteste a FSM fica pausada: nada briga com o teste pelos motores.
+    if (!selfTestRunning) {
+      fsm.update();
+    }
 
     sPeriodic();
 
@@ -277,6 +286,57 @@ public abstract class StateSubsystem<
   }
 
   protected void sPeriodic() {}
+
+  /**
+   * Declara os motores verificados pelo autoteste de pit ({@link #selfTestCommand()}). Chame no
+   * construtor, junto com a FSM:
+   *
+   * <pre>{@code
+   * selfTest()
+   *     .motor("Roller", io::controlRollerMotor, () -> inputs.rollerMotorInputs)
+   *     .output(0.3)
+   *     .currentBetween(Amps.of(0.5), Amps.of(30))
+   *     .mustTurn(RotationsPerSecond.of(5));
+   * }</pre>
+   */
+  protected final SelfTest selfTest() {
+    if (selfTest == null) {
+      selfTest = new SelfTest(subsystemName);
+    }
+    return selfTest;
+  }
+
+  /**
+   * Autoteste de pit: gira cada motor declarado em {@link #selfTest()} por um instante e confere se
+   * ele responde, se a corrente faz sentido e se o mecanismo girou. Enquanto roda, a FSM fica
+   * pausada; ao terminar ela recomeca do estado inicial, como depois do boot. Os resultados vao
+   * para {@code SelfTest/<subsistema>/...} e uma falha gera um alerta no dashboard.
+   *
+   * <p>Um subsistema sem motores declarados devolve um comando que nao faz nada.
+   */
+  public Command selfTestCommand() {
+    if (selfTest == null || selfTest.isEmpty()) {
+      return Commands.none().withName("SelfTest " + getName() + " (nada declarado)");
+    }
+    return selfTest.command(
+        this,
+        running -> {
+          selfTestRunning = running;
+          if (!running) {
+            fsm.restart();
+          }
+        });
+  }
+
+  /** O autoteste declarado, com os resultados da ultima execucao. */
+  public SelfTest getSelfTest() {
+    return selfTest();
+  }
+
+  /** True enquanto o autoteste estiver rodando (a FSM fica pausada). */
+  public boolean isSelfTestRunning() {
+    return selfTestRunning;
+  }
 
   /**
    * Retorna true se o request atual foi atendido. A implementacao padrao usa o mapa construido por

@@ -1,6 +1,8 @@
 package frc.robot.subsystems.shooter;
 
+import static edu.wpi.first.units.Units.Amps;
 import static edu.wpi.first.units.Units.RPM;
+import static edu.wpi.first.units.Units.RotationsPerSecond;
 
 import edu.wpi.first.units.measure.AngularVelocity;
 import frc.robot.subsystems.shooter.ShooterConstants.ShooterRequest;
@@ -73,6 +75,20 @@ public class Shooter
     bindRequest(ShooterRequest.REVERSE, ShooterState.REVERSING, ShooterState.REVERSING);
 
     fsm.validateComplete();
+
+    // Autoteste de pit. O flywheel tem mais inercia: mais tempo para chegar na velocidade antes
+    // de medir. O follower acompanha o lider, entao a corrente dele aparece nos logs tambem.
+    selfTest()
+        .motor("Flywheel", io::controlFlywheel, () -> inputs.leaderInputs)
+        .output(0.2)
+        .forSeconds(1.5)
+        .currentBetween(Amps.of(0.3), Amps.of(30))
+        .mustTurn(RotationsPerSecond.of(5));
+    selfTest()
+        .motor("Kicker", io::controlKicker, () -> inputs.kickerInputs)
+        .output(0.3)
+        .currentBetween(Amps.of(0.2), Amps.of(25))
+        .mustTurn(RotationsPerSecond.of(5));
   }
 
   private boolean isFlywheelReadyToKick() {

@@ -1,5 +1,8 @@
 package frc.robot.subsystems.conveyor;
 
+import static edu.wpi.first.units.Units.Amps;
+import static edu.wpi.first.units.Units.RotationsPerSecond;
+
 import edu.wpi.first.wpilibj.Timer;
 import frc.robot.subsystems.conveyor.ConveyorConstants.ConveyorRequest;
 import frc.robot.subsystems.conveyor.ConveyorConstants.ConveyorState;
@@ -58,5 +61,12 @@ public class Conveyor
     bindRequest(ConveyorRequest.WIGGLE, ConveyorState.WIGGLING, ConveyorState.WIGGLING);
 
     fsm.validateComplete();
+
+    // Autoteste de pit: o motor responde, a corrente faz sentido e a esteira gira.
+    selfTest()
+        .motor("Motor", io::controlMotor, () -> inputs.motorInputs)
+        .output(0.3)
+        .currentBetween(Amps.of(0.3), Amps.of(20))
+        .mustTurn(RotationsPerSecond.of(5));
   }
 }

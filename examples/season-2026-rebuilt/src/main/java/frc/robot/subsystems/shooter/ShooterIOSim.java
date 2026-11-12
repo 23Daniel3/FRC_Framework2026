@@ -17,20 +17,25 @@ public class ShooterIOSim implements ShooterIO {
   private static final double FLYWHEEL_INERTIA_KG_M2 = 0.004;
   private static final double KICKER_GEARING = 1.0;
   private static final double KICKER_INERTIA_KG_M2 = 0.0008;
+  // Bearings and belts: what makes a free mechanism draw a little current.
+  private static final double FLYWHEEL_FRICTION_NM = 0.03;
+  private static final double KICKER_FRICTION_NM = 0.02;
 
   private final MotorIOSim leader =
       MotorIOSim.talonFX(
               "ShooterLeaderMotor",
               ShooterConstants.MOTOR_LEADER_CONFIG,
               SimMechanism.flywheel(
-                  DCMotor.getKrakenX60(2), FLYWHEEL_GEARING, FLYWHEEL_INERTIA_KG_M2))
+                      DCMotor.getKrakenX60(2), FLYWHEEL_GEARING, FLYWHEEL_INERTIA_KG_M2)
+                  .withFriction(FLYWHEEL_FRICTION_NM, 0.0))
           .withFollowers(1);
 
   private final MotorIOSim kicker =
       MotorIOSim.spark(
           "ShooterKickerMotor",
           ShooterConstants.KICKER_MOTOR_CONFIG,
-          SimMechanism.roller(DCMotor.getNeoVortex(1), KICKER_GEARING, KICKER_INERTIA_KG_M2));
+          SimMechanism.roller(DCMotor.getNeoVortex(1), KICKER_GEARING, KICKER_INERTIA_KG_M2)
+              .withFriction(KICKER_FRICTION_NM, 0.0));
 
   @Override
   public void updateInputs(ShooterIOInputsAutoLogged inputs) {

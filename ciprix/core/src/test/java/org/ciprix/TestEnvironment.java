@@ -5,6 +5,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.ciprix.interfaces.HardwareHealthMonitor;
+import org.ciprix.power.PowerManager;
 import org.ciprix.sim.SimBattery;
 import org.ciprix.util.PersistentAlert;
 import org.ciprix.util.Report;
@@ -14,8 +15,8 @@ import org.ciprix.util.RobotStatus;
 
 /**
  * Replaces everything the library reads from or writes to the robot (clock, enabled state, Driver
- * Station messages, dashboard alerts, the scheduler hook, the simulated roboRIO) so tests run as
- * plain Java, without the HAL.
+ * Station messages, dashboard alerts, the scheduler hook, the simulated roboRIO, the battery
+ * voltage) so tests run as plain Java, without the HAL.
  *
  * <pre>{@code
  * private final TestEnvironment env = new TestEnvironment();
@@ -46,6 +47,9 @@ public final class TestEnvironment {
   /** Simulated enabled state of the robot. */
   public boolean enabled = true;
 
+  /** Battery voltage read by the {@link PowerManager}. */
+  public double batteryVolts = 12.5;
+
   /** Every message reported to the Driver Station. */
   public final List<String> reports = new ArrayList<>();
 
@@ -55,6 +59,7 @@ public final class TestEnvironment {
   public void install() {
     now = 100.0;
     enabled = true;
+    batteryVolts = 12.5;
     reports.clear();
     alerts.clear();
     RobotClock.setSource(() -> now);
@@ -81,6 +86,8 @@ public final class TestEnvironment {
     HardwareHealthMonitor.resetForTesting();
     SimBattery.resetForTesting();
     SimBattery.setRoboRioSink(volts -> {});
+    PowerManager.resetForTesting();
+    PowerManager.setVoltageSource(() -> batteryVolts);
   }
 
   public void uninstall() {
@@ -89,6 +96,7 @@ public final class TestEnvironment {
     HardwareHealthMonitor.resetForTesting();
     SimBattery.resetForTesting();
     SimBattery.resetRoboRioSink();
+    PowerManager.resetForTesting();
     PersistentAlert.resetBackendFactory();
     Report.resetSink();
     RobotStatus.resetEnabledSource();

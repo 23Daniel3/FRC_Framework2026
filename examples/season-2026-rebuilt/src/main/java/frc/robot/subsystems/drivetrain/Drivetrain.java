@@ -35,6 +35,7 @@ import frc.robot.Constants;
 import frc.robot.generated.TunerConstants.TunerSwerveDrivetrain;
 import java.util.function.Supplier;
 import org.ciprix.logger.LoggedTunableNumber;
+import org.ciprix.power.PowerManager;
 import org.ciprix.util.AllianceSelector;
 import org.ciprix.util.ConstantsLogger;
 import org.ciprix.util.GeomUtil;
@@ -501,9 +502,17 @@ public class Drivetrain extends TunerSwerveDrivetrain
     if (Constants.tuningMode) {
       tuning();
     }
-    xLimiter.setAccelerationLimit(maxAcceleration);
-    yLimiter.setAccelerationLimit(maxAcceleration);
-    hLimiter.setAccelerationLimit(maxAngularAcceleration);
+    // Bateria caindo: o PowerManager suaviza a aceleracao, que e onde vai a maior parte da
+    // corrente.
+    double powerScale = PowerManager.getDriveAccelerationScale();
+    LinearAcceleration acceleration =
+        MetersPerSecondPerSecond.of(maxAcceleration.in(MetersPerSecondPerSecond) * powerScale);
+    AngularAcceleration angularAcceleration =
+        RadiansPerSecondPerSecond.of(
+            maxAngularAcceleration.in(RadiansPerSecondPerSecond) * powerScale);
+    xLimiter.setAccelerationLimit(acceleration);
+    yLimiter.setAccelerationLimit(acceleration);
+    hLimiter.setAccelerationLimit(angularAcceleration);
     PeriodicTimer.stop(getName());
   }
 

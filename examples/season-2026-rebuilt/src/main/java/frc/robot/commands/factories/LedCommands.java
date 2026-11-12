@@ -42,6 +42,7 @@ public final class LedCommands {
     STATE_EFFECTS.put(RobotState.COLLECT_SHOOTING_RECOVERY, led -> led.breathe(Color.kYellow));
     STATE_EFFECTS.put(RobotState.CLOSING, led -> led.chase(Color.kCyan));
     STATE_EFFECTS.put(RobotState.CLOSED, led -> led.breathe(Color.kViolet));
+    STATE_EFFECTS.put(RobotState.EJECTING, led -> led.breathe(Color.kOrange));
   }
 
   /**

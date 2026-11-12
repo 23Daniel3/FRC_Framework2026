@@ -16,6 +16,7 @@ public final class SuperStructureCommands {
    *
    * <pre>
    * close                      -> CLOSE          (recolhe tudo; vence qualquer outro botao)
+   * eject                      -> EJECT          (reverse em todos os subsistemas)
    * collect + shoot            -> COLLECT_SHOOT  (coleta enquanto atira)
    * collect                    -> COLLECT
    * shoot                      -> SHOOT
@@ -29,18 +30,22 @@ public final class SuperStructureCommands {
       SuperStructure superStructure,
       BooleanSupplier collectBtn,
       BooleanSupplier shootBtn,
-      BooleanSupplier closeButton) {
+      BooleanSupplier closeButton,
+      BooleanSupplier ejectButton) {
 
     return Commands.run(
             () -> {
               boolean collecting = collectBtn.getAsBoolean();
               boolean shooting = shootBtn.getAsBoolean();
               boolean close = closeButton.getAsBoolean();
+              boolean eject = ejectButton.getAsBoolean();
 
               RobotRequest request;
 
               if (close) {
                 request = RobotRequest.CLOSE;
+              } else if (eject) {
+                request = RobotRequest.EJECT;
               } else if (collecting && shooting) {
                 request = RobotRequest.COLLECT_SHOOT;
               } else if (collecting) {

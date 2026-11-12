@@ -4,6 +4,7 @@ import static edu.wpi.first.units.Units.Amps;
 import static edu.wpi.first.units.Units.Volts;
 
 import org.ciprix.interfaces.motor.advanced.MotorConfig;
+import org.ciprix.power.PowerPriority;
 
 public class ConveyorConstants {
   public static final int MOTOR_ID = 20;
@@ -20,7 +21,9 @@ public class ConveyorConstants {
           .currentLimit(Amps.of(25))
           .coastMode()
           .nominalVoltage(Volts.of(10))
-          .inverted(false);
+          .inverted(false)
+          // Bateria caindo: o conveyor pode esperar, o drivetrain e o shooter nao.
+          .powerPriority(PowerPriority.LOW);
 
   public enum ConveyorRequest {
     RUN,

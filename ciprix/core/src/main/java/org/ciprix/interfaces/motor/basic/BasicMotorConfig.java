@@ -7,6 +7,7 @@ import static edu.wpi.first.units.Units.Volts;
 import edu.wpi.first.units.measure.Current;
 import edu.wpi.first.units.measure.Temperature;
 import edu.wpi.first.units.measure.Voltage;
+import org.ciprix.power.PowerPriority;
 import org.littletonrobotics.junction.Logger;
 
 /**
@@ -52,6 +53,13 @@ public class BasicMotorConfig {
 
   public int leaderMotorID = 0;
   public boolean followerInverted = false;
+
+  /**
+   * How much the motor matters when the battery sags: {@link org.ciprix.power.PowerManager} lowers
+   * the current limit of {@link PowerPriority#NORMAL} and {@link PowerPriority#LOW} motors to avoid
+   * a brownout. {@link PowerPriority#HIGH} (default) is never reduced.
+   */
+  public PowerPriority powerPriority = PowerPriority.HIGH;
 
   public BasicMotorConfig currentLimit(Current amps) {
     this.currentLimit = amps;
@@ -115,6 +123,12 @@ public class BasicMotorConfig {
     return this;
   }
 
+  /** Sets how much the motor matters when the battery sags (see {@link #powerPriority}). */
+  public BasicMotorConfig powerPriority(PowerPriority priority) {
+    this.powerPriority = priority == null ? PowerPriority.HIGH : priority;
+    return this;
+  }
+
   /**
    * Returns a new config with only the settings of a simple motor (limits, inversion, neutral mode,
    * voltage, ramp, follower) and the full output range. Used when a motor is only the power stage
@@ -131,6 +145,7 @@ public class BasicMotorConfig {
     copy.temperatureWarning = temperatureWarning;
     copy.leaderMotorID = leaderMotorID;
     copy.followerInverted = followerInverted;
+    copy.powerPriority = powerPriority;
     return copy;
   }
 
@@ -146,6 +161,7 @@ public class BasicMotorConfig {
     Logger.recordOutput(path + "/outputRange/min", minOutput);
     Logger.recordOutput(path + "/outputRange/max", maxOutput);
     Logger.recordOutput(path + "/openLoopRampSeconds", openLoopRampSeconds);
+    Logger.recordOutput(path + "/powerPriority", powerPriority.name());
 
     if (leaderMotorID != 0) {
       Logger.recordOutput(path + "/follower/leaderID", leaderMotorID);

@@ -1,7 +1,9 @@
 package frc.robot.subsystems.intake;
 
+import static edu.wpi.first.units.Units.Amps;
 import static edu.wpi.first.units.Units.RPM;
 import static edu.wpi.first.units.Units.Rotations;
+import static edu.wpi.first.units.Units.RotationsPerSecond;
 
 import frc.robot.subsystems.intake.IntakeConstants.IntakeRequest;
 import frc.robot.subsystems.intake.IntakeConstants.IntakeState;
@@ -77,6 +79,11 @@ public class Intake
 
     fsm.state(IntakeState.STOPPED).onEnter(() -> io.controlRollerMotor().stop());
 
+    // Devolve o que entrou: o pivot fica onde esta e so o roller inverte.
+    fsm.state(IntakeState.REVERSING)
+        .onEnter(
+            () -> io.controlRollerMotor().runPercentOutput(IntakeConstants.INTAKE_REVERSE_POWER));
+
     // Request → (estado de entrada, estado goal, intermediarios protegidos).
     // OUT e COLLECT compartilham a mesma entrada (GOING_OUT); o alvo final e decidido
     // pelas transicoes locais de GOING_OUT com base no request atual.
@@ -84,7 +91,15 @@ public class Intake
     bindRequest(IntakeRequest.OUT, IntakeState.GOING_OUT, IntakeState.OUT);
     bindRequest(IntakeRequest.COLLECT, IntakeState.GOING_OUT, IntakeState.COLLECT);
     bindRequest(IntakeRequest.STOP, IntakeState.STOPPING, IntakeState.STOPPED);
+    bindRequest(IntakeRequest.REVERSE, IntakeState.REVERSING, IntakeState.REVERSING);
 
     fsm.validateComplete();
+
+    // Autoteste de pit: so o roller, que pode girar livre (o pivot bateria no batente).
+    selfTest()
+        .motor("Roller", io::controlRollerMotor, () -> inputs.rollerMotorInputs)
+        .output(0.3)
+        .currentBetween(Amps.of(0.3), Amps.of(25))
+        .mustTurn(RotationsPerSecond.of(5));
   }
 }
