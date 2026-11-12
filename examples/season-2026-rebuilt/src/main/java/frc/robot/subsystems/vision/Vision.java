@@ -5,6 +5,7 @@ import static frc.robot.subsystems.vision.VisionConstants.*;
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.numbers.N1;
@@ -16,6 +17,12 @@ import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 import org.ciprix.util.ConstantsLogger;
 import org.ciprix.util.PeriodicTimer;
+import org.ciprix.util.RobotClock;
+import org.ciprix.vision.PoseObservation;
+import org.ciprix.vision.VisionFilter;
+import org.ciprix.vision.VisionFilter.Rejection;
+import org.ciprix.vision.VisionProcessor;
+import org.ciprix.vision.VisionStdDevs;
 import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 
@@ -23,7 +30,22 @@ public class Vision extends SubsystemBase {
 
   private final VisionConsumer consumer;
   private final Supplier<ChassisSpeeds> robotVelocitySupplier;
+  private final Supplier<Pose2d> estimatedPose;
   private final DoubleSupplier rotation;
+
+  // Regras da biblioteca (limites do campo 2026, robo no chao, giro rapido, salto de tag unica).
+  private final VisionFilter filter =
+      new VisionFilter()
+          .field(APRILTAG_LAYOUT)
+          .maxDistance(MAX_DISTANCE)
+          .maxAmbiguity(MAX_AMBIGUITY)
+          .maxJump(MAX_SINGLE_TAG_JUMP);
+
+  // Cada imagem e julgada uma vez so: a Limelight e lida como "ultimo valor" a cada ciclo, entao a
+  // mesma imagem aparece em varios ciclos e nao pode entrar duas vezes no estimador.
+  private final EnumMap<VisionCamera, Double> lastJudgedTimestamps =
+      new EnumMap<>(VisionCamera.class);
+  private double lastAcceptedTime = Double.NEGATIVE_INFINITY;
 
   enum StopVision {
     STOP,
@@ -49,11 +71,13 @@ public class Vision extends SubsystemBase {
   public Vision(
       VisionConsumer consumer,
       Supplier<ChassisSpeeds> robotVelocitySupplier,
+      Supplier<Pose2d> estimatedPose,
       DoubleSupplier rotation,
       VisionIO... ios) {
 
     this.consumer = consumer;
     this.robotVelocitySupplier = robotVelocitySupplier;
+    this.estimatedPose = estimatedPose;
     this.rotation = rotation;
     this.stopVision = new LoggedDashboardChooser<>("Desligar Visão");
 
@@ -85,9 +109,12 @@ public class Vision extends SubsystemBase {
       Logger.processInputs(getName() + "/" + camera.name(), inputs);
 
       if (camera != VisionCamera.FRONT) {
-        if (shouldAcceptPose(camera, inputs)) {
+        String rejection = rejectionReason(camera, inputs, robotSpeeds);
+        if (rejection.isEmpty()) {
           var stdDevs = calculateVisionStdDevs(camera, inputs, robotSpeeds);
-          if (inputs.tagCount == 2) {
+          if (usesMegatag1Heading(inputs)) {
+            // Com 2 ou mais tags o MegaTag 1 mede o angulo de verdade; o MegaTag 2 so devolve o
+            // angulo do giroscopio, por isso nesse caso o desvio do angulo e ignorado.
             Pose2d pose =
                 new Pose2d(
                     inputs.pose.getX(),
@@ -97,25 +124,61 @@ public class Vision extends SubsystemBase {
           } else {
             consumer.accept(inputs.pose, inputs.timestamp, stdDevs);
           }
-          Logger.recordOutput(
-              "Subsystems/Vision/" + io.getCamera().name() + "/isValidatingPose", true);
-        } else {
-          Logger.recordOutput(
-              "Subsystems/Vision/" + io.getCamera().name() + "/isValidatingPose", false);
+          lastAcceptedTime = RobotClock.now();
         }
+        Logger.recordOutput(
+            "Subsystems/Vision/" + io.getCamera().name() + "/isValidatingPose",
+            rejection.isEmpty());
+        Logger.recordOutput(
+            "Subsystems/Vision/" + io.getCamera().name() + "/RejectReason", rejection);
       }
     }
     PeriodicTimer.stop(getName());
   }
 
-  private boolean shouldAcceptPose(VisionCamera camera, VisionIOInputsAutoLogged inputs) {
-    if (!inputs.hasPose
-        || camera == VisionCamera.FRONT
-        || (inputs.tagCount == 1 && inputs.ambiguity > VisionConstants.MAX_AMBIGUITY)
-        || inputs.avgTagDistance > VisionConstants.MAX_DISTANCE
-        || stopVision.get() == StopVision.STOP) return false;
+  /** Com 2 ou mais tags o angulo vem do MegaTag 1 (medido pelas tags, nao pelo giroscopio). */
+  private static boolean usesMegatag1Heading(VisionIOInputsAutoLogged inputs) {
+    return inputs.tagCount >= 2;
+  }
 
-    return true;
+  /**
+   * Por que a pose desta camera nao entra no estimador, ou vazio quando ela entra. O motivo vai
+   * para o log ({@code RejectReason}), assim uma camera com problema aparece no AdvantageScope.
+   */
+  private String rejectionReason(
+      VisionCamera camera, VisionIOInputsAutoLogged inputs, ChassisSpeeds speeds) {
+    if (camera == VisionCamera.FRONT) {
+      return "FRONT_CAMERA";
+    }
+    if (stopVision.get() == StopVision.STOP) {
+      return "DISABLED";
+    }
+    if (!inputs.hasPose) {
+      return Rejection.NO_TAGS.name();
+    }
+    if (inputs.timestamp <= lastJudgedTimestamps.getOrDefault(camera, Double.NEGATIVE_INFINITY)) {
+      return Rejection.DUPLICATE.name();
+    }
+    lastJudgedTimestamps.put(camera, inputs.timestamp);
+    // A equipe tambem descarta tag unica ambigua no MegaTag 2 (a biblioteca so no MegaTag 1).
+    if (inputs.tagCount == 1 && inputs.ambiguity > MAX_AMBIGUITY) {
+      return Rejection.AMBIGUOUS.name();
+    }
+    PoseObservation observation =
+        new PoseObservation(
+            inputs.timestamp,
+            new Pose3d(inputs.pose),
+            inputs.ambiguity,
+            inputs.tagCount,
+            inputs.avgTagDistance,
+            PoseObservation.Type.MEGATAG_2);
+    boolean estimateTrusted = RobotClock.now() - lastAcceptedTime < VisionProcessor.TRUST_SECONDS;
+    Rejection rejection =
+        filter.check(
+            observation,
+            new VisionFilter.Context(
+                speeds.omegaRadiansPerSecond, estimatedPose.get(), estimateTrusted));
+    return rejection == Rejection.NONE ? "" : rejection.name();
   }
 
   private Matrix<N3, N1> calculateVisionStdDevs(
@@ -176,7 +239,10 @@ public class Vision extends SubsystemBase {
       Logger.recordOutput(baseKey + "visionStdDevs/theta", finalTheta);
     }
 
-    return VecBuilder.fill(finalXY, finalXY, finalTheta);
+    // Sem o angulo do MegaTag 1 a pose traz o proprio giroscopio: corrigir o giroscopio com ele
+    // mesmo so injetaria o atraso da camera no angulo.
+    double thetaStdDev = usesMegatag1Heading(inputs) ? finalTheta : VisionStdDevs.IGNORED;
+    return VecBuilder.fill(finalXY, finalXY, thetaStdDev);
   }
 
   public double getAvgTagDistance(VisionCamera camera) {

@@ -17,8 +17,19 @@ public class VisionConstants {
   public static final double MAX_AMBIGUITY = 0.6;
   public static final double MAX_DISTANCE = 4.0;
 
+  /**
+   * Campo de 2026 (REBUILT), versao AndyMark como a equipe usava em 2025. Troque para {@code
+   * k2026RebuiltWelded} se o evento usar o campo soldado. Usado nos limites do campo do filtro.
+   */
   public static final AprilTagFieldLayout APRILTAG_LAYOUT =
-      AprilTagFieldLayout.loadField(AprilTagFields.k2025ReefscapeAndyMark);
+      AprilTagFieldLayout.loadField(AprilTagFields.k2026RebuiltAndymark);
+
+  /**
+   * Distancia maxima, em metros, entre a pose de uma tag unica e a estimativa atual enquanto a
+   * estimativa e confiavel: descarta a solucao "espelhada" de uma tag so. Se a visao ficar 1 s sem
+   * aceitar nada, a estimativa deixa de ser confiavel e o robo se reencontra.
+   */
+  public static final double MAX_SINGLE_TAG_JUMP = 1.0;
 
   // --- Configurações Físicas ---
   public static final double ROBOT_RADIUS =

@@ -75,6 +75,7 @@ public class RobotContainer {
             new Vision(
                 drivetrain::addVisionMeasurement,
                 () -> drivetrain.getState().Speeds,
+                drivetrain::getPose,
                 () -> drivetrain.getRotation().getDegrees(),
                 new VisionIOLimelight("limelight-left", VisionCamera.LEFT),
                 new VisionIOLimelight("limelight-front", VisionCamera.FRONT),
@@ -92,6 +93,7 @@ public class RobotContainer {
             new Vision(
                 drivetrain::addVisionMeasurement,
                 () -> drivetrain.getState().Speeds,
+                drivetrain::getPose,
                 () -> drivetrain.getRotation().getDegrees(),
                 new VisionIO() {});
         DriverStation.silenceJoystickConnectionWarning(true);
@@ -108,6 +110,7 @@ public class RobotContainer {
             new Vision(
                 drivetrain::addVisionMeasurement,
                 () -> drivetrain.getState().Speeds,
+                drivetrain::getPose,
                 () -> drivetrain.getRotation().getDegrees(),
                 new VisionIO() {});
         break;
