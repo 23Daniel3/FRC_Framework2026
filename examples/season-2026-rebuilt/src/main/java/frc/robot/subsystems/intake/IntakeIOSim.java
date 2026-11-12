@@ -3,48 +3,39 @@ package frc.robot.subsystems.intake;
 import edu.wpi.first.math.system.plant.DCMotor;
 import org.ciprix.interfaces.motor.MotorIOSim;
 import org.ciprix.interfaces.motor.advanced.MotorController;
+import org.ciprix.sim.SimMechanism;
 
+/**
+ * Simulated intake: the roller (Kraken X60 on a Talon FX) and the pivot (NEO on a SPARK MAX), with
+ * the same configurations and names used on the robot, so the gains and the logs match.
+ */
 public class IntakeIOSim implements IntakeIO {
-  private final MotorIOSim rollerMotor;
-  private final MotorIOSim intakeMotor;
 
-  // Variable to simulate the physical button/sensor in the software environment
+  // What the mechanisms are made of. Estimates: replace them with the CAD values when known.
+  private static final double ROLLER_GEARING = 3.0;
+  private static final double ROLLER_INERTIA_KG_M2 = 0.001;
+  private static final double PIVOT_GEARING = 12.0;
+  private static final double PIVOT_INERTIA_KG_M2 = 0.02;
+
+  private final MotorIOSim rollerMotor =
+      MotorIOSim.talonFX(
+          "Intake/Roller",
+          IntakeConstants.CONFIG_ROLLER_MOTOR,
+          SimMechanism.roller(DCMotor.getKrakenX60(1), ROLLER_GEARING, ROLLER_INERTIA_KG_M2));
+
+  private final MotorIOSim intakeMotor =
+      MotorIOSim.spark(
+          "Intake/Intake",
+          IntakeConstants.CONFIG_INTAKE_MOTOR,
+          SimMechanism.roller(DCMotor.getNEO(1), PIVOT_GEARING, PIVOT_INERTIA_KG_M2));
+
+  // Simulates the coast button of the robot (pressed = true).
   private boolean simulatedCoastButton = false;
-
-  public IntakeIOSim() {
-    /**
-     * Roller Motor Simulation - Motor: Kraken X60 (or whichever is being used) - Reduction: 2:1
-     * (example) - Inertia: 0.001 (very light, just a roller)
-     */
-    rollerMotor =
-        new MotorIOSim(
-            "Intake/Roller",
-            IntakeConstants.CONFIG_ROLLER_MOTOR,
-            DCMotor.getKrakenX60(1),
-            3.0,
-            0.001);
-
-    /**
-     * Pivot Motor Simulation (Intake) - Motor: Neo Vortex / SparkFlex - Reduction: 50:1 (Pivot
-     * usually has high reduction) - Inertia: 0.02 (Moderate load to simulate arm weight)
-     */
-    intakeMotor =
-        new MotorIOSim(
-            "Intake/Pivot",
-            IntakeConstants.CONFIG_INTAKE_MOTOR,
-            DCMotor.getNeoVortex(1),
-            12.0,
-            0.02);
-  }
 
   @Override
   public void updateInputs(IntakeIOInputsAutoLogged inputs) {
-    // Updates physics and logs for the simulated motors
     rollerMotor.updateInputs(inputs.rollerMotorInputs);
     intakeMotor.updateInputs(inputs.intakeMotorInputs);
-
-    // In simulation, the coast button is usually false,
-    // unless you want to simulate a click via GUI
     inputs.coastButtonPressed = simulatedCoastButton;
   }
 
@@ -58,11 +49,13 @@ public class IntakeIOSim implements IntakeIO {
     return rollerMotor.getMotorController();
   }
 
-  /**
-   * Utility method for testing: allows forcing the sensor state during simulation to see how your
-   * FSM reacts.
-   */
+  /** Presses or releases the simulated coast button, to see how the state machine reacts. */
   public void setSimulatedCoastButton(boolean pressed) {
     this.simulatedCoastButton = pressed;
+  }
+
+  /** The simulated roller, for tests that inject a jam or a disconnection. */
+  public MotorIOSim getRollerMotor() {
+    return rollerMotor;
   }
 }

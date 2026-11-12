@@ -79,9 +79,9 @@ public class RobotContainer {
       case SIM:
 
         // Sim robot, instantiate physics sim IO implementations
-        conveyor = new Conveyor(new ConveyorIO() {});
+        conveyor = new Conveyor(new ConveyorIOSim());
         intake = new Intake(new IntakeIOSim());
-        shooter = new Shooter(new ShooterIO() {});
+        shooter = new Shooter(new ShooterIOSim());
         led = new Led(new LedIOSim());
         vision =
             new Vision(
