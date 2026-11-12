@@ -29,6 +29,8 @@ jobs:
             dir: ciprix
           - name: Exemplo season-2026-rebuilt
             dir: examples/season-2026-rebuilt
+          - name: Template skeleton
+            dir: templates/skeleton
     defaults:
       run:
         working-directory: ${{ matrix.dir }}
