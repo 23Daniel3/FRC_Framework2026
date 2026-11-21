@@ -1,0 +1,4 @@
+// ciprix-rev: REV hardware (SPARK MAX, SPARK Flex and their encoders).
+dependencies {
+    api project(':ciprix-core')
+}

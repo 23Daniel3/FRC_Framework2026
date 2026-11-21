@@ -1,0 +1,125 @@
+plugins {
+    id 'com.diffplug.spotless' version '6.21.0' apply false
+    id 'edu.wpi.first.GradleRIO' version '2026.2.1' apply false
+}
+
+allprojects {
+    group = 'org.ciprix'
+    version = property('ciprixVersion')
+}
+
+// ---------------------------------------------------------------------------
+// Shared by every module
+// ---------------------------------------------------------------------------
+subprojects {
+    apply plugin: 'java-library'
+    apply plugin: 'maven-publish'
+    apply plugin: 'com.diffplug.spotless'
+
+    repositories {
+        mavenCentral()
+    }
+
+    java {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+        withSourcesJar()
+    }
+
+    tasks.withType(JavaCompile).configureEach {
+        options.encoding = 'UTF-8'
+        options.compilerArgs.add '-XDstringConcat=inline'
+    }
+
+    tasks.withType(Javadoc).configureEach {
+        options.encoding = 'UTF-8'
+        options.addStringOption('Xdoclint:none', '-quiet')
+        failOnError = false
+    }
+
+    // The Javadoc jar is only built when publishing, so a normal build stays fast.
+    def javadocJar = tasks.register('javadocJar', Jar) {
+        archiveClassifier = 'javadoc'
+        from tasks.named('javadoc')
+    }
+
+    spotless {
+        java {
+            googleJavaFormat('1.19.2')
+            target 'src/**/*.java'
+        }
+    }
+
+    // Same behavior as the robot projects: building formats the code.
+    tasks.named('build') {
+        dependsOn tasks.named('spotlessApply')
+    }
+
+    publishing {
+        publications {
+            maven(MavenPublication) {
+                from components.java
+                artifact javadocJar
+                pom {
+                    name = project.name
+                    description = 'Ciprix: state-machine based robot framework for FRC'
+                    url = 'https://github.com/23Daniel3/Ciprix'
+                }
+            }
+        }
+        repositories {
+            // ./gradlew publish writes a Maven repository that can be served as-is
+            // (GitHub Pages, for example). The vendordep JSON files point to it.
+            maven {
+                name = 'local'
+                url = rootProject.layout.buildDirectory.dir('repos/releases')
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Modules that compile against WPILib (everything except the annotation processor)
+// ---------------------------------------------------------------------------
+configure(subprojects.findAll { it.name != 'ciprix-processor' }) {
+    apply plugin: 'edu.wpi.first.GradleRIO'
+
+    wpi.java.debugJni = false
+
+    dependencies {
+        // WPILib and the vendor libraries are provided by the robot project that consumes
+        // Ciprix, so they are compile-only here and never leak into the published POM.
+        compileOnly wpi.java.deps.wpilib()
+        compileOnly wpi.java.vendor.java()
+
+        testImplementation wpi.java.deps.wpilib()
+        testImplementation wpi.java.vendor.java()
+
+        nativeDebug wpi.java.deps.wpilibJniDebug(wpi.platforms.desktop)
+        nativeDebug wpi.java.vendor.jniDebug(wpi.platforms.desktop)
+        nativeRelease wpi.java.deps.wpilibJniRelease(wpi.platforms.desktop)
+        nativeRelease wpi.java.vendor.jniRelease(wpi.platforms.desktop)
+
+        testImplementation 'org.junit.jupiter:junit-jupiter:5.10.1'
+        testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    }
+
+    test {
+        useJUnitPlatform()
+        systemProperty 'junit.jupiter.extensions.autodetection.enabled', 'true'
+    }
+
+    wpi.java.configureTestTasks(test)
+}
+
+// ---------------------------------------------------------------------------
+// Vendordep files (what teams install with "WPILib: Manage Vendor Libraries")
+// ---------------------------------------------------------------------------
+tasks.register('generateVendordeps', Copy) {
+    description = 'Writes the vendordep JSON files with the current version into build/vendordeps.'
+    group = 'publishing'
+    from 'vendordep'
+    include '*.json'
+    into layout.buildDirectory.dir('vendordeps')
+    filter { line -> line.replace('${ciprixVersion}', project.version.toString()) }
+}

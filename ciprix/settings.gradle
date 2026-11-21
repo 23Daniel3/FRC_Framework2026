@@ -1,0 +1,40 @@
+import org.gradle.internal.os.OperatingSystem
+
+pluginManagement {
+    repositories {
+        mavenLocal()
+        gradlePluginPortal()
+        String frcYear = '2026'
+        File frcHome
+        if (OperatingSystem.current().isWindows()) {
+            String publicFolder = System.getenv('PUBLIC')
+            if (publicFolder == null) {
+                publicFolder = "C:\\Users\\Public"
+            }
+            def homeRoot = new File(publicFolder, "wpilib")
+            frcHome = new File(homeRoot, frcYear)
+        } else {
+            def userFolder = System.getProperty("user.home")
+            def homeRoot = new File(userFolder, "wpilib")
+            frcHome = new File(homeRoot, frcYear)
+        }
+        def frcHomeMaven = new File(frcHome, 'maven')
+        maven {
+            name = 'frcHome'
+            url = frcHomeMaven
+        }
+    }
+}
+
+Properties props = System.getProperties();
+props.setProperty("org.gradle.internal.native.headers.unresolved.dependencies.ignore", "true");
+
+rootProject.name = 'ciprix'
+
+// Each module lives in a short folder and is published as org.ciprix:ciprix-<folder>.
+// The project name is the artifact id, which is also what lets robot projects replace the
+// published artifacts with these sources through a composite build (includeBuild).
+['core', 'ctre', 'phoenix5', 'rev', 'pathplanner', 'processor'].each { dir ->
+    include ":ciprix-${dir}"
+    project(":ciprix-${dir}").projectDir = file(dir)
+}

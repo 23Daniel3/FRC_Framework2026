@@ -1,0 +1,4 @@
+// ciprix-pathplanner: PathPlanner integration (logged pathfinder, flipped paths, Choreo paths).
+dependencies {
+    api project(':ciprix-core')
+}
