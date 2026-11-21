@@ -8,11 +8,11 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import frc.game.AllianceManager;
 import frc.game.FieldConstants.Poses;
-import frc.lib.calculus.LoggedTunableMap;
-import frc.lib.calculus.ShotOnTheMoveCalculator;
-import frc.lib.calculus.ShotParameters;
-import frc.lib.logger.LoggedTunableNumber;
 import frc.robot.subsystems.shooter.ShooterConstants;
+import org.ciprix.calculus.LoggedTunableMap;
+import org.ciprix.calculus.ShotOnTheMoveCalculator;
+import org.ciprix.calculus.ShotParameters;
+import org.ciprix.logger.LoggedTunableNumber;
 import org.littletonrobotics.junction.Logger;
 
 /**

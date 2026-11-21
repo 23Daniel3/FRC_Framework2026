@@ -12,22 +12,22 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
-import frc.lib.util.AllianceFlipUtil;
-import frc.lib.util.drivetrain.DualZoneSuctionBumpModifier;
-import frc.lib.util.drivetrain.HeadingStickRotation;
-import frc.lib.util.drivetrain.ManualRotation;
-import frc.lib.util.drivetrain.PIDRotation;
-import frc.lib.util.drivetrain.RotationStrategy;
-import frc.lib.util.drivetrain.TargetAssistModifier;
-import frc.lib.util.drivetrain.ThrottleMapModifier;
-import frc.lib.util.drivetrain.TranslationModifier;
-import frc.lib.util.drivetrain.ZoneRepulsionModifier;
-import frc.lib.util.drivetrain.ZoneSuctionModifier;
-import frc.lib.zones.Polygon2d;
 import frc.robot.subsystems.drivetrain.Drivetrain;
 import frc.robot.subsystems.superstructure.SuperStructure;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
+import org.ciprix.util.AllianceFlipUtil;
+import org.ciprix.util.drivetrain.DualZoneSuctionBumpModifier;
+import org.ciprix.util.drivetrain.HeadingStickRotation;
+import org.ciprix.util.drivetrain.ManualRotation;
+import org.ciprix.util.drivetrain.PIDRotation;
+import org.ciprix.util.drivetrain.RotationStrategy;
+import org.ciprix.util.drivetrain.TargetAssistModifier;
+import org.ciprix.util.drivetrain.ThrottleMapModifier;
+import org.ciprix.util.drivetrain.TranslationModifier;
+import org.ciprix.util.drivetrain.ZoneRepulsionModifier;
+import org.ciprix.util.drivetrain.ZoneSuctionModifier;
+import org.ciprix.zones.Polygon2d;
 
 public class DrivetrainCommands {
 

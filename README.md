@@ -15,7 +15,7 @@ Framework de robô FRC em Java (WPILib + GradleRIO + CTRE Phoenix 6 + PathPlanne
 
 O projeto separa responsabilidades em 3 camadas:
 
-- `src/main/java/frc/lib/` → infraestrutura reutilizável (FSM, utilitários, controle, zonas, wrappers).
+- **[Ciprix](https://23daniel3.github.io/Ciprix/docs/)** (vendordep `vendordeps/Ciprix.json`, pacote `org.ciprix`) → infraestrutura reutilizável (FSM, `StateSubsystem`, motores, utilitários, controle, zonas, logging). Antes ficava copiada em `frc/lib`.
 - `src/main/java/frc/game/` → regras e geometria do jogo/campo (poses, zonas, aliança).
 - `src/main/java/frc/robot/` → implementação do robô da temporada (subsystems, commands, factories, bindings).
 
@@ -37,7 +37,6 @@ Esse modelo evita conflito entre comandos paralelos e centraliza a intenção do
 src/
   main/
     java/frc/
-      lib/
       game/
       robot/
         commands/
@@ -53,10 +52,16 @@ src/
           example/
       tools/
         new_subsystem.py
-  test/
-    java/frc/
-      lib/
+vendordeps/
+  Ciprix.json        # a biblioteca (org.ciprix) + processor de XxxCommands
 ```
+
+### Ciprix e `Robot.java`
+
+- A biblioteca vem do vendordep `Ciprix.json` (`https://23daniel3.github.io/Ciprix/Ciprix.json`). Para atualizar: **WPILib: Manage Vendor Libraries → Check for updates**.
+- O `build.gradle` usa o `ciprix-processor` (mesma versão do vendordep) para gerar os `XxxCommands` dos subsistemas com `@AutoCommandFactory` (`org.ciprix.annotations`).
+- `Robot` estende `CiprixRobot`, que já configura o AdvantageKit (USB + NT no robô, NT na simulação, replay), o `CommandScheduler` e o checklist de pré-partida. Os métodos de ciclo (`robotPeriodic`, `autonomousInit`, `teleopInit`, `testInit`) são `final`: use `periodic()`, `autonomousStart()`, `teleopStart()` e `testStart()`.
+- Configurações que a biblioteca lê (deadband, aliança padrão, tamanho do campo, `periodicTimer`, ganhos do `PIDRotation`) ficam em `Robot.configure()` via `CiprixSettings`. O modo de execução é `CiprixSettings.getMode()`.
 
 ---
 
@@ -164,9 +169,9 @@ Arquivo: `src/main/java/frc/robot/subsystems/superstructure/SuperStructure.java`
 
 ## Testes automatizados
 
-Os testes estão em `src/test/java/frc/` com foco em núcleo lógico (sem hardware real).
+Os testes da infraestrutura (FSM, `StateSubsystem`, utilitários, zonas) agora vivem no repositório da [Ciprix](https://github.com/23Daniel3/Ciprix). Testes específicos do robô ficam em `src/test/java/frc/robot/`.
 
-### Suítes atuais (resumo)
+### Suítes que foram para a Ciprix (resumo)
 
 - `StateMachineTest`
   - prioridade global > local,
@@ -178,7 +183,7 @@ Os testes estão em `src/test/java/frc/` com foco em núcleo lógico (sem hardwa
   - não reentrada indevida,
   - troca de request no meio do caminho.
 - `SetpointTrackerTest`, `LinearInterpolationTest`, `Polygon2dTest`
-  - utilitários matemáticos e geométricos da `lib/`.
+  - utilitários matemáticos e geométricos da biblioteca.
 
 ### Rodar testes e build (PowerShell)
 
@@ -275,7 +280,7 @@ Pré-requisitos:
 
 - Mantenha regras de arquitetura do `TEMPLATE.md`.
 - Evite “atalhos” que furem a SuperStructure.
-- Sempre que alterar `lib/interfaces/fsm` ou infraestrutura central, adicione/atualize testes.
+- Mudanças na infraestrutura (FSM, motores, utilitários) vão para a Ciprix, com testes lá.
 
 ---
 

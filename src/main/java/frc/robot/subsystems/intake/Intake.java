@@ -3,10 +3,10 @@ package frc.robot.subsystems.intake;
 import static edu.wpi.first.units.Units.RPM;
 import static edu.wpi.first.units.Units.Rotations;
 
-import frc.lib.interfaces.subsystem.StateSubsystem;
-import frc.robot.annotations.AutoCommandFactory;
 import frc.robot.subsystems.intake.IntakeConstants.IntakeRequest;
 import frc.robot.subsystems.intake.IntakeConstants.IntakeState;
+import org.ciprix.annotations.AutoCommandFactory;
+import org.ciprix.interfaces.subsystem.StateSubsystem;
 
 @AutoCommandFactory(requestEnum = IntakeConstants.IntakeRequest.class)
 public class Intake

@@ -4,7 +4,7 @@ import static edu.wpi.first.units.Units.Amps;
 import static edu.wpi.first.units.Units.Rotations;
 import static edu.wpi.first.units.Units.Volts;
 
-import frc.lib.interfaces.motor.advanced.MotorConfig;
+import org.ciprix.interfaces.motor.advanced.MotorConfig;
 
 public class IntakeConstants {
   public static final int ROLLER_MOTOR_ID = 18;

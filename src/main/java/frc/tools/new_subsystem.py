@@ -11,7 +11,7 @@ Gera robot/subsystems/<nome>/ com as 4 classes do padrao Request -> State
   1. Ajuste MOTOR_ID e MOTOR_CONFIG nas Constants;
   2. Modele os enums Request e State do mecanismo;
   3. Configure a FSM e os bindRequest no construtor do subsistema;
-  4. Instancie no RobotContainer com o IO certo por Constants.currentMode;
+  4. Instancie no RobotContainer com o IO certo por CiprixSettings.getMode();
   5. Faca a SuperStructure escrever os requests novos nos onEnter da FSM geral.
 """
 
@@ -25,7 +25,7 @@ EXAMPLE = ROOT / "robot" / "subsystems" / "example"
 VENDOR_SNIPPETS = {
     "sparkmax": (
         "import com.revrobotics.spark.SparkLowLevel.MotorType;\n"
-        "import frc.lib.interfaces.motor.MotorIOSparkMax;",
+        "import org.ciprix.interfaces.motor.MotorIOSparkMax;",
         '        new MotorIOSparkMax(\n'
         '            "{Name}Motor",\n'
         "            {Name}Constants.MOTOR_ID,\n"
@@ -34,7 +34,7 @@ VENDOR_SNIPPETS = {
     ),
     "sparkflex": (
         "import com.revrobotics.spark.SparkLowLevel.MotorType;\n"
-        "import frc.lib.interfaces.motor.MotorIOSparkFlex;",
+        "import org.ciprix.interfaces.motor.MotorIOSparkFlex;",
         '        new MotorIOSparkFlex(\n'
         '            "{Name}Motor",\n'
         "            {Name}Constants.MOTOR_ID,\n"
@@ -43,7 +43,7 @@ VENDOR_SNIPPETS = {
     ),
     "talonfx": (
         "import com.ctre.phoenix6.CANBus;\n"
-        "import frc.lib.interfaces.motor.MotorIOTalonFX;",
+        "import org.ciprix.interfaces.motor.MotorIOTalonFX;",
         '        new MotorIOTalonFX(\n'
         '            "{Name}Motor",\n'
         "            {Name}Constants.MOTOR_ID,\n"
@@ -87,11 +87,11 @@ def main() -> int:
         if src.name == "ExampleIOHardware.java" and args.vendor != "sparkmax":
             text = text.replace(
                 "import com.revrobotics.spark.SparkLowLevel.MotorType;\n"
-                "import frc.lib.interfaces.motor.MotorController;\n"
-                "import frc.lib.interfaces.motor.MotorIO;\n"
-                "import frc.lib.interfaces.motor.MotorIOSparkMax;",
-                "import frc.lib.interfaces.motor.MotorController;\n"
-                "import frc.lib.interfaces.motor.MotorIO;\n" + imports,
+                "import org.ciprix.interfaces.motor.advanced.MotorController;\n"
+                "import org.ciprix.interfaces.motor.advanced.MotorIO;\n"
+                "import org.ciprix.interfaces.motor.MotorIOSparkMax;",
+                "import org.ciprix.interfaces.motor.advanced.MotorController;\n"
+                "import org.ciprix.interfaces.motor.advanced.MotorIO;\n" + imports,
             )
             text = text.replace(
                 '        new MotorIOSparkMax(\n'

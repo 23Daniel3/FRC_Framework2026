@@ -9,10 +9,6 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.game.AllianceManager;
 import frc.game.FieldConstants;
-import frc.lib.calculus.ShotParameters;
-import frc.lib.interfaces.fsm.StateMachine;
-import frc.lib.util.ConstantsLogger;
-import frc.lib.util.PeriodicTimer;
 import frc.robot.Constants.RobotRequest;
 import frc.robot.Constants.RobotState;
 import frc.robot.power.RobotPowerDistribution;
@@ -24,6 +20,10 @@ import frc.robot.subsystems.intake.Intake;
 import frc.robot.subsystems.intake.IntakeConstants.IntakeRequest;
 import frc.robot.subsystems.shooter.Shooter;
 import frc.robot.subsystems.shooter.ShooterConstants.ShooterRequest;
+import org.ciprix.calculus.ShotParameters;
+import org.ciprix.interfaces.fsm.StateMachine;
+import org.ciprix.util.ConstantsLogger;
+import org.ciprix.util.PeriodicTimer;
 import org.littletonrobotics.junction.Logger;
 
 public class SuperStructure extends SubsystemBase {

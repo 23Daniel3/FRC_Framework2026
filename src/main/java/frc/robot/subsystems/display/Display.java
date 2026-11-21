@@ -1,9 +1,9 @@
 package frc.robot.subsystems.display;
 
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.lib.util.ConstantsLogger;
-import frc.lib.util.PeriodicTimer;
 import java.util.*;
+import org.ciprix.util.ConstantsLogger;
+import org.ciprix.util.PeriodicTimer;
 import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
 

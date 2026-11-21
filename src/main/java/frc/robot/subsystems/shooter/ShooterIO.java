@@ -1,9 +1,9 @@
 package frc.robot.subsystems.shooter;
 
-import frc.lib.interfaces.motor.advanced.MotorController;
-import frc.lib.interfaces.motor.advanced.MotorControllerNone;
-import frc.lib.interfaces.motor.advanced.MotorIO.MotorIOInputs;
-import frc.lib.interfaces.subsystem.SubsystemIO;
+import org.ciprix.interfaces.motor.advanced.MotorController;
+import org.ciprix.interfaces.motor.advanced.MotorControllerNone;
+import org.ciprix.interfaces.motor.advanced.MotorIO.MotorIOInputs;
+import org.ciprix.interfaces.subsystem.SubsystemIO;
 import org.littletonrobotics.junction.AutoLog;
 
 public interface ShooterIO extends SubsystemIO<ShooterIOInputsAutoLogged> {

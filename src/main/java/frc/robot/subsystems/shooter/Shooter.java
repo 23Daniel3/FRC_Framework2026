@@ -3,11 +3,11 @@ package frc.robot.subsystems.shooter;
 import static edu.wpi.first.units.Units.RPM;
 
 import edu.wpi.first.units.measure.AngularVelocity;
-import frc.lib.interfaces.subsystem.StateSubsystem;
-import frc.lib.util.SetpointTracker;
-import frc.robot.annotations.AutoCommandFactory;
 import frc.robot.subsystems.shooter.ShooterConstants.ShooterRequest;
 import frc.robot.subsystems.shooter.ShooterConstants.ShooterState;
+import org.ciprix.annotations.AutoCommandFactory;
+import org.ciprix.interfaces.subsystem.StateSubsystem;
+import org.ciprix.util.SetpointTracker;
 
 @AutoCommandFactory(requestEnum = ShooterConstants.ShooterRequest.class)
 public class Shooter

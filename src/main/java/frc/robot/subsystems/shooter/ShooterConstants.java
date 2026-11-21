@@ -4,8 +4,8 @@ import static edu.wpi.first.units.Units.Amps;
 import static edu.wpi.first.units.Units.RPM;
 import static edu.wpi.first.units.Units.Volts;
 
-import frc.lib.calculus.LinearInterpolation.Point;
-import frc.lib.interfaces.motor.advanced.MotorConfig;
+import org.ciprix.calculus.LinearInterpolation.Point;
+import org.ciprix.interfaces.motor.advanced.MotorConfig;
 
 public class ShooterConstants {
 

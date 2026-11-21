@@ -52,7 +52,6 @@ dependencies {
     annotationProcessor wpi.java.deps.wpilibAnnotations()
     implementation wpi.java.deps.wpilib()
     implementation wpi.java.vendor.java()
-    implementation 'org.apache.commons:commons-math3:3.+'
 
     roborioDebug wpi.java.deps.wpilibJniDebug(wpi.platforms.roborio)
     roborioDebug wpi.java.vendor.jniDebug(wpi.platforms.roborio)
@@ -74,8 +73,10 @@ dependencies {
     def akitJson = new groovy.json.JsonSlurper().parseText(new File(projectDir.getAbsolutePath() + "/vendordeps/AdvantageKit.json").text)
     annotationProcessor "org.littletonrobotics.akit:akit-autolog:$akitJson.version"
 
-    compileOnly project(':processor') 
-    annotationProcessor project(':processor')
+    // Ciprix itself comes from vendordeps/Ciprix.json (wpi.java.vendor.java() above).
+    // The processor generates <Subsystem>Commands for every @AutoCommandFactory subsystem.
+    def ciprixJson = new groovy.json.JsonSlurper().parseText(new File(projectDir.getAbsolutePath() + "/vendordeps/Ciprix.json").text)
+    annotationProcessor "org.ciprix:ciprix-processor:$ciprixJson.version"
 }
 
 test {

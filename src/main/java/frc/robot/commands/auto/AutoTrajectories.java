@@ -7,11 +7,11 @@ import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import frc.game.FieldConstants;
-import frc.lib.util.AutoEngine;
 import frc.robot.commands.drivetrain.align.AimHub;
 import frc.robot.commands.factories.SuperStructureCommands;
 import frc.robot.subsystems.drivetrain.Drivetrain;
 import frc.robot.subsystems.superstructure.SuperStructure;
+import org.ciprix.util.AutoEngine;
 
 public class AutoTrajectories {
 

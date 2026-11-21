@@ -7,25 +7,15 @@ import com.pathplanner.lib.config.ModuleConfig;
 import com.pathplanner.lib.config.RobotConfig;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
-import edu.wpi.first.wpilibj.RobotBase;
 import frc.robot.subsystems.drivetrain.DrivetrainConstants;
+import org.ciprix.CiprixSettings.Mode;
 
 public final class Constants {
+  /** Desktop mode (SIM or REPLAY). On a roboRIO Ciprix always uses REAL. */
   public static final Mode simMode = Mode.SIM;
-  public static final Mode currentMode = RobotBase.isReal() ? Mode.REAL : simMode;
+
   public static final boolean tuningMode = true;
   public static final boolean periodicTimer = false;
-
-  public static enum Mode {
-    /** Running on a real robot. */
-    REAL,
-
-    /** Running a physics simulator. */
-    SIM,
-
-    /** Replaying from a log file. */
-    REPLAY
-  }
 
   /** Idle Mode for Motors. */
   public static enum IdleMode {

@@ -1,8 +1,8 @@
 package frc.robot.subsystems.conveyor;
 
-import frc.lib.interfaces.motor.MotorIOSparkMax;
-import frc.lib.interfaces.motor.advanced.MotorController;
-import frc.lib.interfaces.motor.advanced.MotorIO;
+import org.ciprix.interfaces.motor.MotorIOSparkMax;
+import org.ciprix.interfaces.motor.advanced.MotorController;
+import org.ciprix.interfaces.motor.advanced.MotorIO;
 
 public class ConveyorIOHardware implements ConveyorIO {
 

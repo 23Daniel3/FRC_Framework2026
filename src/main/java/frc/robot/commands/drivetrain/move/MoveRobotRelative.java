@@ -9,11 +9,12 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.wpilibj2.command.Command;
-import frc.lib.util.ChassisSpeedsLimiter;
 import frc.robot.commands.CommandConstants.MoveHConstants;
 import frc.robot.commands.CommandConstants.MoveXConstants;
 import frc.robot.commands.CommandConstants.MoveYConstants;
 import frc.robot.subsystems.drivetrain.Drivetrain;
+import frc.robot.subsystems.drivetrain.DrivetrainConstants;
+import org.ciprix.util.ChassisSpeedsLimiter;
 import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.networktables.LoggedNetworkNumber;
 
@@ -51,7 +52,8 @@ public class MoveRobotRelative extends Command {
   private final PIDController yController;
   private final ProfiledPIDController thetaController;
 
-  private final ChassisSpeedsLimiter ramp = new ChassisSpeedsLimiter();
+  private final ChassisSpeedsLimiter ramp =
+      new ChassisSpeedsLimiter(DrivetrainConstants.MAX_ACCELERATION);
 
   private Pose2d currentPose;
   private Pose2d inicialPose;

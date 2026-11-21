@@ -8,10 +8,6 @@ import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.game.AllianceManager;
 import frc.game.FieldConstants.Poses;
 import frc.game.FieldConstants.Zones;
-import frc.lib.controller.NaturalXboxController;
-import frc.lib.controller.VibrateXboxController;
-import frc.lib.util.AllianceSelector;
-import frc.lib.util.ConstantsLogger;
 import frc.robot.commands.auto.AutoTrajectories;
 import frc.robot.commands.drivetrain.*;
 import frc.robot.commands.factories.DrivetrainCommands;
@@ -26,6 +22,11 @@ import frc.robot.subsystems.shooter.*;
 import frc.robot.subsystems.superstructure.SuperStructure;
 import frc.robot.subsystems.vision.*;
 import frc.robot.subsystems.vision.VisionConstants.VisionCamera;
+import org.ciprix.CiprixSettings;
+import org.ciprix.controller.NaturalXboxController;
+import org.ciprix.controller.VibrateXboxController;
+import org.ciprix.util.AllianceSelector;
+import org.ciprix.util.ConstantsLogger;
 
 /**
  * This class is where the bulk of the robot should be declared. Since Command-based is a
@@ -58,7 +59,7 @@ public class RobotContainer {
     // Garante que o seletor de alianca (fallback sem FMS) aparece no dashboard desde o boot.
     AllianceSelector.getInstance();
     drivetrain = TunerConstants.createDrivetrain();
-    switch (Constants.currentMode) {
+    switch (CiprixSettings.getMode()) {
       case REAL:
 
         // Real robot, instantiate hardware IO implementations

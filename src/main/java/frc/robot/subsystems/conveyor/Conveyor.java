@@ -1,10 +1,10 @@
 package frc.robot.subsystems.conveyor;
 
 import edu.wpi.first.wpilibj.Timer;
-import frc.lib.interfaces.subsystem.StateSubsystem;
-import frc.robot.annotations.AutoCommandFactory;
 import frc.robot.subsystems.conveyor.ConveyorConstants.ConveyorRequest;
 import frc.robot.subsystems.conveyor.ConveyorConstants.ConveyorState;
+import org.ciprix.annotations.AutoCommandFactory;
+import org.ciprix.interfaces.subsystem.StateSubsystem;
 
 @AutoCommandFactory(requestEnum = ConveyorConstants.ConveyorRequest.class)
 public class Conveyor

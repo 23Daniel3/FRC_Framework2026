@@ -1,8 +1,8 @@
 package frc.robot.subsystems.intake;
 
 import edu.wpi.first.math.system.plant.DCMotor;
-import frc.lib.interfaces.motor.MotorIOSim;
-import frc.lib.interfaces.motor.advanced.MotorController;
+import org.ciprix.interfaces.motor.MotorIOSim;
+import org.ciprix.interfaces.motor.advanced.MotorController;
 
 public class IntakeIOSim implements IntakeIO {
   private final MotorIOSim rollerMotor;

@@ -31,24 +31,27 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.game.FieldConstants.Poses;
-import frc.lib.logger.LoggedTunableNumber;
-import frc.lib.util.AllianceSelector;
-import frc.lib.util.ConstantsLogger;
-import frc.lib.util.GeomUtil;
-import frc.lib.util.PeriodicTimer;
-import frc.lib.util.security.AngularDynamicSlewRateLimiter;
-import frc.lib.util.security.DynamicSlewRateLimiter;
-import frc.lib.util.security.antitipping.AntiTipping;
 import frc.robot.Constants;
 import frc.robot.generated.TunerConstants.TunerSwerveDrivetrain;
 import java.util.function.Supplier;
+import org.ciprix.logger.LoggedTunableNumber;
+import org.ciprix.util.AllianceSelector;
+import org.ciprix.util.ConstantsLogger;
+import org.ciprix.util.GeomUtil;
+import org.ciprix.util.PeriodicTimer;
+import org.ciprix.util.drivetrain.DriveAccelerationLimits;
+import org.ciprix.util.drivetrain.DriveContext;
+import org.ciprix.util.security.AngularDynamicSlewRateLimiter;
+import org.ciprix.util.security.DynamicSlewRateLimiter;
+import org.ciprix.util.security.antitipping.AntiTipping;
 import org.littletonrobotics.junction.AutoLogOutput;
 
 /**
  * Class that extends the Phoenix 6 SwerveDrivetrain class and implements Subsystem so it can easily
  * be used in command-based projects.
  */
-public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem {
+public class Drivetrain extends TunerSwerveDrivetrain
+    implements Subsystem, DriveContext, DriveAccelerationLimits {
   private static final double kSimLoopPeriod = 0.005; // 5 ms
   private Notifier m_simNotifier = null;
   private double m_lastSimTime;
@@ -580,6 +583,7 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem {
     this.pilotMaxSpeed = clampLinear(maxSpeed);
   }
 
+  @Override
   @AutoLogOutput(key = "Subsystems/Drivetrain/MaxSpeed")
   public LinearVelocity getMaxSpeed() {
     return stateMaxSpeed.in(MetersPerSecond) <= pilotMaxSpeed.in(MetersPerSecond)
@@ -597,6 +601,7 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem {
     this.pilotMaxAngularSpeed = clampAngular(maxAngularSpeed);
   }
 
+  @Override
   @AutoLogOutput(key = "Subsystems/Drivetrain/MaxAngularSpeed")
   public AngularVelocity getMaxAngularSpeed() {
     return stateMaxAngularSpeed.in(RadiansPerSecond) <= pilotMaxAngularSpeed.in(RadiansPerSecond)
@@ -604,6 +609,7 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem {
         : pilotMaxAngularSpeed;
   }
 
+  @Override
   public void setMaxAcceleration(LinearAcceleration maxAcceleration) {
     if (maxAcceleration.in(MetersPerSecondPerSecond) >= DrivetrainConstants.MAX_ACCELERATION) {
       this.maxAcceleration = MetersPerSecondPerSecond.of(DrivetrainConstants.MAX_ACCELERATION);
@@ -612,11 +618,13 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem {
     }
   }
 
+  @Override
   @AutoLogOutput(key = "Subsystems/Drivetrain/MaxAcceleration")
   public LinearAcceleration getMaxAcceleration() {
     return this.maxAcceleration;
   }
 
+  @Override
   public void setMaxAngularAcceleration(AngularAcceleration maxAngularAcceleration) {
     if (maxAngularAcceleration.in(RadiansPerSecondPerSecond)
         >= DrivetrainConstants.MAX_ANGULAR_ACCELERATION) {
@@ -627,21 +635,25 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem {
     }
   }
 
+  @Override
   @AutoLogOutput(key = "Subsystems/Drivetrain/MaxAngularAcceleration")
   public AngularAcceleration getMaxAngularAcceleration() {
     return this.maxAngularAcceleration;
   }
 
+  @Override
   @AutoLogOutput(key = "Subsystems/Drivetrain/Odometry/Pose")
   public Pose2d getPose() {
     return getState().Pose;
   }
 
+  @Override
   @AutoLogOutput(key = "Subsystems/Drivetrain/Odometry/Rotation")
   public Rotation2d getRotation() {
     return getPose().getRotation();
   }
 
+  @Override
   @AutoLogOutput(key = "Subsystems/Drivetrain/Odometry/Velocity")
   public ChassisSpeeds getRobotVelocity() {
     return getState().Speeds;

@@ -2,8 +2,8 @@ package frc.robot.subsystems.vision;
 
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
-import frc.lib.calculus.LinearInterpolation.Point;
-import frc.lib.calculus.ThrottleMap;
+import org.ciprix.calculus.LinearInterpolation.Point;
+import org.ciprix.calculus.ThrottleMap;
 
 public class VisionConstants {
   public enum VisionCamera {

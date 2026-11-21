@@ -2,10 +2,10 @@ package frc.robot.subsystems.shooter;
 
 import com.ctre.phoenix6.CANBus;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
-import frc.lib.interfaces.motor.MotorIOSparkFlex;
-import frc.lib.interfaces.motor.MotorIOTalonFX;
-import frc.lib.interfaces.motor.advanced.MotorController;
-import frc.lib.interfaces.motor.advanced.MotorIO;
+import org.ciprix.interfaces.motor.MotorIOSparkFlex;
+import org.ciprix.interfaces.motor.MotorIOTalonFX;
+import org.ciprix.interfaces.motor.advanced.MotorController;
+import org.ciprix.interfaces.motor.advanced.MotorIO;
 
 public class ShooterIOHardware implements ShooterIO {
 
