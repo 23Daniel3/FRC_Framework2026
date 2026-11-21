@@ -1,0 +1,34 @@
+{
+    "fileName": "Ciprix-CTRE.json",
+    "name": "Ciprix-CTRE",
+    "version": "${ciprixVersion}",
+    "frcYear": "2026",
+    "uuid": "5535d301-9f4e-49a0-a5ed-d6f95081849c",
+    "mavenUrls": [
+        "https://23daniel3.github.io/Ciprix/repo"
+    ],
+    "jsonUrl": "https://23daniel3.github.io/Ciprix/Ciprix-CTRE.json",
+    "javaDependencies": [
+        {
+            "groupId": "org.ciprix",
+            "artifactId": "ciprix-ctre",
+            "version": "${ciprixVersion}"
+        }
+    ],
+    "jniDependencies": [],
+    "cppDependencies": [],
+    "requires": [
+        {
+            "uuid": "14266e51-de92-4a56-a425-6bd7e565b7c1",
+            "errorMessage": "This Ciprix module requires the Ciprix core vendordep (Ciprix.json).",
+            "offlineFileName": "Ciprix.json",
+            "onlineUrl": "https://23daniel3.github.io/Ciprix/Ciprix.json"
+        },
+        {
+            "uuid": "e995de00-2c64-4df5-8831-c1441420ff19",
+            "errorMessage": "Ciprix-CTRE requires the CTRE Phoenix 6 vendordep.",
+            "offlineFileName": "Phoenix6-frc2026-latest.json",
+            "onlineUrl": "https://maven.ctr-electronics.com/release/com/ctre/phoenix6/latest/Phoenix6-frc2026-latest.json"
+        }
+    ]
+}

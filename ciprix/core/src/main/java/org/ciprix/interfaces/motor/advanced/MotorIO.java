@@ -1,0 +1,96 @@
+package org.ciprix.interfaces.motor.advanced;
+
+import static edu.wpi.first.units.Units.RadiansPerSecond;
+import static edu.wpi.first.units.Units.Rotations;
+
+import edu.wpi.first.units.measure.Angle;
+import edu.wpi.first.units.measure.AngularVelocity;
+import org.ciprix.interfaces.motor.basic.BasicMotorIO;
+import org.littletonrobotics.junction.LogTable;
+
+/**
+ * Full IO for motors with closed-loop control (SparkFlex, TalonFX, ...). Extends {@link
+ * BasicMotorIO}: a concrete implementation like {@code MotorIOSparkFlex} can be handed to code that
+ * only asks for a {@link BasicMotorIO} — that code will only see percent/voltage control — or to
+ * code that asks for the full {@link MotorIO} — same object, two views, one implementation.
+ */
+public interface MotorIO extends BasicMotorIO {
+
+  class MotorIOInputs extends BasicMotorIOInputs {
+    public Angle position = Rotations.of(0.0);
+    public AngularVelocity velocity = RadiansPerSecond.of(0.0);
+    public boolean atSetpoint = false;
+
+    /** Moving average of the current, in amps (window set by {@code currentAverageSamples}). */
+    public double averageCurrentAmps = 0.0;
+
+    /** True from the moment a stall is detected until the motor runs normally again. */
+    public boolean stalled = false;
+
+    /** True while the motor is driven backwards by the automatic un-jam. */
+    public boolean unjamming = false;
+
+    /** True while the motor turns fast with almost no load (broken belt, loose coupler). */
+    public boolean freeSpinning = false;
+
+    @Override
+    public void toLog(LogTable table) {
+      super.toLog(table);
+      table.put("Position", position);
+      table.put("Velocity", velocity);
+      table.put("AtSetpoint", atSetpoint);
+      table.put("AverageCurrentAmps", averageCurrentAmps);
+      table.put("Stalled", stalled);
+      table.put("Unjamming", unjamming);
+      table.put("FreeSpinning", freeSpinning);
+    }
+
+    @Override
+    public void fromLog(LogTable table) {
+      super.fromLog(table);
+      position = table.get("Position", position);
+      velocity = table.get("Velocity", velocity);
+      atSetpoint = table.get("AtSetpoint", atSetpoint);
+      averageCurrentAmps = table.get("AverageCurrentAmps", averageCurrentAmps);
+      stalled = table.get("Stalled", stalled);
+      unjamming = table.get("Unjamming", unjamming);
+      freeSpinning = table.get("FreeSpinning", freeSpinning);
+    }
+  }
+
+  void updateInputs(MotorIOInputs inputs);
+
+  /**
+   * Zeros the motor's feedback sensor by treating the current physical position as {@code offset}.
+   * Delegates to the underlying encoder's zeroing mechanism (software offset or hardware zero,
+   * depending on the sensor type). Equivalent to {@link
+   * org.ciprix.interfaces.encoder.EncoderIO#setPosition} from the motor's perspective.
+   */
+  void setOffset(Angle offset);
+
+  void runVelocity(AngularVelocity velocity);
+
+  void runPosition(Angle position);
+
+  void runSmartPosition(Angle position);
+
+  void runVelocity(AngularVelocity velocity, int slot);
+
+  void runPosition(Angle position, int slot);
+
+  void runSmartPosition(Angle position, int slot);
+
+  void applyHardwarePID(int slot, double p, double i, double d);
+
+  void applyHardwareSVAG(int slot, double s, double v, double a, double g);
+
+  void applyHardwareSmartMotion(int slot, double maxVel, double maxAccel, double allowedErr);
+
+  void applyHardwareOutputRange(int slot, double min, double max);
+
+  @Override
+  MotorIOInputs getMotorIOInputs();
+
+  @Override
+  MotorController getMotorController();
+}

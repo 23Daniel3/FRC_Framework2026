@@ -1,0 +1,11 @@
+{
+  "name": "Techmaker 2026",
+  "isFTC": false,
+  "disableSimplification": false,
+  "rotations": [{"axis": "x", "degrees": 90}, {"axis": "z", "degrees": 90}],
+  "position": [0, 0, 0],
+  "cameras": [],
+  "components": [
+    {"zeroedRotations": [{"axis": "x", "degrees": 90}, {"axis": "z", "degrees": 90}], "zeroedPosition": [-0.3000, 0.0000, -0.1800]}
+  ]
+}

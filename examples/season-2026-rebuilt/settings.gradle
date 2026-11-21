@@ -1,0 +1,41 @@
+import org.gradle.internal.os.OperatingSystem
+
+pluginManagement {
+    repositories {
+        mavenLocal()
+        gradlePluginPortal()
+        String frcYear = '2026'
+        File frcHome
+        if (OperatingSystem.current().isWindows()) {
+            String publicFolder = System.getenv('PUBLIC')
+            if (publicFolder == null) {
+                publicFolder = "C:\\Users\\Public"
+            }
+            def homeRoot = new File(publicFolder, "wpilib")
+            frcHome = new File(homeRoot, frcYear)
+        } else {
+            def userFolder = System.getProperty("user.home")
+            def homeRoot = new File(userFolder, "wpilib")
+            frcHome = new File(homeRoot, frcYear)
+        }
+        def frcHomeMaven = new File(frcHome, 'maven')
+        maven {
+            name = 'frcHome'
+            url = frcHomeMaven
+        }
+    }
+}
+
+Properties props = System.getProperties();
+props.setProperty("org.gradle.internal.native.headers.unresolved.dependencies.ignore", "true");
+
+rootProject.name = 'season-2026-rebuilt'
+
+// Ciprix is consumed like any other vendor library (vendordeps/Ciprix*.json).
+// Inside the framework repository the library sources live next to this project, so the
+// published artifacts (org.ciprix:ciprix-*) are replaced by those sources automatically.
+// A project copied out of the repository simply downloads the published version instead.
+def ciprixDir = file('../../ciprix')
+if (new File(ciprixDir, 'settings.gradle').exists()) {
+    includeBuild(ciprixDir)
+}

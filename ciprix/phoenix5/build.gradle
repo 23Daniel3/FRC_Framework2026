@@ -1,0 +1,4 @@
+// ciprix-phoenix5: CTRE Phoenix 5 hardware (Talon SRX, Victor SPX).
+dependencies {
+    api project(':ciprix-core')
+}
