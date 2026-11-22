@@ -1,91 +1,292 @@
-# FRC Framework 2026 + Ciprix
+# FRC Framework 2026
+
+**Idioma:** **Português** | [English](./README.en.md)
 
 [![CI/CD](https://github.com/23Daniel3/FRC_Framework2026/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/23Daniel3/FRC_Framework2026/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/23Daniel3/FRC_Framework2026?display_name=tag)](https://github.com/23Daniel3/FRC_Framework2026/releases)
 
-Framework de robôs FRC em Java baseado em **máquinas de estado e requests**. O repositório é
-organizado como os grandes frameworks (WPILib, por exemplo): a biblioteca fica separada dos
-projetos de robô, e os projetos de robô ficam em pastas de templates e exemplos.
+Framework de robô FRC em Java (WPILib + GradleRIO + CTRE Phoenix 6 + PathPlanner + AdvantageKit), organizado para acelerar desenvolvimento de subsistemas com arquitetura **Request → State (FSM)**.
 
-| Pasta | O que é |
-| --- | --- |
-| [`ciprix/`](./ciprix) | A biblioteca **Ciprix**, dividida em módulos (`core`, `ctre`, `phoenix5`, `rev`, `pathplanner`, `processor`). É o que as equipes instalam como vendordep. |
-| [`examples/season-2026-rebuilt/`](./examples/season-2026-rebuilt) | O robô completo da Techmaker (9047) na temporada 2026, usando a Ciprix. É o exemplo de referência do padrão. |
-| [`templates/skeleton/`](./templates/skeleton) | O menor robô completo no padrão, pronto para copiar e começar um robô novo. |
-| [`docs/`](./docs) | Guias de arquitetura, simulação, visão, hardware e migração para a WPILib 2027. |
-
-Cada template e cada exemplo é um **projeto GradleRIO completo**: abra a pasta do projeto no
-VS Code da WPILib (por exemplo `examples/season-2026-rebuilt`), e os comandos de sempre
-(`Build Robot Code`, `Simulate Robot Code`, `Deploy Robot Code`) funcionam normalmente.
+> Este README é o guia principal do robô. Os guias da biblioteca (arquitetura, simulação, visão, hardware e pit, robô 3D, controles, zonas, segurança, tunables) estão em https://23daniel3.github.io/Ciprix/docs/.
 
 ---
 
-## O padrão (não muda)
+## Visão geral da arquitetura
 
-1. O piloto fala com `SuperStructureCommands.manageRequests(...)`, que escreve um `RobotRequest`.
-2. A máquina de estados geral da `SuperStructure` decide o estado do robô.
-3. No `onEnter` de cada estado geral, a `SuperStructure` define o request de cada subsistema.
-4. Cada subsistema é um `StateSubsystem<Request, State, Inputs, IO>` com a sua própria máquina
-   de estados declarativa (`StateMachine` + `bindRequest(...)`), e só fala com o hardware pela
-   camada IO.
-5. O comando padrão de cada subsistema é o **relay** gerado por `@AutoCommandFactory`
-   (`XxxCommands.defaultCommand(superStructure, xxx)`), que entrega o request da `SuperStructure`.
-6. O copiloto é o backup manual: os comandos `XxxCommands.<request>(xxx)` sobrepõem o request
-   de um subsistema enquanto o botão está pressionado.
+O projeto separa responsabilidades em 3 camadas:
 
-## O que a Ciprix traz
+- **[Ciprix](https://23daniel3.github.io/Ciprix/docs/)** (vendordep `vendordeps/Ciprix.json`, pacote `org.ciprix`) → infraestrutura reutilizável (FSM, `StateSubsystem`, motores, utilitários, controle, zonas, logging). Antes ficava copiada em `frc/lib`.
+- `src/main/java/frc/game/` → regras e geometria do jogo/campo (poses, zonas, aliança).
+- `src/main/java/frc/robot/` → implementação do robô da temporada (subsystems, commands, factories, bindings).
 
-| Recurso | Guia |
-| --- | --- |
-| Máquinas de estado com transições temporizadas, estados de segurança e override do copiloto | [Arquitetura](./docs/arquitetura.md) |
-| Motores que guardam a intenção do código, com un-jam e saúde (Talon FX/FXS, SPARK, SRX/SPX, PWM) | [Arquitetura](./docs/arquitetura.md#motores) |
-| Simulação com física e bateria usando a mesma configuração do robô | [Simulação](./docs/simulacao.md) |
-| Robô 3D no AdvantageScope com o CAD da equipe | [Robô 3D](./examples/season-2026-rebuilt/advantagescope/README.md) |
-| Visão por AprilTags pronta (Limelight), com filtros que dizem por que cada pose ficou de fora | [Visão](./docs/visao.md) |
-| Alertas de hardware para o dashboard, gerenciamento de bateria, autoteste no pit e checklist da fila | [Hardware, energia e pit](./docs/hardware-energia-e-pit.md) |
+### Fluxo de controle (teleop/auto)
 
-Antes do primeiro deploy desta versão no robô, leia
-[Mudanças no robô real](./docs/mudancas-no-robo-real.md).
+1. Entradas do piloto vão para `SuperStructureCommands.manageRequests(...)`.
+2. Esse comando escreve um `RobotRequest` na `SuperStructure`.
+3. A FSM geral da `SuperStructure` decide o estado global.
+4. No `onEnter` de cada estado global, a `SuperStructure` escreve requests dos subsistemas (`setRequest(...)`).
+5. Cada subsistema executa sua própria FSM e aplica no hardware via camada IO.
 
-## Como a Ciprix é consumida
+Esse modelo evita conflito entre comandos paralelos e centraliza a intenção do robô.
 
-Os projetos de robô usam a Ciprix como qualquer biblioteca de fornecedor: pelos arquivos
-`vendordeps/Ciprix*.json`. Dentro deste repositório, o `settings.gradle` de cada projeto faz
-`includeBuild('../../ciprix')`, então o Gradle troca os artefatos publicados
-(`org.ciprix:ciprix-*`) pelo código-fonte local automaticamente. Editou a biblioteca, o robô
-já compila com a mudança, sem publicar nada.
+---
 
-Um projeto copiado para fora do repositório não tem a pasta `ciprix/` ao lado, e passa a baixar
-a versão publicada indicada nos vendordeps.
+## Estrutura do projeto (resumo)
 
-| Vendordep | Artefato | Conteúdo |
-| --- | --- | --- |
-| `Ciprix.json` | `ciprix-core` | FSM, `StateSubsystem`, abstrações de motor e encoder, simulação, logging, utilitários |
-| `Ciprix-CTRE.json` | `ciprix-ctre` | TalonFX, TalonFXS, CANcoder, diagnóstico de barramento CAN (Phoenix 6) |
-| `Ciprix-Phoenix5.json` | `ciprix-phoenix5` | TalonSRX e VictorSPX (Phoenix 5) |
-| `Ciprix-REV.json` | `ciprix-rev` | SPARK MAX, SPARK Flex e encoders REV |
-| `Ciprix-PathPlanner.json` | `ciprix-pathplanner` | Integrações com PathPlanner e Choreo |
-
-O processador de anotações (`ciprix-processor`) entra pelo `build.gradle` do projeto:
-
-```groovy
-annotationProcessor "org.ciprix:ciprix-processor:$ciprixJson.version"
+```text
+src/
+  main/
+    java/frc/
+      game/
+      robot/
+        commands/
+        factories/
+        subsystems/
+          drivetrain/
+          superstructure/
+          intake/
+          conveyor/
+          shooter/
+          led/
+          vision/
+          example/
+      tools/
+        new_subsystem.py
+vendordeps/
+  Ciprix.json        # a biblioteca (org.ciprix) + processor de XxxCommands
 ```
 
-## Comandos úteis
+### Ciprix e `Robot.java`
 
-```bash
-# Biblioteca: formatação, build e testes de todos os módulos
-cd ciprix && ./gradlew build
+- A biblioteca vem do vendordep `Ciprix.json` (`https://23daniel3.github.io/Ciprix/Ciprix.json`). Para atualizar: **WPILib: Manage Vendor Libraries → Check for updates**.
+- O `build.gradle` usa o `ciprix-processor` (mesma versão do vendordep) para gerar os `XxxCommands` dos subsistemas com `@AutoCommandFactory` (`org.ciprix.annotations`).
+- `Robot` estende `CiprixRobot`, que já configura o AdvantageKit (USB + NT no robô, NT na simulação, replay), o `CommandScheduler` e o checklist de pré-partida. Os métodos de ciclo (`robotPeriodic`, `autonomousInit`, `teleopInit`, `testInit`) são `final`: use `periodic()`, `autonomousStart()`, `teleopStart()` e `testStart()`.
+- Simulação: intake, conveyor e shooter têm IO de simulação (`XxxIOSim`), usados quando `CiprixSettings.getMode()` é `SIM`.
+- Robô 3D no AdvantageScope: veja [`advantagescope/README.md`](./advantagescope/README.md).
+- Checklist de pré-partida: os itens do robô ficam em `RobotContainer.configurePreMatchChecklist()`; os padrões (bateria, dispositivos, falhas) vêm da `CiprixRobot`.
+- Configurações que a biblioteca lê (deadband, aliança padrão, tamanho do campo, `periodicTimer`, ganhos do `PIDRotation`) ficam em `Robot.configure()` via `CiprixSettings`. O modo de execução é `CiprixSettings.getMode()`.
 
-# Template: build (o CI compila os três projetos)
-cd templates/skeleton && ./gradlew build
+---
 
-# Robô de exemplo: build, testes e simulação
-cd examples/season-2026-rebuilt && ./gradlew build
-cd examples/season-2026-rebuilt && ./gradlew simulateJava
+## Como os subsistemas funcionam
 
-# Gerar os vendordeps com a versão atual (saem em ciprix/build/vendordeps)
-cd ciprix && ./gradlew generateVendordeps
+O padrão base é `StateSubsystem<Request, State, Inputs, IO>`.
+
+### Contrato do padrão
+
+- **Entrada externa:** `setRequest(Request)`
+- **Estado interno:** FSM declarativa (`StateMachine`)
+- **Saída:** chamadas de controle no IO (`io.controlXxx()...`)
+- **Critério de conclusão:** `atGoal()` derivado via `bindRequest(...)`
+
+### Boas práticas adotadas
+
+- Use `onEnter` para efeito discreto (ex.: parar motor, trocar modo).
+- Use `onUpdate` para setpoint dinâmico (ex.: RPM que varia com shot-on-the-move).
+- Sempre finalize construtor com `fsm.validateComplete()`.
+- Evite comparar sensor com `== 0`; prefira tolerância/deadband.
+
+### Exemplo canônico
+
+Use `src/main/java/frc/robot/subsystems/example/` como referência completa de:
+
+- `XxxConstants`
+- `XxxIO` (`@AutoLog` inputs)
+- `XxxIOHardware`
+- `XxxSubsystem` com FSM + `bindRequest`
+
+---
+
+## Drivetrain swerve (CTRE Phoenix 6)
+
+O swerve é implementado em `src/main/java/frc/robot/subsystems/drivetrain/Drivetrain.java` e estende `TunerSwerveDrivetrain`.
+
+### Principais responsabilidades
+
+- Controle field-relative/robot-relative.
+- Configuração de `AutoBuilder` (PathPlanner).
+- Limitação de aceleração e anti-tipping.
+- SysId (translation, steer, rotation).
+- Integração com aliança para flip de referências.
+
+### Estratégia de comando de drive
+
+A base está em `src/main/java/frc/robot/factories/DrivetrainCommands.java`, com um núcleo `driveCore(...)` que:
+
+- aplica modificadores de translação,
+- resolve estratégia de rotação,
+- aplica flip de campo por aliança,
+- envia `ChassisSpeeds` para o drivetrain.
+
+Isso permite compor comandos como:
+
+- joystick normal,
+- throttle map,
+- heading hold,
+- aim em ponto/alvo,
+- repulsão/sucção de zonas,
+- pathfinding para pose.
+
+### Limites de velocidade (dois donos)
+
+No drivetrain existe arbitragem por mínimo entre:
+
+- limite do **estado global** (`setMaxSpeed` via SuperStructure),
+- limite do **piloto** (`setPilotMaxSpeed`, modo lento).
+
+Assim um não sobrescreve o outro.
+
+---
+
+## SuperStructure (orquestração do robô)
+
+Arquivo: `src/main/java/frc/robot/subsystems/superstructure/SuperStructure.java`.
+
+### O que ela faz
+
+- Mantém a FSM geral de `RobotState`.
+- Traduz `RobotRequest` em requests de subsistemas.
+- Coordena modos como coletar, atirar, coletar+atirar, fechar.
+- Ajusta limite de velocidade do drivetrain por estado.
+- Calcula parâmetros ativos de tiro (shot-on-the-move).
+
+### Integração com LEDs e auto
+
+- LEDs seguem estado via comando observador (`followRobotState`).
+- Autos usam factories da SuperStructure (`shoot`, `collect`, `collectShooting`, etc.), sem escrever request direto de subsistema.
+
+---
+
+## Comandos e factories
+
+- `src/main/java/frc/robot/commands/` contém comandos específicos (drive alignment, autos, etc.).
+- `src/main/java/frc/robot/factories/` concentra fábricas de comandos por subsistema/domínio.
+
+### Recomendação do projeto
+
+- Use factories para padronizar criação de comandos.
+- Evite lógica duplicada de binding entre comandos diferentes.
+- Em teleop, preserve a regra: **a intenção global entra pela SuperStructure**.
+
+---
+
+## Testes automatizados
+
+Os testes da infraestrutura (FSM, `StateSubsystem`, utilitários, zonas) agora vivem no repositório da [Ciprix](https://github.com/23Daniel3/Ciprix). Testes específicos do robô ficam em `src/test/java/frc/robot/`.
+
+### Suítes que foram para a Ciprix (resumo)
+
+- `StateMachineTest`
+  - prioridade global > local,
+  - no máximo uma transição por ciclo,
+  - `transitionAfter` em segundos,
+  - `forceState`, `validateComplete`, tempo por estado.
+- `StateSubsystemTest`
+  - `bindRequest` e `atGoal()` derivado,
+  - não reentrada indevida,
+  - troca de request no meio do caminho.
+- `SetpointTrackerTest`, `LinearInterpolationTest`, `Polygon2dTest`
+  - utilitários matemáticos e geométricos da biblioteca.
+
+### Rodar testes e build (PowerShell)
+
+```powershell
+./gradlew test
+./gradlew build
 ```
 
-O CI roda exatamente esses builds para a biblioteca, para o template e para o exemplo.
+> O `build` já inclui compilação + testes.
+
+---
+
+## Como gerar novos subsistemas
+
+Existe um gerador automático:
+
+- Script: `src/main/java/frc/tools/new_subsystem.py`
+- Base usada: `src/main/java/frc/robot/subsystems/example/`
+
+### Exemplo de uso (raiz do repo)
+
+```powershell
+python src/main/java/frc/tools/new_subsystem.py Climber
+python src/main/java/frc/tools/new_subsystem.py ArmPivot --vendor talonfx
+```
+
+Também funciona com `sparkmax` e `sparkflex`.
+
+### Depois de gerar
+
+1. Ajuste constantes e IDs em `XxxConstants`.
+2. Modele enums `Request` e `State`.
+3. Configure FSM + `bindRequest(...)` no subsistema.
+4. Instancie no `RobotContainer` por modo (`REAL`, `SIM`, `REPLAY`).
+5. Conecte requests na FSM da `SuperStructure` (se fizer parte do fluxo global).
+
+---
+
+## Como criar novos comandos
+
+### 1) Defina o objetivo
+
+- Comando local de subsistema?
+- Comando global (via `RobotRequest`)?
+- Comando para auto/path?
+
+### 2) Escolha o lugar certo
+
+- Comandos específicos: `src/main/java/frc/robot/commands/...`
+- Factory reutilizável: `src/main/java/frc/robot/factories/...`
+
+### 3) Padrões recomendados
+
+- Para intenção global: prefira factory em `SuperStructureCommands`.
+- Para rotina contínua: `Commands.run(...)` com `requirements` corretos.
+- Para liga/desliga com cleanup: `Commands.startEnd(...)`.
+- Nomeie comandos (`withName`) para telemetria clara.
+
+### 4) Integre no `RobotContainer`
+
+- binding de botão,
+- default command,
+- trigger contextual (disabled/autonomous/teleop).
+
+---
+
+## Setup rápido de desenvolvimento
+
+Pré-requisitos:
+
+- JDK 17 (WPILib 2026)
+- Gradle Wrapper (já no repositório)
+- VS Code + extensões FRC/WPILib
+
+### Comandos úteis (PowerShell)
+
+```powershell
+./gradlew spotlessApply
+./gradlew test
+./gradlew build
+```
+
+---
+
+## CI e qualidade
+
+- O projeto usa formatação automática com Spotless (Google Java Format).
+- `build` depende de `spotlessApply` no `build.gradle`.
+- Consulte `README-CI-TESTES.md` para detalhes de CI/testes e cobertura atual.
+
+---
+
+## Dicas de contribuição
+
+- Mantenha regras de arquitetura do `TEMPLATE.md`.
+- Evite “atalhos” que furem a SuperStructure.
+- Mudanças na infraestrutura (FSM, motores, utilitários) vão para a Ciprix, com testes lá.
+
+---
+
+## Licença
+
+Consulte `WPILib-License.md` e as licenças dos vendors em `vendordeps/`.
